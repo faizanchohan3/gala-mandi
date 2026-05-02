@@ -1,0 +1,291 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  CASHIER
+  AUDITOR
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+}
+
+enum SaleStatus {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(CASHIER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  assignedTasks   Task[]  @relation("AssignedTo")
+  createdTasks    Task[]  @relation("CreatedBy")
+  sales           Sale[]
+  purchases       Purchase[]
+  auditLogs       AuditLog[]
+  pesticideSales  PesticideSale[]
+  transactions    Transaction[]
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+
+  products    Product[]
+}
+
+model Product {
+  id           String    @id @default(cuid())
+  name         String
+  categoryId   String
+  unit         String    @default("KG")
+  currentStock Float     @default(0)
+  minStock     Float     @default(0)
+  purchasePrice Float    @default(0)
+  salePrice    Float     @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  category      Category       @relation(fields: [categoryId], references: [id])
+  saleItems     SaleItem[]
+  purchaseItems PurchaseItem[]
+  stockMovements StockMovement[]
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  productId   String
+  type        String   // IN / OUT / ADJUSTMENT
+  quantity    Float
+  reference   String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  balance   Float    @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  sales     Sale[]
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  balance   Float    @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  purchases Purchase[]
+}
+
+model Sale {
+  id          String     @id @default(cuid())
+  customerId  String?
+  totalAmount Float
+  paidAmount  Float      @default(0)
+  balance     Float      @default(0)
+  status      SaleStatus @default(PENDING)
+  notes       String?
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  customer    Customer?  @relation(fields: [customerId], references: [id])
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  items       SaleItem[]
+  payments    Payment[]
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  productId String
+  quantity  Float
+  price     Float
+  total     Float
+
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Purchase {
+  id          String     @id @default(cuid())
+  supplierId  String?
+  totalAmount Float
+  paidAmount  Float      @default(0)
+  balance     Float      @default(0)
+  status      SaleStatus @default(PENDING)
+  notes       String?
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  supplier    Supplier?    @relation(fields: [supplierId], references: [id])
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  items       PurchaseItem[]
+  payments    Payment[]
+}
+
+model PurchaseItem {
+  id          String   @id @default(cuid())
+  purchaseId  String
+  productId   String
+  quantity    Float
+  price       Float
+  total       Float
+
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  saleId      String?
+  purchaseId  String?
+  amount      Float
+  method      PaymentMethod @default(CASH)
+  reference   String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+
+  sale        Sale?     @relation(fields: [saleId], references: [id])
+  purchase    Purchase? @relation(fields: [purchaseId], references: [id])
+}
+
+model PesticideCategory {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  createdAt  DateTime    @default(now())
+
+  pesticides Pesticide[]
+}
+
+model Pesticide {
+  id           String    @id @default(cuid())
+  name         String
+  categoryId   String
+  manufacturer String?
+  batchNumber  String?
+  expiryDate   DateTime?
+  quantity     Float     @default(0)
+  unit         String    @default("Litre")
+  purchasePrice Float    @default(0)
+  salePrice    Float     @default(0)
+  minStock     Float     @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  category     PesticideCategory @relation(fields: [categoryId], references: [id])
+  sales        PesticideSale[]
+}
+
+model PesticideSale {
+  id           String   @id @default(cuid())
+  pesticideId  String
+  quantity     Float
+  unitPrice    Float
+  totalAmount  Float
+  customerName String?
+  paidAmount   Float    @default(0)
+  soldById     String
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  pesticide    Pesticide @relation(fields: [pesticideId], references: [id])
+  soldBy       User      @relation(fields: [soldById], references: [id])
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  type        TransactionType
+  amount      Float
+  description String
+  reference   String?
+  category    String?
+  createdById String
+  createdAt   DateTime        @default(now())
+
+  createdBy   User @relation(fields: [createdById], references: [id])
+}
+
+model Task {
+  id           String       @id @default(cuid())
+  title        String
+  description  String?
+  assignedToId String?
+  createdById  String
+  status       TaskStatus   @default(PENDING)
+  priority     TaskPriority @default(MEDIUM)
+  dueDate      DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  assignedTo   User? @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User  @relation("CreatedBy", fields: [createdById], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  module    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id])
+}
