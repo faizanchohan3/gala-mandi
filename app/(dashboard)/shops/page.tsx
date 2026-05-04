@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Store, CheckCircle, XCircle, Clock, Users, ShoppingCart, Package, Phone, MapPin, Mail, RefreshCw, Ban } from "lucide-react"
+import { Store, CheckCircle, XCircle, Clock, Users, ShoppingCart, Package, Phone, MapPin, Mail, RefreshCw, Ban, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 type Shop = {
   id: string
@@ -207,9 +208,19 @@ export default function ShopsPage() {
                 )}
               </div>
 
-              <p className="text-xs text-gray-400 mt-3">
-                Registered: {new Date(shop.createdAt).toLocaleDateString("en-PK")}
-              </p>
+              <div className="flex items-center justify-between mt-3">
+                <p className="text-xs text-gray-400">
+                  Registered: {new Date(shop.createdAt).toLocaleDateString("en-PK")}
+                </p>
+                <Link
+                  href={`/shops/${shop.id}`}
+                  className="flex items-center gap-1 text-xs text-green-700 font-medium hover:text-green-900 hover:underline"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  Manage Users
+                  <ChevronRight className="w-3 h-3" />
+                </Link>
+              </div>
             </div>
           ))}
         </div>
