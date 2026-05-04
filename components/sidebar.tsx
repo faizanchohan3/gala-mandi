@@ -9,7 +9,7 @@ import {
   Wallet, BarChart3, ClipboardList, Users, Settings,
   ChevronLeft, ChevronRight, Store, CheckSquare, UserCheck,
   Truck, ChevronDown, Receipt, Tractor, UserCog, Warehouse,
-  Scale,
+  Scale, UserCircle,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -52,9 +52,10 @@ const shopNavItems: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ]
 
-// Super admin only sees the shops management page
+// Super admin only sees shops management + their profile
 const superAdminNavItems: NavItem[] = [
   { href: "/shops", label: "All Shops", icon: Store },
+  { href: "/profile", label: "My Profile", icon: UserCircle },
 ]
 
 export function Sidebar() {

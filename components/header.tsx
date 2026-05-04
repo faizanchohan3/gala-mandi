@@ -2,16 +2,28 @@
 
 import { signOut } from "next-auth/react"
 import { useSession } from "next-auth/react"
-import { Bell, LogOut, User, Store } from "lucide-react"
+import { Bell, LogOut, User, Store, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRoleColor } from "@/lib/utils"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 
 export function Header({ title }: { title: string }) {
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
   const [pendingShops, setPendingShops] = useState(0)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
 
   useEffect(() => {
     if (!isSuperAdmin) return
@@ -50,26 +62,49 @@ export function Header({ title }: { title: string }) {
           </button>
         )}
 
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-green-700 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-white" />
-          </div>
-          <div className="hidden sm:block">
-            <p className="text-sm font-medium text-gray-800">{session?.user?.name}</p>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getRoleColor(session?.user?.role || "")}`}>
-              {session?.user?.role?.replace("_", " ")}
-            </span>
-          </div>
-        </div>
+        {/* User dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setDropdownOpen((o) => !o)}
+            className="flex items-center gap-3 hover:bg-gray-100 rounded-lg px-2 py-1.5 transition-colors"
+          >
+            <div className="w-8 h-8 bg-green-700 rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <div className="hidden sm:block text-left">
+              <p className="text-sm font-medium text-gray-800 leading-tight">{session?.user?.name}</p>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getRoleColor(session?.user?.role || "")}`}>
+                {session?.user?.role?.replace("_", " ")}
+              </span>
+            </div>
+          </button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          title="Sign out"
-        >
-          <LogOut className="w-4 h-4 text-gray-500" />
-        </Button>
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <p className="text-xs text-gray-500">Signed in as</p>
+                <p className="text-sm font-semibold text-gray-800 truncate">{session?.user?.email}</p>
+              </div>
+              <div className="py-1">
+                <Link
+                  href="/profile"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Settings className="w-4 h-4 text-gray-400" />
+                  My Profile & Password
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

@@ -19,8 +19,9 @@ export const proxy = auth((req) => {
     return NextResponse.redirect(new URL(dest, req.nextUrl))
   }
 
-  // Super admin can ONLY access /shops — but never redirect API routes
-  if (isLoggedIn && isSuperAdmin && !pathname.startsWith("/shops") && !pathname.startsWith("/api/")) {
+  // Super admin can ONLY access /shops and /profile — but never redirect API routes
+  const superAdminAllowed = pathname.startsWith("/shops") || pathname.startsWith("/profile")
+  if (isLoggedIn && isSuperAdmin && !superAdminAllowed && !pathname.startsWith("/api/")) {
     return NextResponse.redirect(new URL("/shops", req.nextUrl))
   }
 
