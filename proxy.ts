@@ -3,14 +3,24 @@ import { NextResponse } from "next/server"
 
 export const proxy = auth((req) => {
   const isLoggedIn = !!req.auth
-  const isLoginPage = req.nextUrl.pathname === "/login"
+  const pathname = req.nextUrl.pathname
+  const isLoginPage = pathname === "/login"
+  const role = req.auth?.user?.role
+  const isSuperAdmin = role === "SUPER_ADMIN"
 
   if (!isLoggedIn && !isLoginPage) {
     return NextResponse.redirect(new URL("/login", req.nextUrl))
   }
 
   if (isLoggedIn && isLoginPage) {
-    return NextResponse.redirect(new URL("/dashboard", req.nextUrl))
+    // Super admin always lands on /shops
+    const dest = isSuperAdmin ? "/shops" : "/dashboard"
+    return NextResponse.redirect(new URL(dest, req.nextUrl))
+  }
+
+  // Super admin can ONLY access /shops (and /api routes which are excluded by matcher)
+  if (isLoggedIn && isSuperAdmin && !pathname.startsWith("/shops")) {
+    return NextResponse.redirect(new URL("/shops", req.nextUrl))
   }
 
   return NextResponse.next()
