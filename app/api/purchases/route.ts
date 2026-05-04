@@ -61,6 +61,13 @@ export async function POST(req: Request) {
       },
     })
 
+    // Record initial payment so the supplier ledger shows a credit entry
+    if (paidAmount && paidAmount > 0) {
+      await tx.payment.create({
+        data: { purchaseId: p.id, amount: paidAmount, method: body.paymentMethod || "CASH", notes: "Initial payment at purchase" },
+      })
+    }
+
     // Add stock
     for (const item of items) {
       await tx.product.update({

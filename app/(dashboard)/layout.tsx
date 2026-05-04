@@ -27,10 +27,14 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      <div className="print:hidden">
+        <Sidebar />
+      </div>
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Header title="Gala Mandi" />
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50">{children}</main>
+        <div className="print:hidden">
+          <Header title="Gala Mandi" />
+        </div>
+        <main className="flex-1 overflow-y-auto p-6 bg-gray-50 print:overflow-visible print:p-4 print:bg-white">{children}</main>
       </div>
     </div>
   )

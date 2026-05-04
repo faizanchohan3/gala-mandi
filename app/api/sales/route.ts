@@ -40,6 +40,20 @@ export async function POST(req: Request) {
   const balance = totalAmount - (paidAmount || 0)
   const status = balance <= 0 ? "PAID" : paidAmount > 0 ? "PARTIAL" : "PENDING"
 
+  // Credit limit check
+  if (customerId) {
+    const customer = await db.customer.findUnique({ where: { id: customerId }, select: { creditLimit: true, balance: true, name: true } })
+    if (customer && customer.creditLimit > 0) {
+      const newBalance = (customer.balance || 0) + balance
+      if (newBalance > customer.creditLimit) {
+        return NextResponse.json(
+          { error: `Credit limit exceeded for ${customer.name}. Limit: PKR ${customer.creditLimit.toLocaleString()}, Current outstanding: PKR ${(customer.balance || 0).toLocaleString()}, This sale balance: PKR ${balance.toLocaleString()}` },
+          { status: 422 }
+        )
+      }
+    }
+  }
+
   const sale = await db.$transaction(async (tx) => {
     const s = await tx.sale.create({
       data: {
@@ -61,6 +75,13 @@ export async function POST(req: Request) {
       },
       include: { items: true },
     })
+
+    // Record initial payment so the ledger shows a credit entry
+    if (paidAmount && paidAmount > 0) {
+      await tx.payment.create({
+        data: { saleId: s.id, amount: paidAmount, method: body.paymentMethod || "CASH", notes: "Initial payment at sale" },
+      })
+    }
 
     // Deduct stock
     for (const item of items) {

@@ -81,6 +81,7 @@ export default function InventoryPage() {
   )
 
   const lowStock = products.filter((p) => p.currentStock <= p.minStock)
+  const criticalStock = products.filter((p) => p.currentStock <= 2)
 
   return (
     <div className="space-y-6">
@@ -94,13 +95,28 @@ export default function InventoryPage() {
         </Button>
       </div>
 
-      {/* Alerts */}
-      {lowStock.length > 0 && (
+      {/* Critical Stock Alert (≤ 2 units) */}
+      {criticalStock.length > 0 && (
+        <div className="bg-red-50 border border-red-300 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-800 font-semibold text-sm">
+              Critical Stock Alert — {criticalStock.length} product{criticalStock.length > 1 ? "s" : ""} almost out of stock!
+            </p>
+            <p className="text-red-600 text-xs mt-0.5">
+              {criticalStock.map((p) => `${p.name} (${p.currentStock} ${p.unit} left)`).join(" · ")}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Low Stock Alert (below minStock, excluding critical) */}
+      {lowStock.filter((p) => p.currentStock > 2).length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
           <p className="text-amber-800 text-sm">
-            <strong>{lowStock.length} products</strong> are below minimum stock levels:{" "}
-            {lowStock.map((p) => p.name).join(", ")}
+            <strong>{lowStock.filter((p) => p.currentStock > 2).length} products</strong> are below minimum stock levels:{" "}
+            {lowStock.filter((p) => p.currentStock > 2).map((p) => p.name).join(", ")}
           </p>
         </div>
       )}

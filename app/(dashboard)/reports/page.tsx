@@ -2,85 +2,235 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell,
 } from "recharts"
-import { BarChart3, TrendingUp, Package, Sprout } from "lucide-react"
+import {
+  BarChart3, TrendingUp, Users, ShoppingCart, DollarSign, BookOpen,
+  ArrowRight, Package, TrendingDown, AlertTriangle, Wallet,
+} from "lucide-react"
+import Link from "next/link"
 
-const COLORS = ["#15803d", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"]
+const reportCards = [
+  {
+    href: "/reports/sales",
+    title: "Sales Report",
+    description: "Detailed sales transactions with date & customer filters",
+    icon: ShoppingCart,
+    color: "from-green-700 to-green-800",
+  },
+  {
+    href: "/reports/customers",
+    title: "Customer Report",
+    description: "Customer-wise summary with expandable sales details",
+    icon: Users,
+    color: "from-blue-600 to-blue-700",
+  },
+  {
+    href: "/reports/products",
+    title: "Product Report",
+    description: "Stock levels, valuations, margins & sales performance",
+    icon: Package,
+    color: "from-violet-600 to-violet-700",
+  },
+  {
+    href: "/reports/profit-loss",
+    title: "Profit & Loss",
+    description: "Revenue vs expenses, gross profit and net income",
+    icon: TrendingUp,
+    color: "from-purple-600 to-purple-700",
+  },
+  {
+    href: "/reports/customer-ledger",
+    title: "Customer Ledger",
+    description: "Full debit/credit transaction ledger per customer",
+    icon: BookOpen,
+    color: "from-orange-500 to-orange-600",
+  },
+  {
+    href: "/reports/supplier-ledger",
+    title: "Supplier Ledger",
+    description: "Full purchase & payment ledger per supplier",
+    icon: DollarSign,
+    color: "from-teal-600 to-teal-700",
+  },
+]
 
 export default function ReportsPage() {
   const [monthlySales, setMonthlySales] = useState<any[]>([])
-  const [topProducts, setTopProducts] = useState<any[]>([])
   const [financeData, setFinanceData] = useState({ income: 0, expense: 0, balance: 0 })
-  const [pesticidesData, setPesticidesData] = useState<any[]>([])
-  const [dateFrom, setDateFrom] = useState("")
-  const [dateTo, setDateTo] = useState("")
+  const [customerData, setCustomerData] = useState({ count: 0, outstanding: 0, totalBusiness: 0 })
+  const [productData, setProductData] = useState({ totalProducts: 0, stockValue: 0, totalSaleAmount: 0, lowStockCount: 0 })
+  const [expenseData, setExpenseData] = useState({ total: 0, topCategories: [] as any[] })
   const [loading, setLoading] = useState(true)
 
-  async function loadReports() {
-    setLoading(true)
-    const [ms, fi] = await Promise.all([
+  useEffect(() => {
+    Promise.all([
       fetch("/api/reports/monthly-sales").then((r) => r.json()),
       fetch("/api/finance").then((r) => r.json()),
-    ])
-    setMonthlySales(ms.data || [])
-    setFinanceData({ income: fi.income || 0, expense: fi.expense || 0, balance: fi.balance || 0 })
-    setLoading(false)
-  }
+      fetch("/api/reports/customers").then((r) => r.json()),
+      fetch("/api/reports/products").then((r) => r.json()),
+      fetch("/api/expenses").then((r) => r.json()),
+    ]).then(([ms, fi, cu, pr, ex]) => {
+      setMonthlySales(ms.data || [])
+      setFinanceData({ income: fi.income || 0, expense: fi.expense || 0, balance: fi.balance || 0 })
 
-  useEffect(() => { loadReports() }, [])
+      const customers = cu.customers || []
+      setCustomerData({
+        count: customers.length,
+        outstanding: customers.reduce((s: number, c: any) => s + (c.totalBalance || 0), 0),
+        totalBusiness: customers.reduce((s: number, c: any) => s + (c.totalBusiness || 0), 0),
+      })
+
+      const t = pr.totals || {}
+      setProductData({
+        totalProducts: t.totalProducts || 0,
+        stockValue: t.totalStockValue || 0,
+        totalSaleAmount: t.totalSaleAmount || 0,
+        lowStockCount: t.lowStockCount || 0,
+      })
+
+      const summary = (ex.summary || []).filter((s: any) => s._sum?.amount)
+      setExpenseData({
+        total: ex.total || 0,
+        topCategories: summary.sort((a: any, b: any) => b._sum.amount - a._sum.amount).slice(0, 4),
+      })
+
+      setLoading(false)
+    })
+  }, [])
 
   const financeChartData = [
     { name: "Income", value: financeData.income, color: "#15803d" },
     { name: "Expenses", value: financeData.expense, color: "#ef4444" },
   ]
 
+  const CATEGORY_COLORS = ["#ef4444", "#f97316", "#eab308", "#8b5cf6"]
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Reports & Analytics</h2>
-        <p className="text-gray-500 text-sm">Business performance overview</p>
+        <p className="text-gray-500 text-sm">Business performance overview — select a report below</p>
       </div>
 
-      {/* Summary Cards */}
+      {/* ── Key Metrics — Colorful Gradient Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/reports/sales">
+          <div
+            className="rounded-xl p-5 text-white cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ background: "linear-gradient(135deg, #15803d 0%, #166534 100%)" }}
+          >
+            <ShoppingCart className="w-6 h-6 mb-3 opacity-80" />
+            <p className="text-2xl font-bold">{loading ? "—" : formatCurrency(financeData.income)}</p>
+            <p className="text-green-200 text-sm mt-1">Total Revenue</p>
+            <p className="text-green-300 text-xs mt-2 flex items-center gap-1">View Sales Report <ArrowRight className="w-3 h-3" /></p>
+          </div>
+        </Link>
+
+        <Link href="/reports/customers">
+          <div
+            className="rounded-xl p-5 text-white cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)" }}
+          >
+            <Users className="w-6 h-6 mb-3 opacity-80" />
+            <p className="text-2xl font-bold">{loading ? "—" : customerData.count}</p>
+            <p className="text-blue-200 text-sm mt-1">Total Customers</p>
+            <p className="text-blue-300 text-xs mt-2 flex items-center gap-1">
+              Udhar: {loading ? "—" : formatCurrency(customerData.outstanding)} <ArrowRight className="w-3 h-3" />
+            </p>
+          </div>
+        </Link>
+
+        <Link href="/reports/products">
+          <div
+            className="rounded-xl p-5 text-white cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)" }}
+          >
+            <Package className="w-6 h-6 mb-3 opacity-80" />
+            <p className="text-2xl font-bold">{loading ? "—" : formatCurrency(productData.stockValue)}</p>
+            <p className="text-violet-200 text-sm mt-1">Inventory Value</p>
+            <p className="text-violet-300 text-xs mt-2 flex items-center gap-1">
+              {loading ? "—" : productData.totalProducts} products · {loading ? "—" : productData.lowStockCount} low stock <ArrowRight className="w-3 h-3" />
+            </p>
+          </div>
+        </Link>
+
+        <Link href="/expenses">
+          <div
+            className="rounded-xl p-5 text-white cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)" }}
+          >
+            <TrendingDown className="w-6 h-6 mb-3 opacity-80" />
+            <p className="text-2xl font-bold">{loading ? "—" : formatCurrency(expenseData.total)}</p>
+            <p className="text-red-200 text-sm mt-1">Total Expenses</p>
+            <p className="text-red-300 text-xs mt-2 flex items-center gap-1">View Expenses <ArrowRight className="w-3 h-3" /></p>
+          </div>
+        </Link>
+      </div>
+
+      {/* ── Secondary Metric Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-green-700 to-green-800 text-white border-0">
-          <CardContent className="p-5">
-            <TrendingUp className="w-6 h-6 mb-2 opacity-80" />
-            <p className="text-2xl font-bold">{formatCurrency(financeData.income)}</p>
-            <p className="text-green-200 text-sm">Total Income</p>
+        <Card className="border-green-100">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Net Balance</p>
+              <Wallet className="w-4 h-4 text-green-600" />
+            </div>
+            <p className={`text-xl font-bold ${financeData.balance >= 0 ? "text-green-700" : "text-red-600"}`}>
+              {loading ? "—" : formatCurrency(financeData.balance)}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Income minus expenses</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0">
-          <CardContent className="p-5">
-            <TrendingUp className="w-6 h-6 mb-2 opacity-80 rotate-180" />
-            <p className="text-2xl font-bold">{formatCurrency(financeData.expense)}</p>
-            <p className="text-red-200 text-sm">Total Expenses</p>
+
+        <Card className="border-blue-100">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Customer Udhar</p>
+              <BookOpen className="w-4 h-4 text-orange-500" />
+            </div>
+            <p className={`text-xl font-bold ${customerData.outstanding > 0 ? "text-orange-600" : "text-gray-500"}`}>
+              {loading ? "—" : formatCurrency(customerData.outstanding)}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Total outstanding balance</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-600 to-blue-700 text-white border-0">
-          <CardContent className="p-5">
-            <BarChart3 className="w-6 h-6 mb-2 opacity-80" />
-            <p className="text-2xl font-bold">{formatCurrency(financeData.balance)}</p>
-            <p className="text-blue-200 text-sm">Net Balance</p>
+
+        <Card className="border-violet-100">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Products Sold</p>
+              <TrendingUp className="w-4 h-4 text-violet-600" />
+            </div>
+            <p className="text-xl font-bold text-violet-700">
+              {loading ? "—" : formatCurrency(productData.totalSaleAmount)}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Total sale amount (all time)</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-600 to-purple-700 text-white border-0">
-          <CardContent className="p-5">
-            <Package className="w-6 h-6 mb-2 opacity-80" />
-            <p className="text-2xl font-bold">{monthlySales.length > 0 ? formatCurrency(monthlySales[monthlySales.length - 1]?.sales || 0) : "—"}</p>
-            <p className="text-purple-200 text-sm">This Month Sales</p>
+
+        <Card className={productData.lowStockCount > 0 ? "border-red-200 bg-red-50/30" : "border-gray-100"}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className={`text-xs font-medium uppercase tracking-wide ${productData.lowStockCount > 0 ? "text-red-500" : "text-gray-500"}`}>
+                Low Stock
+              </p>
+              <AlertTriangle className={`w-4 h-4 ${productData.lowStockCount > 0 ? "text-red-500" : "text-gray-400"}`} />
+            </div>
+            <p className={`text-xl font-bold ${productData.lowStockCount > 0 ? "text-red-600" : "text-gray-500"}`}>
+              {loading ? "—" : productData.lowStockCount} items
+            </p>
+            <Link href="/reports/products" className="text-xs text-red-500 hover:underline mt-1 block">
+              View product report →
+            </Link>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts */}
+      {/* ── Charts Row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -89,7 +239,7 @@ export default function ReportsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={240}>
               <BarChart data={monthlySales}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
@@ -106,14 +256,14 @@ export default function ReportsPage() {
             <CardTitle className="text-base">Income vs Expenses</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={180}>
               <PieChart>
                 <Pie
                   data={financeChartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
+                  innerRadius={50}
+                  outerRadius={75}
                   dataKey="value"
                   label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   labelLine={false}
@@ -133,27 +283,52 @@ export default function ReportsPage() {
                 </div>
               ))}
             </div>
+
+            {/* Expense category breakdown */}
+            {expenseData.topCategories.length > 0 && (
+              <div className="mt-4 space-y-2 border-t pt-4">
+                <p className="text-xs font-semibold text-gray-600 mb-2">Top Expense Categories</p>
+                {expenseData.topCategories.map((cat: any, i: number) => {
+                  const pct = expenseData.total > 0 ? (cat._sum.amount / expenseData.total) * 100 : 0
+                  return (
+                    <div key={cat.category} className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: CATEGORY_COLORS[i] }} />
+                      <p className="text-xs text-gray-500 w-20 truncate">{cat.category}</p>
+                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: CATEGORY_COLORS[i] }} />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700 w-20 text-right">{formatCurrency(cat._sum.amount)}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Sales Trend Line Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">6-Month Sales Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={monthlySales}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `₨${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: any) => formatCurrency(Number(v))} />
-              <Line type="monotone" dataKey="sales" stroke="#15803d" strokeWidth={2} dot={{ fill: "#15803d", r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* ── Report Navigation Cards ── */}
+      <div>
+        <h3 className="text-base font-semibold text-gray-700 mb-3">Detailed Reports</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {reportCards.map(({ href, title, description, icon: Icon, color }) => (
+            <Link key={href} href={href}>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer border border-gray-100 group">
+                <CardContent className="p-5 flex items-start gap-4">
+                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm group-hover:text-green-700 transition-colors">{title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{description}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-green-600 transition-colors flex-shrink-0 mt-0.5" />
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

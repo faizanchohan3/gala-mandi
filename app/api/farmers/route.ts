@@ -1,0 +1,36 @@
+import { NextResponse } from "next/server"
+import { auth } from "@/auth"
+import { db } from "@/lib/db"
+
+export async function GET() {
+  const session = await auth()
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const farmers = await db.farmer.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+    include: {
+      _count: { select: { purchases: true } },
+    },
+  })
+
+  return NextResponse.json({ farmers })
+}
+
+export async function POST(req: Request) {
+  const session = await auth()
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const body = await req.json()
+  const farmer = await db.farmer.create({
+    data: {
+      name: body.name,
+      phone: body.phone || null,
+      address: body.address || null,
+      village: body.village || null,
+      cnic: body.cnic || null,
+      creditLimit: body.creditLimit || 0,
+    },
+  })
+  return NextResponse.json({ farmer })
+}
