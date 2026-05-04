@@ -8,7 +8,8 @@ export const proxy = auth((req) => {
   const role = req.auth?.user?.role
   const isSuperAdmin = role === "SUPER_ADMIN"
 
-  if (!isLoggedIn && !isLoginPage) {
+  // Only redirect page routes to login — never redirect API routes
+  if (!isLoggedIn && !isLoginPage && !pathname.startsWith("/api/")) {
     return NextResponse.redirect(new URL("/login", req.nextUrl))
   }
 
