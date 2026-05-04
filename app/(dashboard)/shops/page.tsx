@@ -1,10 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Store, CheckCircle, XCircle, Clock, Users, ShoppingCart, Package, Phone, MapPin, Mail, RefreshCw, Ban, Eye } from "lucide-react"
+import { Store, CheckCircle, XCircle, Clock, Users, ShoppingCart, Package, Phone, MapPin, Mail, RefreshCw, Ban } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { formatDate } from "@/lib/utils"
 
 type Shop = {
   id: string
