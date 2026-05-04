@@ -12,10 +12,12 @@ export async function GET(req: Request) {
   const limit = parseInt(searchParams.get("limit") || "20")
   const skip = (page - 1) * limit
 
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
   const [purchases, total] = await Promise.all([
     db.purchase.findMany({
       skip,
       take: limit,
+      where: shopFilter,
       orderBy: { createdAt: "desc" },
       include: {
         supplier: true,
@@ -23,7 +25,7 @@ export async function GET(req: Request) {
         items: { include: { product: true } },
       },
     }),
-    db.purchase.count(),
+    db.purchase.count({ where: shopFilter }),
   ])
 
   return NextResponse.json({ purchases, total })
@@ -43,6 +45,7 @@ export async function POST(req: Request) {
   const purchase = await db.$transaction(async (tx) => {
     const p = await tx.purchase.create({
       data: {
+        shopId: session.user.shopId || null,
         supplierId: supplierId || null,
         totalAmount,
         paidAmount: paidAmount || 0,

@@ -6,8 +6,9 @@ export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
   const farmers = await db.farmer.findMany({
-    where: { isActive: true },
+    where: { ...shopFilter, isActive: true },
     orderBy: { name: "asc" },
     include: {
       _count: { select: { purchases: true } },
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
   const body = await req.json()
   const farmer = await db.farmer.create({
     data: {
+      shopId: session.user.shopId || null,
       name: body.name,
       phone: body.phone || null,
       address: body.address || null,

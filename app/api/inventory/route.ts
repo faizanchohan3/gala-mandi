@@ -6,9 +6,10 @@ import { createAuditLog } from "@/lib/audit"
 export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
 
   const products = await db.product.findMany({
-    where: { isActive: true },
+    where: { ...shopFilter, isActive: true },
     include: { category: true },
     orderBy: { name: "asc" },
   })
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
   const { name, categoryId, unit, currentStock, minStock, purchasePrice, salePrice } = body
 
   const product = await db.product.create({
-    data: { name, categoryId, unit, currentStock, minStock, purchasePrice, salePrice },
+    data: { shopId: session.user.shopId || null, name, categoryId, unit, currentStock, minStock, purchasePrice, salePrice },
   })
 
   if (currentStock > 0) {
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     })
   }
 
-  await createAuditLog({ userId: session.user.id, action: "CREATE", module: "INVENTORY", details: `Created product: ${name}` })
+  await createAuditLog({ userId: session.user.id, shopId: session.user.shopId, action: "CREATE", module: "INVENTORY", details: `Created product: ${name}` })
 
   return NextResponse.json({ product }, { status: 201 })
 }

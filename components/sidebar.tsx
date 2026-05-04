@@ -2,13 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, Package, ShoppingCart, ShoppingBag, Sprout,
   Wallet, BarChart3, ClipboardList, Users, Settings,
   ChevronLeft, ChevronRight, Store, CheckSquare, UserCheck,
   Truck, ChevronDown, Receipt, Tractor, UserCog, Warehouse,
-  DoorOpen, Scale,
+  Scale, ShoppingBag as ShopIcon,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -17,7 +18,7 @@ type NavItem = {
   label: string
   icon: React.ComponentType<{ className?: string }>
   hasChildren?: true
-  section?: string
+  superAdminOnly?: true
 }
 
 const reportSubItems = [
@@ -53,17 +54,27 @@ const navItems: NavItem[] = [
   { href: "/audit", label: "Audit Log", icon: ClipboardList },
   { href: "/users", label: "Users", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
+  // ── Super Admin only ──
+  { href: "/shops", label: "All Shops", icon: Store, superAdminOnly: true },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
   const [collapsed, setCollapsed] = useState(false)
   const [reportsOpen, setReportsOpen] = useState(false)
 
-  // Auto-open when navigating into reports section
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
+  const shopName = session?.user?.shopName
+
   useEffect(() => {
     if (pathname.startsWith("/reports")) setReportsOpen(true)
   }, [pathname])
+
+  const visibleItems = navItems.filter((item) => {
+    if (item.superAdminOnly) return isSuperAdmin
+    return true
+  })
 
   return (
     <aside
@@ -72,105 +83,118 @@ export function Sidebar() {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-green-700">
+      {/* Logo + Shop Name */}
+      <div className="flex items-center gap-3 px-4 py-5 border-b border-green-700 flex-shrink-0">
         <div className="flex-shrink-0 w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
           <Store className="w-5 h-5 text-green-900" />
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
-            <p className="font-bold text-sm leading-tight">Gala Mandi</p>
-            <p className="text-green-300 text-xs">Shop Management</p>
+            <p className="font-bold text-sm leading-tight truncate">
+              {isSuperAdmin ? "Gala Mandi" : (shopName || "Gala Mandi")}
+            </p>
+            <p className="text-green-300 text-xs">
+              {isSuperAdmin ? "Platform Admin" : "Shop Management"}
+            </p>
           </div>
         )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
-          const { href, label, icon: Icon, hasChildren } = item
+        {visibleItems.map((item) => {
+          const { href, label, icon: Icon, hasChildren, superAdminOnly } = item
           const active =
             pathname === href ||
             (href !== "/dashboard" && href !== "/" && pathname.startsWith(href))
 
-          if (hasChildren) {
-            return (
-              <div key={href}>
-                {/* Reports row: link + toggle chevron */}
-                <div
-                  className={cn(
-                    "flex items-center rounded-lg transition-colors",
-                    active ? "bg-green-600" : "hover:bg-green-700"
-                  )}
-                >
-                  <Link
-                    href={href}
-                    className="flex items-center gap-3 px-3 py-2.5 flex-1 text-sm font-medium"
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0 text-white" />
-                    {!collapsed && <span className="text-white">{label}</span>}
-                  </Link>
-                  {!collapsed && (
-                    <button
-                      onClick={() => setReportsOpen((o) => !o)}
-                      className="pr-3 py-2.5 text-green-200 hover:text-white transition-colors"
-                      aria-label="Toggle reports menu"
-                    >
-                      <ChevronDown
-                        className={cn(
-                          "w-4 h-4 transition-transform duration-300",
-                          reportsOpen ? "rotate-180" : "rotate-0"
-                        )}
-                      />
-                    </button>
-                  )}
-                </div>
-
-                {/* Animated sub-menu */}
-                {!collapsed && (
-                  <div
-                    className={cn(
-                      "overflow-hidden transition-all duration-300 ease-in-out",
-                      reportsOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
-                    )}
-                  >
-                    <div className="ml-4 mt-1 border-l-2 border-green-600 pl-3 pb-1 space-y-0.5">
-                      {reportSubItems.map((sub) => {
-                        const subActive = pathname === sub.href
-                        return (
-                          <Link
-                            key={sub.href}
-                            href={sub.href}
-                            className={cn(
-                              "flex items-center py-1.5 px-2 rounded text-xs font-medium transition-colors",
-                              subActive
-                                ? "bg-green-700 text-yellow-300"
-                                : "text-green-300 hover:bg-green-700 hover:text-white"
-                            )}
-                          >
-                            {sub.label}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          }
+          // Super admin "All Shops" gets a special separator above
+          const isShopsItem = href === "/shops"
 
           return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                active ? "bg-green-600 text-white" : "text-green-100 hover:bg-green-700 hover:text-white"
+            <div key={href}>
+              {isShopsItem && (
+                <div className="mt-3 mb-1 px-3">
+                  <div className="border-t border-green-700" />
+                  {!collapsed && (
+                    <p className="text-green-400 text-xs font-semibold uppercase tracking-wider mt-2 mb-1">Platform</p>
+                  )}
+                </div>
               )}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span>{label}</span>}
-            </Link>
+
+              {hasChildren ? (
+                <div>
+                  <div
+                    className={cn(
+                      "flex items-center rounded-lg transition-colors",
+                      active ? "bg-green-600" : "hover:bg-green-700"
+                    )}
+                  >
+                    <Link
+                      href={href}
+                      className="flex items-center gap-3 px-3 py-2.5 flex-1 text-sm font-medium"
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0 text-white" />
+                      {!collapsed && <span className="text-white">{label}</span>}
+                    </Link>
+                    {!collapsed && (
+                      <button
+                        onClick={() => setReportsOpen((o) => !o)}
+                        className="pr-3 py-2.5 text-green-200 hover:text-white transition-colors"
+                        aria-label="Toggle reports menu"
+                      >
+                        <ChevronDown
+                          className={cn(
+                            "w-4 h-4 transition-transform duration-300",
+                            reportsOpen ? "rotate-180" : "rotate-0"
+                          )}
+                        />
+                      </button>
+                    )}
+                  </div>
+
+                  {!collapsed && (
+                    <div
+                      className={cn(
+                        "overflow-hidden transition-all duration-300 ease-in-out",
+                        reportsOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
+                      )}
+                    >
+                      <div className="ml-4 mt-1 border-l-2 border-green-600 pl-3 pb-1 space-y-0.5">
+                        {reportSubItems.map((sub) => {
+                          const subActive = pathname === sub.href
+                          return (
+                            <Link
+                              key={sub.href}
+                              href={sub.href}
+                              className={cn(
+                                "flex items-center py-1.5 px-2 rounded text-xs font-medium transition-colors",
+                                subActive
+                                  ? "bg-green-700 text-yellow-300"
+                                  : "text-green-300 hover:bg-green-700 hover:text-white"
+                              )}
+                            >
+                              {sub.label}
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    active ? "bg-green-600 text-white" : "text-green-100 hover:bg-green-700 hover:text-white"
+                  )}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {!collapsed && <span>{label}</span>}
+                </Link>
+              )}
+            </div>
           )
         })}
       </nav>

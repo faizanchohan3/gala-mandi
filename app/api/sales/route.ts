@@ -11,11 +11,13 @@ export async function GET(req: Request) {
   const page = parseInt(searchParams.get("page") || "1")
   const limit = parseInt(searchParams.get("limit") || "20")
   const skip = (page - 1) * limit
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
 
   const [sales, total] = await Promise.all([
     db.sale.findMany({
       skip,
       take: limit,
+      where: shopFilter,
       orderBy: { createdAt: "desc" },
       include: {
         customer: true,
@@ -23,7 +25,7 @@ export async function GET(req: Request) {
         items: { include: { product: true } },
       },
     }),
-    db.sale.count(),
+    db.sale.count({ where: shopFilter }),
   ])
 
   return NextResponse.json({ sales, total, page, limit })
@@ -57,6 +59,7 @@ export async function POST(req: Request) {
   const sale = await db.$transaction(async (tx) => {
     const s = await tx.sale.create({
       data: {
+        shopId: session.user.shopId || null,
         customerId: customerId || null,
         totalAmount,
         paidAmount: paidAmount || 0,
@@ -76,14 +79,12 @@ export async function POST(req: Request) {
       include: { items: true },
     })
 
-    // Record initial payment so the ledger shows a credit entry
     if (paidAmount && paidAmount > 0) {
       await tx.payment.create({
         data: { saleId: s.id, amount: paidAmount, method: body.paymentMethod || "CASH", notes: "Initial payment at sale" },
       })
     }
 
-    // Deduct stock
     for (const item of items) {
       await tx.product.update({
         where: { id: item.productId },
@@ -97,11 +98,7 @@ export async function POST(req: Request) {
     return s
   })
 
-  await createAuditLog({ userId: session.user.id, action: "CREATE", module: "SALES", details: `Created sale: ${formatCurrency(totalAmount)}` })
+  await createAuditLog({ userId: session.user.id, shopId: session.user.shopId, action: "CREATE", module: "SALES", details: `Created sale: PKR ${totalAmount.toLocaleString()}` })
 
   return NextResponse.json({ sale }, { status: 201 })
-}
-
-function formatCurrency(amount: number) {
-  return `PKR ${amount.toLocaleString()}`
 }

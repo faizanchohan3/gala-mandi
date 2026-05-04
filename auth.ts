@@ -16,6 +16,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = (user as any).role
         token.name = user.name
         token.email = user.email
+        token.shopId = (user as any).shopId ?? null
+        token.shopName = (user as any).shopName ?? null
       }
       return token
     },
@@ -25,6 +27,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.role = token.role as string
         session.user.name = token.name as string
         session.user.email = token.email as string
+        session.user.shopId = (token.shopId as string) ?? null
+        session.user.shopName = (token.shopName as string) ?? null
       }
       return session
     },
@@ -40,9 +44,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await db.user.findUnique({
           where: { email: parsed.data.email },
+          include: { shop: true },
         })
 
         if (!user || !user.isActive) return null
+
+        // Block login if the user's shop is not approved yet
+        if (user.shopId && !user.shop?.isActive) return null
 
         const passwordMatch = await bcrypt.compare(
           parsed.data.password,
@@ -56,6 +64,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
+          shopId: user.shopId ?? null,
+          shopName: user.shop?.name ?? null,
         }
       },
     }),

@@ -2,12 +2,14 @@ import { db } from "./db"
 
 export async function createAuditLog({
   userId,
+  shopId,
   action,
   module,
   details,
   ipAddress,
 }: {
   userId: string
+  shopId?: string | null
   action: string
   module: string
   details?: string
@@ -15,7 +17,7 @@ export async function createAuditLog({
 }) {
   try {
     await db.auditLog.create({
-      data: { userId, action, module, details, ipAddress },
+      data: { userId, shopId: shopId || null, action, module, details, ipAddress },
     })
   } catch {
     // Audit failures should not break the main operation

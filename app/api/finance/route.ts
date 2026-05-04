@@ -12,16 +12,19 @@ export async function GET(req: Request) {
   const limit = parseInt(searchParams.get("limit") || "20")
   const skip = (page - 1) * limit
 
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
   const [transactions, total, summary] = await Promise.all([
     db.transaction.findMany({
       skip,
       take: limit,
+      where: shopFilter,
       orderBy: { createdAt: "desc" },
       include: { createdBy: { select: { name: true } } },
     }),
-    db.transaction.count(),
+    db.transaction.count({ where: shopFilter }),
     db.transaction.groupBy({
       by: ["type"],
+      where: shopFilter,
       _sum: { amount: true },
     }),
   ])
@@ -39,7 +42,7 @@ export async function POST(req: Request) {
   const { type, amount, description, reference, category } = await req.json()
 
   const transaction = await db.transaction.create({
-    data: { type, amount, description, reference, category, createdById: session.user.id },
+    data: { shopId: session.user.shopId || null, type, amount, description, reference, category, createdById: session.user.id },
   })
 
   await createAuditLog({ userId: session.user.id, action: "CREATE", module: "FINANCE", details: `${type}: PKR ${amount} - ${description}` })

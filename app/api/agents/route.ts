@@ -6,8 +6,9 @@ export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
   const agents = await db.commissionAgent.findMany({
-    where: { isActive: true },
+    where: { ...shopFilter, isActive: true },
     orderBy: { name: "asc" },
     include: {
       _count: { select: { commissions: true } },
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
   const body = await req.json()
   const agent = await db.commissionAgent.create({
     data: {
+      shopId: session.user.shopId || null,
       name: body.name,
       phone: body.phone || null,
       address: body.address || null,
