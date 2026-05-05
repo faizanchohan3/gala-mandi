@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Plus, Search, AlertTriangle, ShoppingCart, Edit, Sprout } from "lucide-react"
+import { Plus, Search, AlertTriangle, ShoppingCart, Edit, Sprout, Trash2 } from "lucide-react"
 
 export default function PesticidesPage() {
   const [pesticides, setPesticides] = useState<any[]>([])
@@ -84,6 +84,12 @@ export default function PesticidesPage() {
       }),
     })
     if (res.ok) { setShowModal(false); loadData() }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this pesticide? This cannot be undone.")) return
+    const res = await fetch(`/api/pesticides/${id}`, { method: "DELETE" })
+    if (res.ok) loadData()
   }
 
   async function handleSale() {
@@ -194,6 +200,9 @@ export default function PesticidesPage() {
                             </button>
                             <button onClick={() => openEdit(p)} className="p-1 text-gray-400 hover:text-blue-600">
                               <Edit className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDelete(p.id)} className="p-1 text-gray-400 hover:text-red-600" title="Delete">
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>

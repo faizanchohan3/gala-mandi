@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Plus, Search, Package, AlertTriangle, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, Package, AlertTriangle, Edit, Trash2, Tag, ChevronDown, ChevronUp, X } from "lucide-react"
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<any[]>([])
@@ -22,6 +22,9 @@ export default function InventoryPage() {
     name: "", categoryId: "", unit: "KG", currentStock: "0",
     minStock: "0", purchasePrice: "0", salePrice: "0",
   })
+  const [showCategories, setShowCategories] = useState(false)
+  const [newCatName, setNewCatName] = useState("")
+  const [catSaving, setCatSaving] = useState(false)
 
   async function loadData() {
     setLoading(true)
@@ -75,6 +78,25 @@ export default function InventoryPage() {
     loadData()
   }
 
+  async function addCategory() {
+    if (!newCatName.trim()) return
+    setCatSaving(true)
+    await fetch("/api/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newCatName.trim() }),
+    })
+    setNewCatName("")
+    setCatSaving(false)
+    loadData()
+  }
+
+  async function deleteCategory(id: string) {
+    if (!confirm("Delete this category? Products in this category will lose their category.")) return
+    await fetch(`/api/categories/${id}`, { method: "DELETE" })
+    loadData()
+  }
+
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.category?.name.toLowerCase().includes(search.toLowerCase())
@@ -90,10 +112,62 @@ export default function InventoryPage() {
           <h2 className="text-2xl font-bold text-gray-900">Inventory</h2>
           <p className="text-gray-500 text-sm">{products.length} products total</p>
         </div>
-        <Button onClick={openAdd}>
-          <Plus className="w-4 h-4" /> Add Product
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowCategories((v) => !v)} className="gap-2">
+            <Tag className="w-4 h-4" />
+            Categories ({categories.length})
+            {showCategories ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </Button>
+          <Button onClick={openAdd} className="gap-1">
+            <Plus className="w-4 h-4" /> Add Product
+          </Button>
+        </div>
       </div>
+
+      {/* Category Management Panel */}
+      {showCategories && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Tag className="w-4 h-4 text-purple-600" />
+            Manage Categories
+          </h3>
+
+          {/* Add new category */}
+          <div className="flex gap-2 mb-4">
+            <Input
+              placeholder="New category name (e.g. Grains, Vegetables)"
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCategory()}
+              className="flex-1"
+            />
+            <Button onClick={addCategory} disabled={catSaving || !newCatName.trim()} className="gap-1">
+              <Plus className="w-4 h-4" />
+              {catSaving ? "Adding..." : "Add"}
+            </Button>
+          </div>
+
+          {/* Category list */}
+          {categories.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">No categories yet. Add one above to get started.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {categories.map((c) => (
+                <div key={c.id} className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 text-purple-800 text-sm px-3 py-1.5 rounded-full">
+                  <span className="font-medium">{c.name}</span>
+                  <button
+                    onClick={() => deleteCategory(c.id)}
+                    className="text-purple-400 hover:text-red-600 transition-colors ml-1"
+                    title="Delete category"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Critical Stock Alert (≤ 2 units) */}
       {criticalStock.length > 0 && (
@@ -222,14 +296,20 @@ export default function InventoryPage() {
             </div>
             <div>
               <Label>Category</Label>
-              <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {categories.length === 0 ? (
+                <div className="mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  No categories yet. Close this and click <strong>Categories</strong> to add one first.
+                </div>
+              ) : (
+                <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
