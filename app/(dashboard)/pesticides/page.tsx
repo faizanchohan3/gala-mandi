@@ -31,16 +31,19 @@ export default function PesticidesPage() {
   const [saleForm, setSaleForm] = useState({ quantity: "1", customerName: "", paidAmount: "0", notes: "" })
 
   async function loadData() {
-    setLoading(true)
-    const [pr, cr, sr] = await Promise.all([
-      fetch("/api/pesticides").then((r) => r.json()),
-      fetch("/api/pesticide-categories").then((r) => r.json()),
-      fetch("/api/pesticides/sales").then((r) => r.json()),
-    ])
-    setPesticides(pr.pesticides || [])
-    setCategories(cr.categories || [])
-    setSales(sr.sales || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const [pr, cr, sr] = await Promise.all([
+        fetch("/api/pesticides").then((r) => r.json()),
+        fetch("/api/pesticide-categories").then((r) => r.json()),
+        fetch("/api/pesticides/sales").then((r) => r.json()),
+      ])
+      setPesticides(pr.pesticides || [])
+      setCategories(cr.categories || [])
+      setSales(sr.sales || [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadData() }, [])
@@ -159,7 +162,7 @@ export default function PesticidesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {loading && !pesticides.length ? (
               <div className="text-center py-8 text-gray-400">Loading...</div>
             ) : (
               <table className="w-full text-sm">

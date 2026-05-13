@@ -28,12 +28,15 @@ export default function ExpensesPage() {
   })
 
   async function loadData() {
-    setLoading(true)
-    const data = await fetch("/api/expenses").then((r) => r.json())
-    setExpenses(data.expenses || [])
-    setSummary(data.summary || [])
-    setTotal(data.total || 0)
-    setLoading(false)
+    try {
+      setLoading(true)
+      const data = await fetch("/api/expenses").then((r) => r.json())
+      setExpenses(data.expenses || [])
+      setSummary(data.summary || [])
+      setTotal(data.total || 0)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadData() }, [])
@@ -173,7 +176,7 @@ export default function ExpensesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {loading ? (
+                {loading && !expenses.length ? (
                   <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : filtered.map((e, i) => (
                   <tr key={e.id} className="hover:bg-red-50/30">

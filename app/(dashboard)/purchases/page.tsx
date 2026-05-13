@@ -24,16 +24,19 @@ export default function PurchasesPage() {
   const [items, setItems] = useState([{ productId: "", quantity: "1", price: "0" }])
 
   async function loadData() {
-    setLoading(true)
-    const [pr, prod, sup] = await Promise.all([
-      fetch("/api/purchases").then((r) => r.json()),
-      fetch("/api/inventory").then((r) => r.json()),
-      fetch("/api/suppliers").then((r) => r.json()),
-    ])
-    setPurchases(pr.purchases || [])
-    setProducts(prod.products || [])
-    setSuppliers(sup.suppliers || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const [pr, prod, sup] = await Promise.all([
+        fetch("/api/purchases").then((r) => r.json()),
+        fetch("/api/inventory").then((r) => r.json()),
+        fetch("/api/suppliers").then((r) => r.json()),
+      ])
+      setPurchases(pr.purchases || [])
+      setProducts(prod.products || [])
+      setSuppliers(sup.suppliers || [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadData() }, [])
@@ -102,7 +105,7 @@ export default function PurchasesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {loading && !purchases.length ? (
             <div className="text-center py-8 text-gray-400">Loading...</div>
           ) : (
             <div className="overflow-x-auto">

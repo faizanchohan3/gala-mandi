@@ -35,15 +35,19 @@ export default function CustomersPage() {
   const [detail, setDetail] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<Tab>("ledger")
   const [form, setForm] = useState(DEFAULT_FORM)
-  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "" })
+  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "" })
+  const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function loadData() {
-    setLoading(true)
-    const data = await fetch("/api/customers").then((r) => r.json())
-    setCustomers(data.customers || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const data = await fetch("/api/customers").then((r) => r.json())
+      setCustomers(data.customers || [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function loadDetail(id: string) {
@@ -51,7 +55,10 @@ export default function CustomersPage() {
     setDetail(data)
   }
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    loadData()
+    fetch("/api/banks").then((r) => r.json()).then((d) => setBanks(d.banks || []))
+  }, [])
 
   function openAdd() {
     setEditing(null)
@@ -83,7 +90,7 @@ export default function CustomersPage() {
 
   function openPayment(c: any) {
     setSelected(c)
-    setPaymentForm({ amount: "", method: "CASH", notes: "" })
+    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "" })
     setShowPaymentModal(true)
   }
 
@@ -201,7 +208,7 @@ export default function CustomersPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {loading ? (
+          {loading && !customers.length ? (
             <div className="text-center py-10 text-gray-400">Loading...</div>
           ) : (
             <div className="overflow-x-auto">
@@ -653,7 +660,7 @@ export default function CustomersPage() {
             </div>
             <div>
               <Label>Payment Method</Label>
-              <Select value={paymentForm.method} onValueChange={(v) => setPaymentForm({ ...paymentForm, method: v })}>
+              <Select value={paymentForm.method} onValueChange={(v) => setPaymentForm({ ...paymentForm, method: v, bankId: v === "CASH" ? "" : paymentForm.bankId })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="CASH">Cash</SelectItem>
@@ -662,6 +669,20 @@ export default function CustomersPage() {
                 </SelectContent>
               </Select>
             </div>
+            {paymentForm.method !== "CASH" && banks.length > 0 && (
+              <div>
+                <Label>Bank Account</Label>
+                <Select value={paymentForm.bankId || "none"} onValueChange={(v) => setPaymentForm({ ...paymentForm, bankId: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="Select bank..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Not specified —</SelectItem>
+                    {banks.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}{b.accountNumber ? ` (${b.accountNumber})` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Notes (optional)</Label>
               <Input placeholder="Cheque no., reference..."

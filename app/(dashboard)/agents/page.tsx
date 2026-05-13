@@ -23,10 +23,13 @@ export default function AgentsPage() {
   const [payForm, setPayForm] = useState({ type: "CREDIT", amount: "", rate: "", saleValue: "", notes: "" })
 
   async function loadData() {
-    setLoading(true)
-    const d = await fetch("/api/agents").then((r) => r.json())
-    setAgents(d.agents || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const d = await fetch("/api/agents").then((r) => r.json())
+      setAgents(d.agents || [])
+    } finally {
+      setLoading(false)
+    }
   }
   useEffect(() => { loadData() }, [])
 
@@ -149,7 +152,7 @@ export default function AgentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {loading && !agents.length ? (
                   <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : filtered.map((a, i) => (
                   <>

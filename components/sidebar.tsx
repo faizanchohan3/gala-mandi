@@ -9,7 +9,7 @@ import {
   Wallet, BarChart3, ClipboardList, Users, Settings,
   ChevronLeft, ChevronRight, Store, CheckSquare, UserCheck,
   Truck, ChevronDown, Receipt, Tractor, UserCog, Warehouse,
-  Scale, UserCircle,
+  Scale, UserCircle, Building2,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -28,6 +28,7 @@ const reportSubItems = [
   { href: "/reports/profit-loss", label: "Profit & Loss" },
   { href: "/reports/customer-ledger", label: "Customer Ledger" },
   { href: "/reports/supplier-ledger", label: "Supplier Ledger" },
+  { href: "/reports/bank-transactions", label: "Bank Transactions" },
 ]
 
 const shopNavItems: NavItem[] = [
@@ -39,9 +40,10 @@ const shopNavItems: NavItem[] = [
   { href: "/suppliers", label: "Suppliers", icon: Truck },
   { href: "/pesticides", label: "Pesticides", icon: Sprout },
   { href: "/finance", label: "Finance", icon: Wallet },
+  { href: "/banks", label: "Banks", icon: Building2 },
   { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/farmers", label: "Farmers", icon: Tractor },
-  { href: "/agents", label: "Aadat Agents", icon: UserCog },
+  { href: "/agents", label: "Commission Agents", icon: UserCog },
   { href: "/warehouse", label: "Godowns", icon: Warehouse },
   { href: "/transport", label: "Transport", icon: Truck },
   { href: "/gate", label: "Gate / Weighbridge", icon: Scale },

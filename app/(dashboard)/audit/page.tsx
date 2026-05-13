@@ -63,7 +63,7 @@ export default function AuditPage() {
 
       <Card>
         <CardContent className="pt-6">
-          {loading ? (
+          {loading && !logs.length ? (
             <div className="text-center py-8 text-gray-400">Loading audit logs...</div>
           ) : (
             <div className="space-y-2">

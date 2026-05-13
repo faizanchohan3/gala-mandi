@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       take: limit,
       where: shopFilter,
       orderBy: { createdAt: "desc" },
-      include: { createdBy: { select: { name: true } } },
+      include: { createdBy: { select: { name: true } }, bank: { select: { name: true } } },
     }),
     db.transaction.count({ where: shopFilter }),
     db.transaction.groupBy({
@@ -39,10 +39,10 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { type, amount, description, reference, category } = await req.json()
+  const { type, amount, description, reference, category, bankId } = await req.json()
 
   const transaction = await db.transaction.create({
-    data: { shopId: session.user.shopId || null, type, amount, description, reference, category, createdById: session.user.id },
+    data: { shopId: session.user.shopId || null, type, amount, description, reference, category, bankId: bankId || null, createdById: session.user.id },
   })
 
   await createAuditLog({ userId: session.user.id, action: "CREATE", module: "FINANCE", details: `${type}: PKR ${amount} - ${description}` })

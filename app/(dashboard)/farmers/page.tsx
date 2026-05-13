@@ -22,10 +22,13 @@ export default function FarmersPage() {
   })
 
   async function loadData() {
-    setLoading(true)
-    const d = await fetch("/api/farmers").then((r) => r.json())
-    setFarmers(d.farmers || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const d = await fetch("/api/farmers").then((r) => r.json())
+      setFarmers(d.farmers || [])
+    } finally {
+      setLoading(false)
+    }
   }
   useEffect(() => { loadData() }, [])
 
@@ -143,7 +146,7 @@ export default function FarmersPage() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {loading && !farmers.length ? (
                   <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : filtered.map((f, i) => (
                   <>

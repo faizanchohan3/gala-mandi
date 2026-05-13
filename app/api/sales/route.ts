@@ -56,6 +56,20 @@ export async function POST(req: Request) {
     }
   }
 
+  // Stock check before transaction
+  const productIds = items.map((i: any) => i.productId)
+  const products = await db.product.findMany({ where: { id: { in: productIds } }, select: { id: true, name: true, currentStock: true } })
+  for (const item of items) {
+    const prod = products.find((p) => p.id === item.productId)
+    if (!prod) return NextResponse.json({ error: `Product not found` }, { status: 400 })
+    if (prod.currentStock < item.quantity) {
+      return NextResponse.json(
+        { error: `Insufficient stock for "${prod.name}". Available: ${prod.currentStock}, Requested: ${item.quantity}` },
+        { status: 422 }
+      )
+    }
+  }
+
   const sale = await db.$transaction(async (tx) => {
     const s = await tx.sale.create({
       data: {

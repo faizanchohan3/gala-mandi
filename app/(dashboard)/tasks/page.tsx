@@ -27,14 +27,17 @@ export default function TasksPage() {
   })
 
   async function loadData() {
-    setLoading(true)
-    const [tr, ur] = await Promise.all([
-      fetch("/api/tasks").then((r) => r.json()),
-      fetch("/api/users").then((r) => r.json()),
-    ])
-    setTasks(tr.tasks || [])
-    setUsers(ur.users || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const [tr, ur] = await Promise.all([
+        fetch("/api/tasks").then((r) => r.json()),
+        fetch("/api/users").then((r) => r.json()),
+      ])
+      setTasks(tr.tasks || [])
+      setUsers(ur.users || [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadData() }, [])
@@ -128,7 +131,7 @@ export default function TasksPage() {
       </div>
 
       {/* Tasks Grid */}
-      {loading ? (
+      {loading && !tasks.length ? (
         <div className="text-center py-8 text-gray-400">Loading...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

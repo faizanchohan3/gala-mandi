@@ -8,7 +8,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
-  const { amount, method, notes } = await req.json()
+  const { amount, method, notes, bankId } = await req.json()
 
   if (!amount || amount <= 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
 
@@ -33,7 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       })
 
       await tx.payment.create({
-        data: { purchaseId: purchase.id, amount: apply, method: method || "CASH", notes },
+        data: { purchaseId: purchase.id, amount: apply, method: method || "CASH", notes, bankId: bankId || null },
       })
 
       remaining -= apply

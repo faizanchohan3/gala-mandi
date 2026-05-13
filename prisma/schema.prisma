@@ -87,6 +87,23 @@ model Shop {
   transactions        Transaction[]
   tasks               Task[]
   auditLogs           AuditLog[]
+  banks               Bank[]
+}
+
+// ── BANKS ─────────────────────────────────────────────────────────────────────
+
+model Bank {
+  id            String   @id @default(cuid())
+  shopId        String?
+  name          String
+  accountNumber String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  shop           Shop?           @relation(fields: [shopId], references: [id])
+  payments       Payment[]
+  farmerPayments FarmerPayment[]
+  transactions   Transaction[]
 }
 
 // ── USERS ────────────────────────────────────────────────────────────────────
@@ -276,6 +293,7 @@ model Payment {
   id         String        @id @default(cuid())
   saleId     String?
   purchaseId String?
+  bankId     String?
   amount     Float
   method     PaymentMethod @default(CASH)
   reference  String?
@@ -284,6 +302,7 @@ model Payment {
 
   sale     Sale?     @relation(fields: [saleId], references: [id])
   purchase Purchase? @relation(fields: [purchaseId], references: [id])
+  bank     Bank?     @relation(fields: [bankId], references: [id])
 }
 
 // ── PESTICIDES ───────────────────────────────────────────────────────────────
@@ -343,6 +362,7 @@ model PesticideSale {
 model Transaction {
   id          String          @id @default(cuid())
   shopId      String?
+  bankId      String?
   type        TransactionType
   amount      Float
   description String
@@ -352,6 +372,7 @@ model Transaction {
   createdAt   DateTime        @default(now())
 
   shop      Shop? @relation(fields: [shopId], references: [id])
+  bank      Bank? @relation(fields: [bankId], references: [id])
   createdBy User  @relation(fields: [createdById], references: [id])
 }
 
@@ -452,6 +473,7 @@ model FarmerPayment {
   id         String        @id @default(cuid())
   farmerId   String
   purchaseId String?
+  bankId     String?
   amount     Float
   method     PaymentMethod @default(CASH)
   reference  String?
@@ -460,6 +482,7 @@ model FarmerPayment {
 
   farmer   Farmer          @relation(fields: [farmerId], references: [id])
   purchase FarmerPurchase? @relation(fields: [purchaseId], references: [id])
+  bank     Bank?           @relation(fields: [bankId], references: [id])
 }
 
 // ── COMMISSION AGENT (AADAT) ─────────────────────────────────────────────────

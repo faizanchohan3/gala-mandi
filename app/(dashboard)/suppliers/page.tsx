@@ -24,14 +24,18 @@ export default function SuppliersPage() {
   const [selected, setSelected] = useState<any>(null)
   const [detail, setDetail] = useState<any>(null)
   const [form, setForm] = useState({ name: "", phone: "", address: "" })
-  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "" })
+  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "" })
+  const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
 
   async function loadData() {
-    setLoading(true)
-    const data = await fetch("/api/suppliers").then((r) => r.json())
-    setSuppliers(data.suppliers || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const data = await fetch("/api/suppliers").then((r) => r.json())
+      setSuppliers(data.suppliers || [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function loadDetail(id: string) {
@@ -39,7 +43,10 @@ export default function SuppliersPage() {
     setDetail(data)
   }
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    loadData()
+    fetch("/api/banks").then((r) => r.json()).then((d) => setBanks(d.banks || []))
+  }, [])
 
   function openAdd() {
     setEditing(null)
@@ -62,7 +69,7 @@ export default function SuppliersPage() {
 
   function openPayment(s: any) {
     setSelected(s)
-    setPaymentForm({ amount: "", method: "CASH", notes: "" })
+    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "" })
     setShowPaymentModal(true)
   }
 
@@ -170,7 +177,7 @@ export default function SuppliersPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {loading && !suppliers.length ? (
             <div className="text-center py-10 text-gray-400">Loading...</div>
           ) : (
             <div className="overflow-x-auto">
@@ -389,7 +396,7 @@ export default function SuppliersPage() {
             </div>
             <div>
               <Label>Payment Method</Label>
-              <Select value={paymentForm.method} onValueChange={(v) => setPaymentForm({ ...paymentForm, method: v })}>
+              <Select value={paymentForm.method} onValueChange={(v) => setPaymentForm({ ...paymentForm, method: v, bankId: v === "CASH" ? "" : paymentForm.bankId })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="CASH">Cash</SelectItem>
@@ -398,6 +405,20 @@ export default function SuppliersPage() {
                 </SelectContent>
               </Select>
             </div>
+            {paymentForm.method !== "CASH" && banks.length > 0 && (
+              <div>
+                <Label>Bank Account</Label>
+                <Select value={paymentForm.bankId || "none"} onValueChange={(v) => setPaymentForm({ ...paymentForm, bankId: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="Select bank..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Not specified —</SelectItem>
+                    {banks.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}{b.accountNumber ? ` (${b.accountNumber})` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Notes (optional)</Label>
               <Input

@@ -20,10 +20,13 @@ export default function UsersPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "CASHIER", isActive: true })
 
   async function loadData() {
-    setLoading(true)
-    const data = await fetch("/api/users").then((r) => r.json())
-    setUsers(data.users || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const data = await fetch("/api/users").then((r) => r.json())
+      setUsers(data.users || [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadData() }, [])
@@ -96,7 +99,7 @@ export default function UsersPage() {
 
       <Card>
         <CardContent className="pt-6">
-          {loading ? (
+          {loading && !users.length ? (
             <div className="text-center py-8 text-gray-400">Loading...</div>
           ) : (
             <div className="overflow-x-auto">

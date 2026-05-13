@@ -27,14 +27,17 @@ export default function InventoryPage() {
   const [catSaving, setCatSaving] = useState(false)
 
   async function loadData() {
-    setLoading(true)
-    const [pr, cr] = await Promise.all([
-      fetch("/api/inventory").then((r) => r.json()),
-      fetch("/api/categories").then((r) => r.json()),
-    ])
-    setProducts(pr.products || [])
-    setCategories(cr.categories || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const [pr, cr] = await Promise.all([
+        fetch("/api/inventory").then((r) => r.json()),
+        fetch("/api/categories").then((r) => r.json()),
+      ])
+      setProducts(pr.products || [])
+      setCategories(cr.categories || [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadData() }, [])
@@ -231,7 +234,7 @@ export default function InventoryPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {loading && !products.length ? (
             <div className="text-center py-8 text-gray-400">Loading...</div>
           ) : (
             <div className="overflow-x-auto">

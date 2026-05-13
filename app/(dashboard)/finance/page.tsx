@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,21 +10,32 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDateTime } from "@/lib/utils"
-import { Plus, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle } from "lucide-react"
+import {
+  Plus, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle,
+  Building2,
+} from "lucide-react"
 
 export default function FinancePage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 })
+  const [banks, setBanks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ type: "CREDIT", amount: "", description: "", reference: "", category: "" })
+  const [form, setForm] = useState({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "" })
 
   async function loadData() {
-    setLoading(true)
-    const data = await fetch("/api/finance").then((r) => r.json())
-    setTransactions(data.transactions || [])
-    setSummary({ income: data.income || 0, expense: data.expense || 0, balance: data.balance || 0 })
-    setLoading(false)
+    try {
+      setLoading(true)
+      const [txData, bankData] = await Promise.all([
+        fetch("/api/finance").then((r) => r.json()),
+        fetch("/api/banks").then((r) => r.json()),
+      ])
+      setTransactions(txData.transactions || [])
+      setSummary({ income: txData.income || 0, expense: txData.expense || 0, balance: txData.balance || 0 })
+      setBanks(bankData.banks || [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadData() }, [])
@@ -33,11 +45,11 @@ export default function FinancePage() {
     const res = await fetch("/api/finance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
+      body: JSON.stringify({ ...form, amount: parseFloat(form.amount), bankId: form.bankId || null }),
     })
     if (res.ok) {
       setShowModal(false)
-      setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "" })
+      setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "" })
       loadData()
     }
   }
@@ -51,7 +63,16 @@ export default function FinancePage() {
           <h2 className="text-2xl font-bold text-gray-900">Finance</h2>
           <p className="text-gray-500 text-sm">Track income, expenses, and balance</p>
         </div>
-        <Button onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Add Transaction</Button>
+        <div className="flex gap-2">
+          <Link href="/banks">
+            <Button variant="outline" className="gap-2">
+              <Building2 className="w-4 h-4" /> Manage Banks
+            </Button>
+          </Link>
+          <Button onClick={() => setShowModal(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Add Transaction
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -105,14 +126,14 @@ export default function FinancePage() {
           <CardTitle className="text-base">Transaction History</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {loading && !transactions.length ? (
             <div className="text-center py-8 text-gray-400">Loading...</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["Type", "Description", "Category", "Amount", "Reference", "By", "Date"].map((h) => (
+                    {["Type", "Description", "Category", "Bank", "Amount", "Reference", "By", "Date"].map((h) => (
                       <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
                     ))}
                   </tr>
@@ -134,6 +155,15 @@ export default function FinancePage() {
                       </td>
                       <td className="py-3 px-3 font-medium text-gray-800">{t.description}</td>
                       <td className="py-3 px-3 text-gray-500">{t.category || "-"}</td>
+                      <td className="py-3 px-3">
+                        {t.bank ? (
+                          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">
+                            {t.bank.name}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">Cash</span>
+                        )}
+                      </td>
                       <td className={`py-3 px-3 font-semibold ${t.type === "CREDIT" ? "text-green-600" : "text-red-600"}`}>
                         {t.type === "CREDIT" ? "+" : "-"}{formatCurrency(t.amount)}
                       </td>
@@ -143,7 +173,7 @@ export default function FinancePage() {
                     </tr>
                   ))}
                   {transactions.length === 0 && (
-                    <tr><td colSpan={7} className="text-center py-8 text-gray-400">No transactions yet</td></tr>
+                    <tr><td colSpan={8} className="text-center py-8 text-gray-400">No transactions yet</td></tr>
                   )}
                 </tbody>
               </table>
@@ -152,6 +182,7 @@ export default function FinancePage() {
         </CardContent>
       </Card>
 
+      {/* Add Transaction Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -179,6 +210,18 @@ export default function FinancePage() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label>Bank Account (optional)</Label>
+              <Select value={form.bankId || "CASH"} onValueChange={(v) => setForm({ ...form, bankId: v === "CASH" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Cash / No Bank" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CASH">Cash (No Bank)</SelectItem>
+                  {banks.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}{b.accountNumber ? ` — ${b.accountNumber}` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Reference (optional)</Label><Input placeholder="Invoice #, Cheque #" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
@@ -187,6 +230,7 @@ export default function FinancePage() {
           </div>
         </DialogContent>
       </Dialog>
+
     </div>
   )
 }

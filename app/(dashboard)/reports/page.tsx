@@ -56,6 +56,13 @@ const reportCards = [
     icon: DollarSign,
     color: "from-teal-600 to-teal-700",
   },
+  {
+    href: "/reports/bank-transactions",
+    title: "Bank Transactions",
+    description: "All bank payments & receipts filtered by bank and date",
+    icon: Wallet,
+    color: "from-blue-600 to-blue-700",
+  },
 ]
 
 export default function ReportsPage() {
