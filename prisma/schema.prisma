@@ -200,9 +200,10 @@ model Customer {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  shop         Shop?         @relation(fields: [shopId], references: [id])
-  sales        Sale[]
-  freightSlips FreightSlip[]
+  shop           Shop?           @relation(fields: [shopId], references: [id])
+  sales          Sale[]
+  pesticideSales PesticideSale[]
+  freightSlips   FreightSlip[]
 }
 
 // ── SUPPLIERS ────────────────────────────────────────────────────────────────
@@ -343,17 +344,20 @@ model PesticideSale {
   id           String   @id @default(cuid())
   shopId       String?
   pesticideId  String
+  customerId   String?
   quantity     Float
   unitPrice    Float
   totalAmount  Float
   customerName String?
   paidAmount   Float    @default(0)
+  balance      Float    @default(0)
   soldById     String
   notes        String?
   createdAt    DateTime @default(now())
 
   shop      Shop?     @relation(fields: [shopId], references: [id])
   pesticide Pesticide @relation(fields: [pesticideId], references: [id])
+  customer  Customer? @relation(fields: [customerId], references: [id])
   soldBy    User      @relation(fields: [soldById], references: [id])
 }
 

@@ -25,17 +25,25 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const customer = await db.customer.findUnique({ where: { id } })
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const sales = await db.sale.findMany({
-    where: { customerId: id, ...dateWhere },
-    orderBy: { createdAt: "asc" },
-    include: {
-      items: { include: { product: { select: { name: true, unit: true } } } },
-      payments: { orderBy: { createdAt: "asc" } },
-    },
-  })
+  const [sales, pesticideSales] = await Promise.all([
+    db.sale.findMany({
+      where: { customerId: id, ...dateWhere },
+      orderBy: { createdAt: "asc" },
+      include: {
+        items: { include: { product: { select: { name: true, unit: true } } } },
+        payments: { orderBy: { createdAt: "asc" } },
+      },
+    }),
+    db.pesticideSale.findMany({
+      where: { customerId: id, ...dateWhere },
+      orderBy: { createdAt: "asc" },
+      include: { pesticide: { select: { name: true, unit: true } } },
+    }),
+  ])
 
   const events: any[] = []
 
+  // Regular product sales
   for (const sale of sales) {
     events.push({
       date: sale.createdAt,
@@ -46,7 +54,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     })
 
     if (sale.payments.length > 0) {
-      // Use actual payment records
       for (const payment of sale.payments) {
         events.push({
           date: payment.createdAt,
@@ -57,13 +64,32 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         })
       }
     } else if (sale.paidAmount > 0) {
-      // Fallback: sale was created with paidAmount but no Payment record exists (legacy data)
       events.push({
         date: sale.createdAt,
         type: "PAYMENT",
         description: `Payment received — CASH (recorded at sale)`,
         debit: 0,
         credit: sale.paidAmount,
+      })
+    }
+  }
+
+  // Pesticide sales
+  for (const ps of pesticideSales) {
+    events.push({
+      date: ps.createdAt,
+      type: "PESTICIDE_SALE",
+      description: `Pesticide Sale #${ps.id.slice(-6).toUpperCase()} — ${ps.quantity} ${ps.pesticide?.unit} ${ps.pesticide?.name}`,
+      debit: ps.totalAmount,
+      credit: 0,
+    })
+    if (ps.paidAmount > 0) {
+      events.push({
+        date: ps.createdAt,
+        type: "PAYMENT",
+        description: `Payment received — Pesticide sale`,
+        debit: 0,
+        credit: ps.paidAmount,
       })
     }
   }

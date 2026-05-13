@@ -205,10 +205,12 @@ export default function CustomerLedgerPage() {
                             className={`text-xs font-semibold px-2 py-0.5 rounded ${
                               entry.type === "PAYMENT"
                                 ? "bg-green-100 text-green-700"
+                                : entry.type === "PESTICIDE_SALE"
+                                ? "bg-orange-100 text-orange-700"
                                 : "bg-blue-100 text-blue-700"
                             }`}
                           >
-                            {entry.type}
+                            {entry.type === "PESTICIDE_SALE" ? "PESTICIDE" : entry.type}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-gray-700 text-xs">{entry.description}</td>

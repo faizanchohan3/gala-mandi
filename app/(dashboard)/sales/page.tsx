@@ -25,7 +25,9 @@ export default function SalesPage() {
   const [showModal, setShowModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showPesticideSaleModal, setShowPesticideSaleModal] = useState(false)
+  const [showPesticideDetailModal, setShowPesticideDetailModal] = useState(false)
   const [selectedSale, setSelectedSale] = useState<any>(null)
+  const [selectedPesticideSaleDetail, setSelectedPesticideSaleDetail] = useState<any>(null)
   const [customerId, setCustomerId] = useState("")
   const [paidAmount, setPaidAmount] = useState("0")
   const [notes, setNotes] = useState("")
@@ -116,6 +118,7 @@ export default function SalesPage() {
         pesticideId: pesticideSaleForm.pesticideId,
         quantity: parseFloat(pesticideSaleForm.quantity),
         unitPrice: selectedPesticide?.salePrice || 0,
+        customerId: pesticideSaleForm.customerId || null,
         customerName,
         paidAmount: parseFloat(pesticideSaleForm.paidAmount),
       }),
@@ -154,7 +157,90 @@ export default function SalesPage() {
 
   return (
     <>
-      {/* ── Print Invoice Template (hidden on screen, shown on print) ── */}
+      {/* ── Pesticide Sale Print Template ── */}
+      {selectedPesticideSaleDetail && (
+        <div className="hidden print:block fixed inset-0 bg-white z-50 p-8">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-start justify-between border-b-2 border-gray-800 pb-4 mb-5">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{shopName}</h1>
+                <p className="text-sm text-gray-500">Pesticide Sale Invoice</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-gray-800">Invoice #{selectedPesticideSaleDetail.id.slice(-8).toUpperCase()}</p>
+                <p className="text-sm text-gray-600">Date: {formatDate(selectedPesticideSaleDetail.createdAt)}</p>
+                <p className="text-sm text-gray-600">Time: {new Date(selectedPesticideSaleDetail.createdAt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}</p>
+              </div>
+            </div>
+            <div className="mb-5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Bill To</p>
+              {(selectedPesticideSaleDetail.customer || selectedPesticideSaleDetail.customerName) ? (
+                <div>
+                  <p className="text-base font-bold text-gray-900">{selectedPesticideSaleDetail.customer?.name || selectedPesticideSaleDetail.customerName}</p>
+                  {selectedPesticideSaleDetail.customer?.phone && <p className="text-sm text-gray-600">Phone: {selectedPesticideSaleDetail.customer.phone}</p>}
+                </div>
+              ) : (
+                <p className="text-base font-medium text-gray-700">Walk-in Customer</p>
+              )}
+            </div>
+            <table className="w-full text-sm border-collapse mb-5">
+              <thead>
+                <tr className="bg-gray-800 text-white">
+                  <th className="px-3 py-2 text-left font-semibold">#</th>
+                  <th className="px-3 py-2 text-left font-semibold">Pesticide</th>
+                  <th className="px-3 py-2 text-center font-semibold">Qty</th>
+                  <th className="px-3 py-2 text-center font-semibold">Unit</th>
+                  <th className="px-3 py-2 text-right font-semibold">Unit Price</th>
+                  <th className="px-3 py-2 text-right font-semibold">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="bg-gray-50">
+                  <td className="px-3 py-2 border-b border-gray-200 text-gray-500">1</td>
+                  <td className="px-3 py-2 border-b border-gray-200 font-medium text-gray-900">{selectedPesticideSaleDetail.pesticide?.name}</td>
+                  <td className="px-3 py-2 border-b border-gray-200 text-center">{selectedPesticideSaleDetail.quantity}</td>
+                  <td className="px-3 py-2 border-b border-gray-200 text-center text-gray-500">{selectedPesticideSaleDetail.pesticide?.unit}</td>
+                  <td className="px-3 py-2 border-b border-gray-200 text-right">{formatCurrency(selectedPesticideSaleDetail.unitPrice)}</td>
+                  <td className="px-3 py-2 border-b border-gray-200 text-right font-semibold">{formatCurrency(selectedPesticideSaleDetail.totalAmount)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="flex justify-end mb-5">
+              <div className="w-64 space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Sub Total:</span>
+                  <span className="font-semibold">{formatCurrency(selectedPesticideSaleDetail.totalAmount)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-green-700">
+                  <span>Amount Paid:</span>
+                  <span className="font-semibold">{formatCurrency(selectedPesticideSaleDetail.paidAmount)}</span>
+                </div>
+                <div className="border-t border-gray-300 pt-1.5 flex justify-between font-bold text-base">
+                  <span className={(selectedPesticideSaleDetail.balance ?? 0) > 0 ? "text-red-700" : "text-green-700"}>
+                    {(selectedPesticideSaleDetail.balance ?? 0) > 0 ? "Balance Due:" : "Change:"}
+                  </span>
+                  <span className={(selectedPesticideSaleDetail.balance ?? 0) > 0 ? "text-red-700" : "text-green-700"}>
+                    {formatCurrency(Math.abs(selectedPesticideSaleDetail.balance ?? 0))}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 pt-4 flex items-start justify-between text-sm text-gray-600">
+              <div>
+                {selectedPesticideSaleDetail.notes && (
+                  <p><span className="font-medium">Notes:</span> {selectedPesticideSaleDetail.notes}</p>
+                )}
+              </div>
+              <div className="text-right">
+                <p>Sold by: {selectedPesticideSaleDetail.soldBy?.name}</p>
+                <p className="mt-4 pt-8 border-t border-gray-400 text-xs text-gray-400">Authorized Signature</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Product Sale Print Invoice Template (hidden on screen, shown on print) ── */}
       {selectedSale && (
         <div className="hidden print:block fixed inset-0 bg-white z-50 p-8">
           <div className="max-w-2xl mx-auto">
@@ -352,14 +438,15 @@ export default function SalesPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200">
-                        {["#", "Pesticide", "Qty", "Unit Price", "Total", "Customer", "Paid", "Balance", "Date", "By"].map((h) => (
+                        {["#", "Pesticide", "Qty", "Unit Price", "Total", "Customer", "Paid", "Balance", "Date", "By", ""].map((h) => (
                           <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {filteredPesticideSales.map((s, i) => {
-                        const bal = s.totalAmount - s.paidAmount
+                        const bal = s.balance ?? (s.totalAmount - s.paidAmount)
+                        const displayName = s.customer?.name || s.customerName
                         return (
                           <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
                             <td className="py-3 px-3 text-gray-400 text-xs">{i + 1}</td>
@@ -368,17 +455,30 @@ export default function SalesPage() {
                             <td className="py-3 px-3 text-gray-700">{formatCurrency(s.unitPrice)}</td>
                             <td className="py-3 px-3 font-semibold text-gray-900">{formatCurrency(s.totalAmount)}</td>
                             <td className="py-3 px-3">
-                              <span className="text-gray-800">{s.customerName || <span className="text-gray-400 text-xs">Walk-in</span>}</span>
+                              {displayName ? (
+                                <span className="text-gray-800">{displayName}</span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">Walk-in</span>
+                              )}
                             </td>
                             <td className="py-3 px-3 text-green-600">{formatCurrency(s.paidAmount)}</td>
                             <td className="py-3 px-3 text-red-600">{formatCurrency(bal)}</td>
                             <td className="py-3 px-3 text-gray-500">{formatDate(s.createdAt)}</td>
                             <td className="py-3 px-3 text-gray-500">{s.soldBy?.name}</td>
+                            <td className="py-3 px-3">
+                              <button
+                                onClick={() => { setSelectedPesticideSaleDetail(s); setShowPesticideDetailModal(true) }}
+                                className="p-1.5 text-gray-400 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                                title="View & Print"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </td>
                           </tr>
                         )
                       })}
                       {filteredPesticideSales.length === 0 && (
-                        <tr><td colSpan={10} className="text-center py-8 text-gray-400">No pesticide sales found</td></tr>
+                        <tr><td colSpan={11} className="text-center py-8 text-gray-400">No pesticide sales found</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -625,6 +725,90 @@ export default function SalesPage() {
                   <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Notes</p>
                     <p className="text-sm text-gray-700">{selectedSale.notes}</p>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Pesticide Sale Detail Modal */}
+        {selectedPesticideSaleDetail && (
+          <Dialog open={showPesticideDetailModal} onOpenChange={setShowPesticideDetailModal}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="flex items-center gap-2">
+                    <Sprout className="w-5 h-5 text-green-600" />
+                    Pesticide Sale
+                    <span className="text-sm font-normal text-gray-400">#{selectedPesticideSaleDetail.id.slice(-8).toUpperCase()}</span>
+                  </DialogTitle>
+                  <Button onClick={() => window.print()} variant="outline" size="sm" className="gap-2 mr-6">
+                    <Printer className="w-4 h-4" /> Print
+                  </Button>
+                </div>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 font-medium uppercase mb-1">Customer</p>
+                    <p className="font-bold text-gray-900">
+                      {selectedPesticideSaleDetail.customer?.name || selectedPesticideSaleDetail.customerName || "Walk-in"}
+                    </p>
+                    {selectedPesticideSaleDetail.customer?.phone && (
+                      <p className="text-sm text-gray-600">{selectedPesticideSaleDetail.customer.phone}</p>
+                    )}
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 font-medium uppercase mb-1">Sale Info</p>
+                    <p className="text-sm text-gray-700">Date: <span className="font-medium">{formatDate(selectedPesticideSaleDetail.createdAt)}</span></p>
+                    <p className="text-sm text-gray-700">By: <span className="font-medium">{selectedPesticideSaleDetail.soldBy?.name}</span></p>
+                  </div>
+                </div>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Pesticide</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Qty</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Unit</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Unit Price</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="px-3 py-2.5 font-medium text-gray-900">{selectedPesticideSaleDetail.pesticide?.name}</td>
+                        <td className="px-3 py-2.5 text-center text-gray-700">{selectedPesticideSaleDetail.quantity}</td>
+                        <td className="px-3 py-2.5 text-center text-gray-500 text-xs">{selectedPesticideSaleDetail.pesticide?.unit}</td>
+                        <td className="px-3 py-2.5 text-right text-gray-700">{formatCurrency(selectedPesticideSaleDetail.unitPrice)}</td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-gray-900">{formatCurrency(selectedPesticideSaleDetail.totalAmount)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex justify-end">
+                    <div className="w-56 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Amount:</span>
+                        <span className="font-bold text-gray-900">{formatCurrency(selectedPesticideSaleDetail.totalAmount)}</span>
+                      </div>
+                      <div className="flex justify-between text-green-700">
+                        <span>Amount Paid:</span>
+                        <span className="font-semibold">{formatCurrency(selectedPesticideSaleDetail.paidAmount)}</span>
+                      </div>
+                      <div className={`flex justify-between border-t border-gray-200 pt-2 font-bold ${(selectedPesticideSaleDetail.balance ?? 0) > 0 ? "text-red-600" : "text-green-600"}`}>
+                        <span>{(selectedPesticideSaleDetail.balance ?? 0) > 0 ? "Balance Due:" : "Paid"}</span>
+                        <span>{formatCurrency(Math.abs(selectedPesticideSaleDetail.balance ?? 0))}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {selectedPesticideSaleDetail.notes && (
+                  <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Notes</p>
+                    <p className="text-sm text-gray-700">{selectedPesticideSaleDetail.notes}</p>
                   </div>
                 )}
               </div>
