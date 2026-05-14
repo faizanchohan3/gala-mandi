@@ -79,6 +79,7 @@ model Shop {
   commissionAgents    CommissionAgent[]
   warehouses          Warehouse[]
   vehicles            Vehicle[]
+  drivers             Driver[]
   freightSlips        FreightSlip[]
   gateEntries         GateEntry[]
   pesticideCategories PesticideCategory[]
@@ -103,6 +104,7 @@ model Bank {
   shop           Shop?           @relation(fields: [shopId], references: [id])
   payments       Payment[]
   farmerPayments FarmerPayment[]
+  driverPayments DriverPayment[]
   transactions   Transaction[]
 }
 
@@ -595,6 +597,38 @@ model StockAdjustment {
 
 // ── TRANSPORT / FREIGHT ──────────────────────────────────────────────────────
 
+model Driver {
+  id        String   @id @default(cuid())
+  shopId    String?
+  name      String
+  phone     String?
+  cnic      String?
+  address   String?
+  license   String?
+  balance   Float    @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shop         Shop?           @relation(fields: [shopId], references: [id])
+  freightSlips FreightSlip[]
+  payments     DriverPayment[]
+}
+
+model DriverPayment {
+  id        String        @id @default(cuid())
+  driverId  String
+  bankId    String?
+  amount    Float
+  method    PaymentMethod @default(CASH)
+  reference String?
+  notes     String?
+  createdAt DateTime      @default(now())
+
+  driver Driver @relation(fields: [driverId], references: [id])
+  bank   Bank?  @relation(fields: [bankId], references: [id])
+}
+
 model Vehicle {
   id          String   @id @default(cuid())
   shopId      String?
@@ -614,14 +648,24 @@ model FreightSlip {
   id           String    @id @default(cuid())
   shopId       String?
   slipNo       String    @unique
+  driverId     String?
   vehicleId    String?
   customerId   String?
   fromLocation String?
   toLocation   String?
   commodity    String?
+  builtyNo     String?
+  rate         Float     @default(0)
+  weighbridge  Float?
   bags         Int?
+  mill         String?
+  netWeight    Float?
   weight       Float?
   freight      Float     @default(0)
+  netAmount    Float     @default(0)
+  rent         Float     @default(0)
+  referenceNo  String?
+  unloadDate   DateTime?
   status       String    @default("PENDING")
   dispatchedAt DateTime?
   deliveredAt  DateTime?
@@ -630,6 +674,7 @@ model FreightSlip {
   createdAt    DateTime  @default(now())
 
   shop            Shop?            @relation(fields: [shopId], references: [id])
+  driver          Driver?          @relation(fields: [driverId], references: [id])
   vehicle         Vehicle?         @relation(fields: [vehicleId], references: [id])
   customer        Customer?        @relation(fields: [customerId], references: [id])
   createdBy       User             @relation(fields: [createdById], references: [id])

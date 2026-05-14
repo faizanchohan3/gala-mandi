@@ -15,6 +15,7 @@ export async function GET(req: Request) {
       where: { ...shopFilter, ...(status ? { status } : {}) },
       orderBy: { createdAt: "desc" },
       include: {
+        driver: { select: { id: true, name: true, phone: true } },
         vehicle: { select: { vehicleNo: true, vehicleType: true, driverName: true } },
         customer: { select: { name: true, phone: true } },
         createdBy: { select: { name: true } },
@@ -40,21 +41,49 @@ export async function POST(req: Request) {
     }
     const slipNo = `FRT-${Date.now()}`
 
-    const slip = await db.freightSlip.create({
-      data: {
-        slipNo,
-        shopId: session.user.shopId || null,
-        vehicleId: body.vehicleId || null,
-        customerId: body.customerId || null,
-        fromLocation: body.fromLocation || null,
-        toLocation: body.toLocation || null,
-        commodity: body.commodity || null,
-        bags: body.bags || null,
-        weight: body.weight || null,
-        freight: body.freight || 0,
-        notes: body.notes || null,
-        createdById: session.user!.id!,
-      },
+    const rate = parseFloat(body.rate) || 0
+    const bags = body.bags ? parseInt(body.bags) : null
+    const netWeight = body.netWeight ? parseFloat(body.netWeight) : null
+    const netAmount = body.netAmount ? parseFloat(body.netAmount) : (rate * (bags || netWeight || 0))
+    const rent = parseFloat(body.rent) || 0
+
+    const slip = await db.$transaction(async (tx) => {
+      const s = await tx.freightSlip.create({
+        data: {
+          slipNo,
+          shopId: session.user.shopId || null,
+          driverId: body.driverId || null,
+          vehicleId: body.vehicleId || null,
+          customerId: body.customerId || null,
+          fromLocation: body.fromLocation || null,
+          toLocation: body.toLocation || null,
+          commodity: body.commodity || null,
+          builtyNo: body.builtyNo || null,
+          rate,
+          weighbridge: body.weighbridge ? parseFloat(body.weighbridge) : null,
+          bags,
+          mill: body.mill || null,
+          netWeight,
+          weight: body.weight ? parseFloat(body.weight) : null,
+          freight: parseFloat(body.freight) || 0,
+          netAmount,
+          rent,
+          referenceNo: body.referenceNo || null,
+          unloadDate: body.unloadDate ? new Date(body.unloadDate) : null,
+          notes: body.notes || null,
+          createdById: session.user!.id!,
+        },
+      })
+
+      // Update driver balance if rent > 0
+      if (body.driverId && rent > 0) {
+        await tx.driver.update({
+          where: { id: body.driverId },
+          data: { balance: { increment: rent } },
+        })
+      }
+
+      return s
     })
 
     return NextResponse.json({ slip })
