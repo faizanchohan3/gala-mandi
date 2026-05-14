@@ -22,7 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     ])
     if (!driver) return NextResponse.json({ error: "Driver not found" }, { status: 404 })
 
-    // Build ledger
+    // Build ledger — Cr = driver earns (rent), Dr = we pay driver
     const events: any[] = []
     for (const s of slips) {
       if (s.rent > 0) {
@@ -30,8 +30,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           date: s.unloadDate || s.createdAt,
           type: "SLIP",
           description: `Freight Slip ${s.slipNo}${s.builtyNo ? ` / Builty ${s.builtyNo}` : ""}${s.vehicle ? ` — ${s.vehicle.vehicleNo}` : ""}`,
-          debit: s.rent,
-          credit: 0,
+          debit: 0,
+          credit: s.rent,
         })
       }
     }
@@ -40,20 +40,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         date: p.createdAt,
         type: "PAYMENT",
         description: `Payment — ${p.method}${p.notes ? ` (${p.notes})` : ""}`,
-        debit: 0,
-        credit: p.amount,
+        debit: p.amount,
+        credit: 0,
       })
     }
     events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
+    // running = Cr - Dr = earnings - payments; positive → we owe driver (Cr balance)
     let running = 0
     const ledger = events.map((e) => {
-      running += e.debit - e.credit
+      running += e.credit - e.debit
       return { ...e, balance: running }
     })
 
-    const totalEarned = events.reduce((s, e) => s + e.debit, 0)
-    const totalPaid = events.reduce((s, e) => s + e.credit, 0)
+    const totalEarned = events.reduce((s, e) => s + e.credit, 0)
+    const totalPaid = events.reduce((s, e) => s + e.debit, 0)
 
     return NextResponse.json({ driver, ledger, totalEarned, totalPaid, balance: running })
   } catch (err: any) {

@@ -53,6 +53,7 @@ export default function TransportPage() {
   const [showDriverLedger, setShowDriverLedger] = useState(false)
   const [selectedDriver, setSelectedDriver] = useState<any>(null)
   const [driverDetail, setDriverDetail] = useState<any>(null)
+  const [driverDetailError, setDriverDetailError] = useState<string | null>(null)
 
   // Driver payment modal
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -84,13 +85,25 @@ export default function TransportPage() {
   useEffect(() => { loadData() }, [])
 
   async function loadDriverDetail(id: string) {
-    const data = await fetch(`/api/drivers/${id}`).then((r) => r.json())
-    setDriverDetail(data)
+    setDriverDetailError(null)
+    setDriverDetail(null)
+    try {
+      const res = await fetch(`/api/drivers/${id}`)
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        setDriverDetailError(data?.error || "Failed to load driver ledger")
+        return
+      }
+      setDriverDetail(data)
+    } catch {
+      setDriverDetailError("Network error. Please try again.")
+    }
   }
 
   function openDriverLedger(d: any) {
     setSelectedDriver(d)
     setDriverDetail(null)
+    setDriverDetailError(null)
     setShowDriverLedger(true)
     loadDriverDetail(d.id)
   }
@@ -229,6 +242,55 @@ export default function TransportPage() {
     }
   }
 
+  function printAllSlips(slipList: any[]) {
+    const sorted = [...slipList].sort((a, b) => {
+      const da = new Date(a.unloadDate || a.createdAt).getTime()
+      const db2 = new Date(b.unloadDate || b.createdAt).getTime()
+      return da - db2
+    })
+    const rows = sorted.map((s, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${s.driver?.name || "—"}</td>
+        <td>${s.builtyNo || s.slipNo}</td>
+        <td>${s.rate > 0 ? s.rate : "—"}</td>
+        <td>${s.vehicle?.vehicleNo || "—"}</td>
+        <td>${s.freight > 0 ? s.freight.toLocaleString() : "—"}</td>
+        <td>${s.weighbridge ? s.weighbridge + " KG" : "—"}</td>
+        <td>${s.bags || "—"}</td>
+        <td>${s.mill || "—"}</td>
+        <td>${s.netWeight ? s.netWeight + " KG" : "—"}</td>
+        <td>${s.unloadDate ? new Date(s.unloadDate).toLocaleDateString("en-PK") : "—"}</td>
+        <td>${s.netAmount > 0 ? s.netAmount.toLocaleString() : "—"}</td>
+        <td>${s.rent > 0 ? s.rent.toLocaleString() : "—"}</td>
+        <td>${s.status}</td>
+        <td>${s.referenceNo || "—"}</td>
+      </tr>`).join("")
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Freight Slips — All Entries</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 11px; padding: 16px; }
+  h2 { font-size: 15px; margin-bottom: 4px; }
+  p.sub { color: #666; font-size: 10px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; white-space: nowrap; }
+  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+  tr:nth-child(even) { background: #fafafa; }
+</style></head><body>
+<h2>Freight Slips — All Entries</h2>
+<p class="sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; Total: ${sorted.length} slips</p>
+<table>
+  <thead><tr>
+    <th>#</th><th>Driver</th><th>Builty</th><th>Rate</th><th>Vehicle</th>
+    <th>Freight</th><th>Weighbridge</th><th>Bags</th><th>Mill</th><th>Net Wt</th>
+    <th>Unload Date</th><th>Net Amount</th><th>Rent</th><th>Status</th><th>Ref No</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`)
+    w.print()
+  }
+
   const printChallan = (slip: any) => {
     const challan = slip.deliveryChallan
     const w = window.open("", "_blank")!
@@ -328,6 +390,9 @@ export default function TransportPage() {
                 <SelectItem value="DELIVERED">Delivered</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" className="gap-2 shrink-0" onClick={() => printAllSlips(filtered)}>
+              <Printer className="w-4 h-4" /> Print All
+            </Button>
           </div>
 
           <Card>
@@ -381,19 +446,9 @@ export default function TransportPage() {
                         </td>
                         <td className="px-3 py-2.5 text-xs text-gray-500">{s.referenceNo || "—"}</td>
                         <td className="px-3 py-2.5 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {s.status === "PENDING" && (
-                              <button onClick={() => { setShowDispatchModal(s); setDispForm({ items: s.commodity || "", totalWeight: s.weight ? String(s.weight) : "", totalBags: s.bags ? String(s.bags) : "", receivedBy: "" }) }}
-                                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">Dispatch</button>
-                            )}
-                            {s.status === "IN_TRANSIT" && (
-                              <button onClick={() => handleDeliver(s.id)}
-                                className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">Delivered</button>
-                            )}
-                            <button onClick={() => printChallan(s)} className="p-1 text-gray-400 hover:text-teal-600" title="Print">
-                              <Printer className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          <button onClick={() => printChallan(s)} className="p-1 text-gray-400 hover:text-teal-600" title="Print Challan">
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -676,7 +731,12 @@ export default function TransportPage() {
               </Button>
             </div>
           </DialogHeader>
-          {!driverDetail ? (
+          {driverDetailError ? (
+            <div className="py-10 text-center">
+              <p className="text-red-500 mb-3">{driverDetailError}</p>
+              <Button size="sm" variant="outline" onClick={() => loadDriverDetail(selectedDriver?.id)}>Retry</Button>
+            </div>
+          ) : !driverDetail ? (
             <div className="py-10 text-center text-gray-400">Loading...</div>
           ) : (
             <div className="space-y-4">
@@ -684,21 +744,22 @@ export default function TransportPage() {
               <div className="grid grid-cols-3 gap-3">
                 <Card>
                   <CardContent className="p-4">
-                    <p className="text-xs text-gray-500 uppercase font-medium">Total Earned (Dr)</p>
+                    <p className="text-xs text-gray-500 uppercase font-medium">Total Earned (Cr)</p>
                     <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(driverDetail.totalEarned || 0)}</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4">
-                    <p className="text-xs text-gray-500 uppercase font-medium">Total Paid (Cr)</p>
+                    <p className="text-xs text-gray-500 uppercase font-medium">Total Paid (Dr)</p>
                     <p className="text-xl font-bold text-green-700 mt-1">{formatCurrency(driverDetail.totalPaid || 0)}</p>
                   </CardContent>
                 </Card>
                 <Card className={(driverDetail.balance || 0) > 0 ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}>
                   <CardContent className="p-4">
-                    <p className="text-xs text-gray-500 uppercase font-medium">Balance (Payable)</p>
+                    <p className="text-xs text-gray-500 uppercase font-medium">Balance Payable</p>
                     <p className={`text-xl font-bold mt-1 ${(driverDetail.balance || 0) > 0 ? "text-red-600" : "text-green-700"}`}>
                       {formatCurrency(Math.abs(driverDetail.balance || 0))}
+                      <span className="text-sm font-normal ml-1">{(driverDetail.balance || 0) > 0 ? "Cr" : (driverDetail.balance || 0) < 0 ? "Dr" : ""}</span>
                     </p>
                   </CardContent>
                 </Card>
@@ -712,8 +773,8 @@ export default function TransportPage() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">#</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Debit (Dr)</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Credit (Cr)</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Paid (Dr)</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Earned (Cr)</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Balance</th>
                     </tr>
                   </thead>
@@ -723,15 +784,15 @@ export default function TransportPage() {
                         <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
                         <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(entry.date)}</td>
                         <td className="px-4 py-3 text-gray-700 text-xs">{entry.description}</td>
-                        <td className="px-4 py-3 text-right text-gray-900">
+                        <td className="px-4 py-3 text-right text-green-700">
                           {entry.debit > 0 ? formatCurrency(entry.debit) : "—"}
                         </td>
-                        <td className="px-4 py-3 text-right text-green-700">
+                        <td className="px-4 py-3 text-right text-gray-900">
                           {entry.credit > 0 ? formatCurrency(entry.credit) : "—"}
                         </td>
                         <td className={`px-4 py-3 text-right font-medium ${entry.balance > 0 ? "text-red-600" : "text-green-700"}`}>
                           {formatCurrency(Math.abs(entry.balance))}
-                          {entry.balance !== 0 && <span className="text-xs ml-1 font-normal">{entry.balance > 0 ? "Dr" : "Cr"}</span>}
+                          {entry.balance !== 0 && <span className="text-xs ml-1 font-normal">{entry.balance > 0 ? "Cr" : "Dr"}</span>}
                         </td>
                       </tr>
                     ))}
@@ -742,11 +803,11 @@ export default function TransportPage() {
                   <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                     <tr>
                       <td colSpan={3} className="px-4 py-3 font-bold text-gray-700">Closing Balance</td>
-                      <td className="px-4 py-3 text-right font-bold text-gray-900">{formatCurrency(driverDetail.totalEarned || 0)}</td>
                       <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(driverDetail.totalPaid || 0)}</td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-900">{formatCurrency(driverDetail.totalEarned || 0)}</td>
                       <td className={`px-4 py-3 text-right font-bold ${(driverDetail.balance || 0) > 0 ? "text-red-600" : "text-green-700"}`}>
                         {formatCurrency(Math.abs(driverDetail.balance || 0))}
-                        <span className="text-sm ml-1 font-normal">{(driverDetail.balance || 0) > 0 ? "Dr" : "Cr"}</span>
+                        <span className="text-sm ml-1 font-normal">{(driverDetail.balance || 0) > 0 ? "Cr" : (driverDetail.balance || 0) < 0 ? "Dr" : ""}</span>
                       </td>
                     </tr>
                   </tfoot>
