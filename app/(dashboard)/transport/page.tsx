@@ -24,7 +24,7 @@ export default function TransportPage() {
   const [customers, setCustomers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const [filterStatus, setFilterStatus] = useState("")
+  const [filterStatus, setFilterStatus] = useState("all")
   const [tab, setTab] = useState<"slips" | "vehicles">("slips")
   const [showSlipModal, setShowSlipModal] = useState(false)
   const [showVehicleModal, setShowVehicleModal] = useState(false)
@@ -134,7 +134,7 @@ export default function TransportPage() {
       (s.vehicle?.vehicleNo || "").toLowerCase().includes(search.toLowerCase()) ||
       (s.commodity || "").toLowerCase().includes(search.toLowerCase()) ||
       (s.customer?.name || "").toLowerCase().includes(search.toLowerCase())
-    const matchStatus = !filterStatus || s.status === filterStatus
+    const matchStatus = filterStatus === "all" || s.status === filterStatus
     return matchSearch && matchStatus
   })
 
@@ -209,9 +209,9 @@ export default function TransportPage() {
                 onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="All Status" /></SelectTrigger>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
                 <SelectItem value="IN_TRANSIT">In Transit</SelectItem>
                 <SelectItem value="DELIVERED">Delivered</SelectItem>
