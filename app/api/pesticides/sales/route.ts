@@ -23,55 +23,69 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { pesticideId, quantity, unitPrice, customerId, customerName, paidAmount, notes } = await req.json()
-  const totalAmount = quantity * unitPrice
-  const paid = paidAmount || 0
-  const balance = totalAmount - paid
+  try {
+    const { pesticideId, quantity, unitPrice, customerId, customerName, paidAmount, notes } = await req.json()
 
-  const sale = await db.$transaction(async (tx) => {
-    const s = await tx.pesticideSale.create({
-      data: {
-        shopId: session.user.shopId || null,
-        pesticideId,
-        customerId: customerId || null,
-        quantity,
-        unitPrice,
-        totalAmount,
-        customerName: customerName || null,
-        paidAmount: paid,
-        balance,
-        soldById: session.user.id,
-        notes: notes || null,
-      },
-      include: {
-        pesticide: true,
-        customer: { select: { id: true, name: true, phone: true } },
-        soldBy: { select: { name: true } },
-      },
-    })
+    if (!pesticideId) return NextResponse.json({ error: "Pesticide is required" }, { status: 400 })
+    if (!quantity || quantity <= 0) return NextResponse.json({ error: "Invalid quantity" }, { status: 400 })
+    if (!unitPrice || unitPrice <= 0) return NextResponse.json({ error: "Invalid unit price" }, { status: 400 })
 
-    await tx.pesticide.update({
-      where: { id: pesticideId },
-      data: { quantity: { decrement: quantity } },
-    })
+    const totalAmount = quantity * unitPrice
+    const paid = parseFloat(paidAmount) || 0
+    const balance = totalAmount - paid
 
-    // Update customer balance if linked to a registered customer with outstanding balance
-    if (customerId && balance > 0) {
-      await tx.customer.update({
-        where: { id: customerId },
-        data: { balance: { increment: balance } },
+    const sale = await db.$transaction(async (tx) => {
+      // Verify pesticide exists and has enough stock
+      const pesticide = await tx.pesticide.findUnique({ where: { id: pesticideId } })
+      if (!pesticide) throw new Error("Pesticide not found")
+      if (pesticide.quantity < quantity) throw new Error(`Insufficient stock. Available: ${pesticide.quantity} ${pesticide.unit}`)
+
+      const s = await tx.pesticideSale.create({
+        data: {
+          shopId: session.user.shopId || null,
+          pesticideId,
+          customerId: customerId || null,
+          quantity,
+          unitPrice,
+          totalAmount,
+          customerName: customerName || null,
+          paidAmount: paid,
+          balance,
+          soldById: session.user.id,
+          notes: notes || null,
+        },
+        include: {
+          pesticide: true,
+          customer: { select: { id: true, name: true, phone: true } },
+          soldBy: { select: { name: true } },
+        },
       })
-    }
 
-    return s
-  })
+      await tx.pesticide.update({
+        where: { id: pesticideId },
+        data: { quantity: { decrement: quantity } },
+      })
 
-  await createAuditLog({
-    userId: session.user.id,
-    action: "CREATE",
-    module: "PESTICIDES",
-    details: `Sold pesticide, amount: PKR ${totalAmount}${customerId ? ` to customer ${customerId}` : ""}`,
-  })
+      if (customerId && balance > 0) {
+        await tx.customer.update({
+          where: { id: customerId },
+          data: { balance: { increment: balance } },
+        })
+      }
 
-  return NextResponse.json({ sale }, { status: 201 })
+      return s
+    })
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: "CREATE",
+      module: "PESTICIDES",
+      details: `Sold pesticide, amount: PKR ${totalAmount}${customerId ? ` to customer ${customerId}` : ""}`,
+    })
+
+    return NextResponse.json({ sale }, { status: 201 })
+  } catch (err: any) {
+    console.error("Pesticide sale error:", err)
+    return NextResponse.json({ error: err?.message || "Failed to create pesticide sale" }, { status: 500 })
+  }
 }

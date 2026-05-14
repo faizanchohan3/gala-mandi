@@ -95,6 +95,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   return NextResponse.json({ customer })
 }
 
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth()
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { id } = await params
+  const { isActive } = await req.json()
+  const customer = await db.customer.update({ where: { id }, data: { isActive } })
+  await createAuditLog({
+    userId: session.user.id,
+    action: "UPDATE",
+    module: "CUSTOMERS",
+    details: `${isActive ? "Activated" : "Deactivated"} customer ID: ${id}`,
+  })
+  return NextResponse.json({ customer })
+}
+
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

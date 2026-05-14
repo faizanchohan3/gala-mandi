@@ -17,6 +17,7 @@ import {
 import Link from "next/link"
 
 type Tab = "sales" | "ledger"
+type StatusTab = "active" | "inactive"
 
 const DEFAULT_FORM = {
   name: "", phone: "", address: "",
@@ -38,12 +39,13 @@ export default function CustomersPage() {
   const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "" })
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
+  const [statusTab, setStatusTab] = useState<StatusTab>("active")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function loadData() {
     try {
       setLoading(true)
-      const data = await fetch("/api/customers").then((r) => r.json())
+      const data = await fetch("/api/customers?all=true").then((r) => r.json())
       setCustomers(data.customers || [])
     } finally {
       setLoading(false)
@@ -141,20 +143,35 @@ export default function CustomersPage() {
     loadData()
   }
 
-  const filtered = customers.filter((c) =>
+  async function handleToggleActive(c: any) {
+    const action = c.isActive ? "deactivate" : "activate"
+    if (!confirm(`${c.isActive ? "Deactivate" : "Activate"} customer "${c.name}"?`)) return
+    await fetch(`/api/customers/${c.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: !c.isActive }),
+    })
+    loadData()
+  }
+
+  const activeCustomers = customers.filter((c) => c.isActive)
+  const inactiveCustomers = customers.filter((c) => !c.isActive)
+  const visibleCustomers = statusTab === "active" ? activeCustomers : inactiveCustomers
+
+  const filtered = visibleCustomers.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     (c.phone || "").includes(search) ||
     (c.referenceName || "").toLowerCase().includes(search.toLowerCase())
   )
 
-  const totalOutstanding = customers.reduce((s, c) => s + (c.balance || 0), 0)
+  const totalOutstanding = activeCustomers.reduce((s, c) => s + (c.balance || 0), 0)
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Customers</h2>
-          <p className="text-gray-500 text-sm">{customers.length} customers registered</p>
+          <p className="text-gray-500 text-sm">{activeCustomers.length} active · {inactiveCustomers.length} inactive</p>
         </div>
         <Button onClick={openAdd} className="bg-green-700 hover:bg-green-800 gap-2">
           <Plus className="w-4 h-4" /> Add Customer
@@ -168,7 +185,7 @@ export default function CustomersPage() {
             <div className="p-2 bg-blue-50 rounded-lg"><Users className="w-5 h-5 text-blue-600" /></div>
             <div>
               <p className="text-2xl font-bold text-gray-900">{customers.length}</p>
-              <p className="text-sm text-gray-500">Total Customers</p>
+              <p className="text-sm text-gray-500">Total Registered</p>
             </div>
           </CardContent>
         </Card>
@@ -176,7 +193,7 @@ export default function CustomersPage() {
           <CardContent className="p-5 flex items-center gap-3">
             <div className="p-2 bg-green-50 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{customers.filter((c) => c.isActive).length}</p>
+              <p className="text-2xl font-bold text-gray-900">{activeCustomers.length}</p>
               <p className="text-sm text-gray-500">Active Customers</p>
             </div>
           </CardContent>
@@ -192,6 +209,16 @@ export default function CustomersPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Active / Inactive Tabs */}
+      <div className="flex gap-1 border-b">
+        {([["active", "Active", activeCustomers.length], ["inactive", "Inactive", inactiveCustomers.length]] as const).map(([key, label, count]) => (
+          <button key={key} onClick={() => { setStatusTab(key); setSearch("") }}
+            className={`pb-2 px-4 text-sm font-medium transition-colors border-b-2 ${statusTab === key ? "border-green-700 text-green-700" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+            {label} <span className="text-xs text-gray-400 ml-1">({count})</span>
+          </button>
+        ))}
       </div>
 
       {/* Table */}
@@ -280,8 +307,12 @@ export default function CustomersPage() {
                           <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded" title="Edit">
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDelete(c.id, c.name)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Remove">
-                            <X className="w-4 h-4" />
+                          <button
+                            onClick={() => handleToggleActive(c)}
+                            className={`p-1.5 rounded text-xs font-medium px-2 ${c.isActive ? "text-red-500 hover:text-red-700 hover:bg-red-50" : "text-green-600 hover:text-green-800 hover:bg-green-50"}`}
+                            title={c.isActive ? "Deactivate" : "Activate"}
+                          >
+                            {c.isActive ? "Deactivate" : "Activate"}
                           </button>
                         </div>
                       </td>

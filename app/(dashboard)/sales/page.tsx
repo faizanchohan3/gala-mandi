@@ -35,20 +35,20 @@ export default function SalesPage() {
   const [pesticideSaleForm, setPesticideSaleForm] = useState({ pesticideId: "", quantity: "1", customerId: "", customerName: "", paidAmount: "0" })
 
   async function loadData() {
+    setLoading(true)
     try {
-      setLoading(true)
-      const [sr, pr, cr, psr, pestr] = await Promise.all([
+      const [sr, pr, cr, psr, pestr] = await Promise.allSettled([
         fetch("/api/sales").then((r) => r.json()),
         fetch("/api/inventory").then((r) => r.json()),
         fetch("/api/customers").then((r) => r.json()),
         fetch("/api/pesticides/sales").then((r) => r.json()),
         fetch("/api/pesticides").then((r) => r.json()),
       ])
-      setSales(sr.sales || [])
-      setProducts(pr.products || [])
-      setCustomers(cr.customers || [])
-      setPesticideSales(psr.sales || [])
-      setPesticides(pestr.pesticides || [])
+      if (sr.status === "fulfilled") setSales(sr.value.sales || [])
+      if (pr.status === "fulfilled") setProducts(pr.value.products || [])
+      if (cr.status === "fulfilled") setCustomers(cr.value.customers || [])
+      if (psr.status === "fulfilled") setPesticideSales(psr.value.sales || [])
+      if (pestr.status === "fulfilled") setPesticides(pestr.value.pesticides || [])
     } finally {
       setLoading(false)
     }
@@ -109,24 +109,35 @@ export default function SalesPage() {
 
   async function handlePesticideSale() {
     if (!pesticideSaleForm.pesticideId) return alert("Please select a pesticide")
+    if (!selectedPesticide) return alert("Selected pesticide not found. Please refresh and try again.")
+    const qty = parseFloat(pesticideSaleForm.quantity)
+    if (!qty || qty <= 0) return alert("Please enter a valid quantity")
+    if (qty > selectedPesticide.quantity) return alert(`Insufficient stock. Available: ${selectedPesticide.quantity} ${selectedPesticide.unit}`)
     const chosenCustomer = customers.find((c: any) => c.id === pesticideSaleForm.customerId)
     const customerName = chosenCustomer ? chosenCustomer.name : pesticideSaleForm.customerName
-    const res = await fetch("/api/pesticides/sales", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pesticideId: pesticideSaleForm.pesticideId,
-        quantity: parseFloat(pesticideSaleForm.quantity),
-        unitPrice: selectedPesticide?.salePrice || 0,
-        customerId: pesticideSaleForm.customerId || null,
-        customerName,
-        paidAmount: parseFloat(pesticideSaleForm.paidAmount),
-      }),
-    })
-    if (res.ok) {
-      setShowPesticideSaleModal(false)
-      setPesticideSaleForm({ pesticideId: "", quantity: "1", customerId: "", customerName: "", paidAmount: "0" })
-      loadData()
+    try {
+      const res = await fetch("/api/pesticides/sales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pesticideId: pesticideSaleForm.pesticideId,
+          quantity: qty,
+          unitPrice: selectedPesticide.salePrice,
+          customerId: pesticideSaleForm.customerId || null,
+          customerName,
+          paidAmount: parseFloat(pesticideSaleForm.paidAmount) || 0,
+        }),
+      })
+      if (res.ok) {
+        setShowPesticideSaleModal(false)
+        setPesticideSaleForm({ pesticideId: "", quantity: "1", customerId: "", customerName: "", paidAmount: "0" })
+        loadData()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        alert(data?.error || "Failed to create pesticide sale")
+      }
+    } catch (err) {
+      alert("Network error. Please try again.")
     }
   }
 

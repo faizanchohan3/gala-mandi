@@ -2,11 +2,14 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
-  const customers = await db.customer.findMany({ where: { ...shopFilter, isActive: true }, orderBy: { name: "asc" } })
+  const { searchParams } = new URL(req.url)
+  const all = searchParams.get("all") === "true"
+  const activeFilter = all ? {} : { isActive: true }
+  const customers = await db.customer.findMany({ where: { ...shopFilter, ...activeFilter }, orderBy: { name: "asc" } })
   return NextResponse.json({ customers })
 }
 

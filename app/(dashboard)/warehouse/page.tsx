@@ -53,11 +53,28 @@ export default function WarehousePage() {
 
   async function handleTransfer() {
     if (!tForm.fromWarehouseId || !tForm.toWarehouseId || !tForm.productId || !tForm.quantity) return alert("All fields required")
-    await fetch("/api/warehouse/transfer", {
+    const res = await fetch("/api/warehouse/transfer", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...tForm, quantity: parseFloat(tForm.quantity) }),
     })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      return alert(d?.error || "Failed to create transfer")
+    }
     setShowTransferModal(false); loadData()
+  }
+
+  async function handleApproveTransfer(transferId: string) {
+    if (!confirm("Approve this transfer? This will move stock between godowns and deduct from main inventory.")) return
+    const res = await fetch("/api/warehouse/transfer", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transferId }),
+    })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      return alert(d?.error || "Failed to approve transfer")
+    }
+    loadData()
   }
 
   async function handleAdjust() {
@@ -171,24 +188,39 @@ export default function WarehousePage() {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">By</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {transfers.map((t) => (
-                    <tr key={t.id} className="hover:bg-gray-50">
+                    <tr key={t.id} className={`hover:bg-gray-50 ${t.status === "PENDING" ? "bg-yellow-50/40" : ""}`}>
                       <td className="px-4 py-3 font-mono text-xs text-gray-500">{t.transferNo}</td>
                       <td className="px-4 py-3 text-gray-700">{t.fromWarehouse.name}</td>
                       <td className="px-4 py-3 text-gray-700">{t.toWarehouse.name}</td>
                       <td className="px-4 py-3 text-gray-800 font-medium">{t.product.name}</td>
                       <td className="px-4 py-3 text-right font-medium">{t.quantity} {t.product.unit}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">{t.status}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          t.status === "PENDING" ? "bg-yellow-100 text-yellow-700" :
+                          t.status === "APPROVED" ? "bg-green-100 text-green-700" :
+                          "bg-gray-100 text-gray-600"
+                        }`}>{t.status}</span>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{t.createdBy?.name}</td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{new Date(t.createdAt).toLocaleDateString("en-PK")}</td>
+                      <td className="px-4 py-3 text-center">
+                        {t.status === "PENDING" && (
+                          <button
+                            onClick={() => handleApproveTransfer(t.id)}
+                            className="text-xs bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded font-medium"
+                          >
+                            Approve
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
-                  {transfers.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">No transfers yet</td></tr>}
+                  {transfers.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">No transfers yet</td></tr>}
                 </tbody>
               </table>
             </div>
