@@ -35,63 +35,98 @@ export default function TransportPage() {
 
   async function loadData() {
     setLoading(true)
-    const [s, v, c] = await Promise.all([
-      fetch("/api/freight").then((r) => r.json()),
-      fetch("/api/vehicles").then((r) => r.json()),
-      fetch("/api/customers").then((r) => r.json()),
-    ])
-    setSlips(s.slips || [])
-    setVehicles(v.vehicles || [])
-    setCustomers(c.customers || [])
-    setLoading(false)
+    try {
+      const [sr, vr, cr] = await Promise.allSettled([
+        fetch("/api/freight").then((r) => r.json()),
+        fetch("/api/vehicles").then((r) => r.json()),
+        fetch("/api/customers").then((r) => r.json()),
+      ])
+      if (sr.status === "fulfilled") setSlips(sr.value.slips || [])
+      if (vr.status === "fulfilled") setVehicles(vr.value.vehicles || [])
+      if (cr.status === "fulfilled") setCustomers(cr.value.customers || [])
+    } finally {
+      setLoading(false)
+    }
   }
   useEffect(() => { loadData() }, [])
 
   async function handleCreateSlip() {
     if (!form.fromLocation || !form.toLocation) return alert("From & To locations required")
-    await fetch("/api/freight", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        bags: form.bags ? parseInt(form.bags) : null,
-        weight: form.weight ? parseFloat(form.weight) : null,
-        freight: parseFloat(form.freight) || 0,
-        vehicleId: form.vehicleId || null,
-        customerId: form.customerId || null,
-      }),
-    })
-    setShowSlipModal(false); loadData()
+    try {
+      const res = await fetch("/api/freight", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          bags: form.bags ? parseInt(form.bags) : null,
+          weight: form.weight ? parseFloat(form.weight) : null,
+          freight: parseFloat(form.freight) || 0,
+          vehicleId: form.vehicleId || null,
+          customerId: form.customerId || null,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        return alert(d?.error || "Failed to create freight slip")
+      }
+      setShowSlipModal(false); loadData()
+    } catch {
+      alert("Network error. Please try again.")
+    }
   }
 
   async function handleDispatch(slipId: string) {
-    await fetch(`/api/freight/${slipId}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        status: "IN_TRANSIT",
-        items: dispForm.items,
-        totalWeight: dispForm.totalWeight ? parseFloat(dispForm.totalWeight) : null,
-        totalBags: dispForm.totalBags ? parseInt(dispForm.totalBags) : null,
-        receivedBy: dispForm.receivedBy,
-      }),
-    })
-    setShowDispatchModal(null); loadData()
+    try {
+      const res = await fetch(`/api/freight/${slipId}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "IN_TRANSIT",
+          items: dispForm.items,
+          totalWeight: dispForm.totalWeight ? parseFloat(dispForm.totalWeight) : null,
+          totalBags: dispForm.totalBags ? parseInt(dispForm.totalBags) : null,
+          receivedBy: dispForm.receivedBy,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        return alert(d?.error || "Failed to dispatch")
+      }
+      setShowDispatchModal(null); loadData()
+    } catch {
+      alert("Network error. Please try again.")
+    }
   }
 
   async function handleDeliver(slipId: string) {
-    await fetch(`/api/freight/${slipId}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "DELIVERED" }),
-    })
-    loadData()
+    try {
+      const res = await fetch(`/api/freight/${slipId}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "DELIVERED" }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        return alert(d?.error || "Failed to mark as delivered")
+      }
+      loadData()
+    } catch {
+      alert("Network error. Please try again.")
+    }
   }
 
   async function handleSaveVehicle() {
     if (!vForm.vehicleNo.trim()) return alert("Vehicle number required")
-    await fetch("/api/vehicles", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(vForm),
-    })
-    setShowVehicleModal(false); loadData()
+    try {
+      const res = await fetch("/api/vehicles", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(vForm),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        return alert(d?.error || "Failed to add vehicle")
+      }
+      setShowVehicleModal(false); loadData()
+    } catch {
+      alert("Network error. Please try again.")
+    }
   }
 
   const filtered = slips.filter((s) => {
