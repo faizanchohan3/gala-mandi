@@ -283,9 +283,96 @@ export default function TransportPage() {
   <thead><tr>
     <th>#</th><th>Driver</th><th>Builty</th><th>Rate</th><th>Vehicle</th>
     <th>Freight</th><th>Weighbridge</th><th>Bags</th><th>Mill</th><th>Net Wt</th>
-    <th>Unload Date</th><th>Net Amount</th><th>Rent</th><th>Status</th><th>Ref No</th>
+    <th>Unload Date</th><th>Net Amount</th><th>Rent</th><th>Ref No</th>
   </tr></thead>
   <tbody>${rows}</tbody>
+</table>
+</body></html>`)
+    w.print()
+  }
+
+  function printAllDrivers() {
+    const rows = drivers.map((d, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${d.name}</td>
+        <td>${d.phone || "—"}</td>
+        <td>${d.cnic || "—"}</td>
+        <td>${d.license || "—"}</td>
+        <td style="text-align:center">${d._count?.freightSlips || 0}</td>
+        <td style="text-align:right">${(d.balance || 0) > 0 ? "PKR " + (d.balance).toLocaleString() : "—"}</td>
+      </tr>`).join("")
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Drivers List</title>
+<style>
+  body { font-family: Arial; font-size: 11px; padding: 16px; }
+  h2 { font-size: 15px; margin-bottom: 4px; }
+  p.sub { color: #666; font-size: 10px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
+  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+  tr:nth-child(even) { background: #fafafa; }
+</style></head><body>
+<h2>Drivers List</h2>
+<p class="sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; Total: ${drivers.length} drivers</p>
+<table>
+  <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>CNIC</th><th>License</th><th>Trips</th><th>Balance Payable</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`)
+    w.print()
+  }
+
+  function printDriverLedger() {
+    if (!driverDetail || !selectedDriver) return
+    const rows = (driverDetail.ledger || []).map((e: any, i: number) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${new Date(e.date).toLocaleDateString("en-PK")}</td>
+        <td>${e.description}</td>
+        <td style="text-align:right">${e.debit > 0 ? "PKR " + e.debit.toLocaleString() : "—"}</td>
+        <td style="text-align:right">${e.credit > 0 ? "PKR " + e.credit.toLocaleString() : "—"}</td>
+        <td style="text-align:right;font-weight:bold;color:${e.balance > 0 ? "#dc2626" : "#16a34a"}">
+          PKR ${Math.abs(e.balance).toLocaleString()} ${e.balance > 0 ? "Cr" : e.balance < 0 ? "Dr" : ""}
+        </td>
+      </tr>`).join("")
+    const bal = driverDetail.balance || 0
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Driver Ledger — ${selectedDriver.name}</title>
+<style>
+  body { font-family: Arial; font-size: 11px; padding: 16px; }
+  h2 { font-size: 15px; margin-bottom: 2px; }
+  p.sub { color: #666; font-size: 10px; margin-bottom: 10px; }
+  .summary { display: flex; gap: 16px; margin-bottom: 14px; }
+  .summary div { border: 1px solid #ccc; padding: 8px 14px; }
+  .summary .lbl { font-size: 9px; text-transform: uppercase; color: #666; }
+  .summary .val { font-size: 14px; font-weight: bold; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
+  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+  tfoot td { font-weight: bold; background: #f0f0f0; }
+  tr:nth-child(even) { background: #fafafa; }
+</style></head><body>
+<h2>Driver Ledger — ${selectedDriver.name}</h2>
+<p class="sub">
+  ${selectedDriver.phone ? "Phone: " + selectedDriver.phone + " &nbsp;|&nbsp; " : ""}
+  ${selectedDriver.cnic ? "CNIC: " + selectedDriver.cnic + " &nbsp;|&nbsp; " : ""}
+  Printed on ${new Date().toLocaleDateString("en-PK")}
+</p>
+<div class="summary">
+  <div><div class="lbl">Total Earned (Cr)</div><div class="val">PKR ${(driverDetail.totalEarned || 0).toLocaleString()}</div></div>
+  <div><div class="lbl">Total Paid (Dr)</div><div class="val">PKR ${(driverDetail.totalPaid || 0).toLocaleString()}</div></div>
+  <div><div class="lbl">Balance Payable</div><div class="val" style="color:${bal > 0 ? "#dc2626" : "#16a34a"}">PKR ${Math.abs(bal).toLocaleString()} ${bal > 0 ? "Cr" : bal < 0 ? "Dr" : ""}</div></div>
+</div>
+<table>
+  <thead><tr><th>#</th><th>Date</th><th>Description</th><th>Paid (Dr)</th><th>Earned (Cr)</th><th>Balance</th></tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr>
+    <td colspan="3">Closing Balance</td>
+    <td style="text-align:right">PKR ${(driverDetail.totalPaid || 0).toLocaleString()}</td>
+    <td style="text-align:right">PKR ${(driverDetail.totalEarned || 0).toLocaleString()}</td>
+    <td style="text-align:right;color:${bal > 0 ? "#dc2626" : "#16a34a"}">PKR ${Math.abs(bal).toLocaleString()} ${bal > 0 ? "Cr" : bal < 0 ? "Dr" : ""}</td>
+  </tr></tfoot>
 </table>
 </body></html>`)
     w.print()
@@ -381,15 +468,6 @@ export default function TransportPage() {
               <Input placeholder="Search driver, builty, vehicle, mill..." value={search}
                 onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="IN_TRANSIT">In Transit</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
-              </SelectContent>
-            </Select>
             <Button variant="outline" className="gap-2 shrink-0" onClick={() => printAllSlips(filtered)}>
               <Printer className="w-4 h-4" /> Print All
             </Button>
@@ -414,14 +492,13 @@ export default function TransportPage() {
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Unload Date</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Net Amt</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Rent</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ref No</th>
                       <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {loading ? (
-                      <tr><td colSpan={16} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
+                      <tr><td colSpan={15} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                     ) : filtered.map((s, i) => (
                       <tr key={s.id} className="hover:bg-gray-50">
                         <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
@@ -439,11 +516,6 @@ export default function TransportPage() {
                         <td className="px-3 py-2.5 text-gray-500 text-xs">{s.unloadDate ? formatDate(s.unloadDate) : "—"}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-gray-900">{s.netAmount > 0 ? formatCurrency(s.netAmount) : "—"}</td>
                         <td className="px-3 py-2.5 text-right text-orange-600 font-medium">{s.rent > 0 ? formatCurrency(s.rent) : "—"}</td>
-                        <td className="px-3 py-2.5 text-center">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[s.status] || "bg-gray-100 text-gray-600"}`}>
-                            {s.status}
-                          </span>
-                        </td>
                         <td className="px-3 py-2.5 text-xs text-gray-500">{s.referenceNo || "—"}</td>
                         <td className="px-3 py-2.5 text-center">
                           <button onClick={() => printChallan(s)} className="p-1 text-gray-400 hover:text-teal-600" title="Print Challan">
@@ -453,7 +525,7 @@ export default function TransportPage() {
                       </tr>
                     ))}
                     {!loading && filtered.length === 0 && (
-                      <tr><td colSpan={16} className="px-4 py-10 text-center text-gray-400">No freight slips found</td></tr>
+                      <tr><td colSpan={15} className="px-4 py-10 text-center text-gray-400">No freight slips found</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -465,6 +537,12 @@ export default function TransportPage() {
 
       {/* ── Drivers Tab ── */}
       {tab === "drivers" && (
+        <>
+          <div className="flex justify-end">
+            <Button variant="outline" className="gap-2" onClick={printAllDrivers}>
+              <Printer className="w-4 h-4" /> Print All Drivers
+            </Button>
+          </div>
         <Card>
           <CardContent className="p-0">
             <table className="w-full text-sm">
@@ -520,6 +598,7 @@ export default function TransportPage() {
             </table>
           </CardContent>
         </Card>
+        </>
       )}
 
       {/* ── Vehicles Tab ── */}
@@ -725,10 +804,16 @@ export default function TransportPage() {
                 <User className="w-5 h-5 text-teal-600" />
                 {selectedDriver?.name} — Driver Ledger
               </DialogTitle>
-              <Button size="sm" variant="outline" className="gap-2 mr-6"
-                onClick={() => { setShowDriverLedger(false); setShowPaymentModal(true) }}>
-                <ArrowDownCircle className="w-4 h-4" /> Pay Driver
-              </Button>
+              <div className="flex gap-2 mr-6">
+                <Button size="sm" variant="outline" className="gap-2"
+                  onClick={printDriverLedger} disabled={!driverDetail}>
+                  <Printer className="w-4 h-4" /> Print
+                </Button>
+                <Button size="sm" variant="outline" className="gap-2"
+                  onClick={() => { setShowDriverLedger(false); setShowPaymentModal(true) }}>
+                  <ArrowDownCircle className="w-4 h-4" /> Pay Driver
+                </Button>
+              </div>
             </div>
           </DialogHeader>
           {driverDetailError ? (
