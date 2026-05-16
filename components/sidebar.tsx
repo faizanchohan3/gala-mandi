@@ -65,6 +65,7 @@ export function Sidebar() {
   const { data: session } = useSession()
   const [collapsed, setCollapsed] = useState(false)
   const [reportsOpen, setReportsOpen] = useState(false)
+  const [shopLogo, setShopLogo] = useState<string | null>(null)
 
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
   const shopName = session?.user?.shopName
@@ -73,6 +74,15 @@ export function Sidebar() {
   useEffect(() => {
     if (pathname.startsWith("/reports")) setReportsOpen(true)
   }, [pathname])
+
+  useEffect(() => {
+    if (!isSuperAdmin && session?.user?.shopId) {
+      fetch("/api/settings")
+        .then((r) => r.json())
+        .then((d) => { if (d.shop?.logo) setShopLogo(d.shop.logo) })
+        .catch(() => {})
+    }
+  }, [isSuperAdmin, session?.user?.shopId])
 
   return (
     <aside
@@ -83,8 +93,12 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-green-700 flex-shrink-0">
-        <div className="flex-shrink-0 w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
-          <Store className="w-5 h-5 text-green-900" />
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-yellow-400">
+          {shopLogo ? (
+            <img src={shopLogo} alt="Shop Logo" className="w-full h-full object-cover" />
+          ) : (
+            <Store className="w-5 h-5 text-green-900" />
+          )}
         </div>
         {!collapsed && (
           <div className="overflow-hidden">

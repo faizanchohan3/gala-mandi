@@ -46,6 +46,8 @@ export async function POST(req: Request) {
     const netWeight = body.netWeight ? parseFloat(body.netWeight) : null
     const netAmount = body.netAmount ? parseFloat(body.netAmount) : (rate * (bags || netWeight || 0))
     const rent = parseFloat(body.rent) || 0
+    const deduction = parseFloat(body.deduction) || 0
+    const labour = parseFloat(body.labour) || 0
 
     const slip = await db.$transaction(async (tx) => {
       const s = await tx.freightSlip.create({
@@ -68,6 +70,8 @@ export async function POST(req: Request) {
           freight: parseFloat(body.freight) || 0,
           netAmount,
           rent,
+          deduction,
+          labour,
           referenceNo: body.referenceNo || null,
           unloadDate: body.unloadDate ? new Date(body.unloadDate) : null,
           notes: body.notes || null,

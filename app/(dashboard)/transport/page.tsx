@@ -22,7 +22,7 @@ const BLANK_FORM = {
   fromLocation: "", toLocation: "", commodity: "",
   builtyNo: "", rate: "", weighbridge: "", bags: "",
   mill: "", netWeight: "", freight: "", netAmount: "",
-  rent: "", referenceNo: "", unloadDate: "", notes: "",
+  rent: "", deduction: "", labour: "", referenceNo: "", unloadDate: "", notes: "",
 }
 
 export default function TransportPage() {
@@ -263,7 +263,8 @@ export default function TransportPage() {
         <td>${s.unloadDate ? new Date(s.unloadDate).toLocaleDateString("en-PK") : "—"}</td>
         <td>${s.netAmount > 0 ? s.netAmount.toLocaleString() : "—"}</td>
         <td>${s.rent > 0 ? s.rent.toLocaleString() : "—"}</td>
-        <td>${s.status}</td>
+        <td>${s.deduction > 0 ? s.deduction.toLocaleString() : "—"}</td>
+        <td>${s.labour > 0 ? s.labour.toLocaleString() : "—"}</td>
         <td>${s.referenceNo || "—"}</td>
       </tr>`).join("")
     const w = window.open("", "_blank")!
@@ -283,7 +284,7 @@ export default function TransportPage() {
   <thead><tr>
     <th>#</th><th>Driver</th><th>Builty</th><th>Rate</th><th>Vehicle</th>
     <th>Freight</th><th>Weighbridge</th><th>Bags</th><th>Mill</th><th>Net Wt</th>
-    <th>Unload Date</th><th>Net Amount</th><th>Rent</th><th>Ref No</th>
+    <th>Unload Date</th><th>Net Amount</th><th>Rent</th><th>Deduction</th><th>Labour</th><th>Ref No</th>
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
@@ -423,7 +424,7 @@ export default function TransportPage() {
             <Truck className="w-4 h-4" /> Add Vehicle
           </Button>
           <Button onClick={() => { setForm({ ...BLANK_FORM }); setShowSlipModal(true) }} className="bg-teal-700 hover:bg-teal-800 gap-2">
-            <Plus className="w-4 h-4" /> New Freight Slip
+            <Plus className="w-4 h-4" /> New FeedMills
           </Button>
         </div>
       </div>
@@ -492,13 +493,15 @@ export default function TransportPage() {
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Unload Date</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Net Amt</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Rent</th>
+                      <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Deduction</th>
+                      <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Labour</th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ref No</th>
                       <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {loading ? (
-                      <tr><td colSpan={15} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
+                      <tr><td colSpan={17} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                     ) : filtered.map((s, i) => (
                       <tr key={s.id} className="hover:bg-gray-50">
                         <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
@@ -516,6 +519,8 @@ export default function TransportPage() {
                         <td className="px-3 py-2.5 text-gray-500 text-xs">{s.unloadDate ? formatDate(s.unloadDate) : "—"}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-gray-900">{s.netAmount > 0 ? formatCurrency(s.netAmount) : "—"}</td>
                         <td className="px-3 py-2.5 text-right text-orange-600 font-medium">{s.rent > 0 ? formatCurrency(s.rent) : "—"}</td>
+                        <td className="px-3 py-2.5 text-right text-red-500">{s.deduction > 0 ? formatCurrency(s.deduction) : "—"}</td>
+                        <td className="px-3 py-2.5 text-right text-gray-700">{s.labour > 0 ? formatCurrency(s.labour) : "—"}</td>
                         <td className="px-3 py-2.5 text-xs text-gray-500">{s.referenceNo || "—"}</td>
                         <td className="px-3 py-2.5 text-center">
                           <button onClick={() => printChallan(s)} className="p-1 text-gray-400 hover:text-teal-600" title="Print Challan">
@@ -525,7 +530,7 @@ export default function TransportPage() {
                       </tr>
                     ))}
                     {!loading && filtered.length === 0 && (
-                      <tr><td colSpan={15} className="px-4 py-10 text-center text-gray-400">No freight slips found</td></tr>
+                      <tr><td colSpan={17} className="px-4 py-10 text-center text-gray-400">No freight slips found</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -689,12 +694,20 @@ export default function TransportPage() {
               <Input type="date" value={form.unloadDate} onChange={(e) => setForm({ ...form, unloadDate: e.target.value })} />
             </div>
             <div>
+              <Label>Deduction (PKR)</Label>
+              <Input type="number" value={form.deduction} onChange={(e) => setForm({ ...form, deduction: e.target.value })} placeholder="0" />
+            </div>
+            <div>
               <Label>Net Amount (PKR)</Label>
               <Input type="number" value={form.netAmount} onChange={(e) => setForm({ ...form, netAmount: e.target.value })} placeholder="Auto-calculated" />
             </div>
             <div>
               <Label>Rent (PKR) <span className="text-xs text-gray-400">— paid to driver</span></Label>
               <Input type="number" value={form.rent} onChange={(e) => setForm({ ...form, rent: e.target.value })} placeholder="0" />
+            </div>
+            <div>
+              <Label>Labour (PKR)</Label>
+              <Input type="number" value={form.labour} onChange={(e) => setForm({ ...form, labour: e.target.value })} placeholder="0" />
             </div>
             <div>
               <Label>Reference No</Label>

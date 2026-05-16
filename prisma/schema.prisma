@@ -63,6 +63,7 @@ model Shop {
   address   String?
   city      String?
   email     String     @unique
+  logo      String?
   status    ShopStatus @default(PENDING)
   isActive  Boolean    @default(false)
   createdAt DateTime   @default(now())
@@ -664,6 +665,8 @@ model FreightSlip {
   freight      Float     @default(0)
   netAmount    Float     @default(0)
   rent         Float     @default(0)
+  deduction    Float     @default(0)
+  labour       Float     @default(0)
   referenceNo  String?
   unloadDate   DateTime?
   status       String    @default("PENDING")
