@@ -268,7 +268,7 @@ export default function TransportPage() {
         <td>${s.referenceNo || "—"}</td>
       </tr>`).join("")
     const w = window.open("", "_blank")!
-    w.document.write(`<html><head><title>Freight Slips — All Entries</title>
+    w.document.write(`<html><head><title>All FeedMills</title>
 <style>
   body { font-family: Arial, sans-serif; font-size: 11px; padding: 16px; }
   h2 { font-size: 15px; margin-bottom: 4px; }
@@ -278,7 +278,7 @@ export default function TransportPage() {
   th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
   tr:nth-child(even) { background: #fafafa; }
 </style></head><body>
-<h2>Freight Slips — All Entries</h2>
+<h2>All FeedMills</h2>
 <p class="sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; Total: ${sorted.length} slips</p>
 <table>
   <thead><tr>
