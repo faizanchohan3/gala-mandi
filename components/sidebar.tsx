@@ -45,7 +45,7 @@ const shopNavItems: NavItem[] = [
   { href: "/farmers", label: "Farmers", icon: Tractor },
   { href: "/agents", label: "Commission Agents", icon: UserCog },
   { href: "/warehouse", label: "Godowns", icon: Warehouse },
-  { href: "/transport", label: "Transport", icon: Truck },
+  { href: "/transport", label: "FeedMills", icon: Truck },
   { href: "/gate", label: "Gate / Weighbridge", icon: Scale },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/reports", label: "Reports", icon: BarChart3, hasChildren: true },

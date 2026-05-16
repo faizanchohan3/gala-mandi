@@ -412,7 +412,7 @@ export default function TransportPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Transport & Freight</h2>
+          <h2 className="text-2xl font-bold text-gray-900">FeedMills</h2>
           <p className="text-gray-500 text-sm">Manage drivers, vehicles, freight slips & ledgers</p>
         </div>
         <div className="flex gap-2">
