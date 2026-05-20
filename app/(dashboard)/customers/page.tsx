@@ -12,7 +12,7 @@ import {
   Plus, Search, Edit, Phone, MapPin, Wallet,
   TrendingUp, ArrowDownCircle, Eye, Users, X,
   BookOpen, ShoppingCart, ExternalLink, Camera, UserCheck,
-  CreditCard, Shield,
+  CreditCard, Shield, Printer, Check,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -40,6 +40,7 @@ export default function CustomersPage() {
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [statusTab, setStatusTab] = useState<StatusTab>("active")
+  const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; balance: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function loadData() {
@@ -93,6 +94,7 @@ export default function CustomersPage() {
   function openPayment(c: any) {
     setSelected(c)
     setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "" })
+    setLastPayment(null)
     setShowPaymentModal(true)
   }
 
@@ -122,14 +124,16 @@ export default function CustomersPage() {
   async function handlePayment() {
     if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) return alert("Enter a valid amount")
     setSaving(true)
+    const amt = parseFloat(paymentForm.amount)
     const res = await fetch(`/api/customers/${selected.id}/payment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...paymentForm, amount: parseFloat(paymentForm.amount) }),
+      body: JSON.stringify({ ...paymentForm, amount: amt }),
     })
     setSaving(false)
     if (res.ok) {
-      setShowPaymentModal(false)
+      const newBalance = Math.max(0, (selected.balance || 0) - amt)
+      setLastPayment({ amount: amt, method: paymentForm.method, notes: paymentForm.notes, name: selected.name, phone: selected.phone, balance: newBalance })
       loadData()
       if (showDetailModal) loadDetail(selected.id)
     } else {
@@ -662,70 +666,128 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Payment Receipt Print Template */}
+      {lastPayment && showPaymentModal && (
+        <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-10">
+          <div className="max-w-xs mx-auto">
+            <div className="text-center border-b-2 border-gray-800 pb-4 mb-5">
+              <h1 className="text-2xl font-bold text-gray-900">Gala Mandi</h1>
+              <p className="text-sm text-gray-500">Payment Receipt</p>
+              <p className="text-xs text-gray-400 mt-1">{new Date().toLocaleString("en-PK")}</p>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-gray-500">Customer:</span><span className="font-semibold">{lastPayment.name}</span></div>
+              {lastPayment.phone && <div className="flex justify-between"><span className="text-gray-500">Phone:</span><span>{lastPayment.phone}</span></div>}
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between"><span className="text-gray-500">Amount Received:</span><span className="text-lg font-bold text-green-700">{formatCurrency(lastPayment.amount)}</span></div>
+                <div className="flex justify-between mt-1"><span className="text-gray-500">Method:</span><span>{lastPayment.method.replace("_", " ")}</span></div>
+                {lastPayment.notes && <div className="flex justify-between mt-1"><span className="text-gray-500">Reference:</span><span>{lastPayment.notes}</span></div>}
+              </div>
+              <div className="border-t-2 border-gray-800 pt-2 flex justify-between font-bold text-base">
+                <span>Remaining Balance:</span>
+                <span className={lastPayment.balance > 0 ? "text-red-700" : "text-green-700"}>{formatCurrency(lastPayment.balance)}</span>
+              </div>
+            </div>
+            <p className="mt-8 text-center text-xs text-gray-400 border-t pt-4">Thank you for your payment</p>
+          </div>
+        </div>
+      )}
+
       {/* ── Payment Modal ──────────────────────────────────────── */}
-      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+      <Dialog open={showPaymentModal} onOpenChange={(open) => { setShowPaymentModal(open); if (!open) setLastPayment(null) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ArrowDownCircle className="w-5 h-5 text-green-600" /> Receive Payment
+              {lastPayment ? <Check className="w-5 h-5 text-green-600" /> : <ArrowDownCircle className="w-5 h-5 text-green-600" />}
+              {lastPayment ? "Payment Recorded" : "Receive Payment"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-green-50 rounded-lg p-3 flex items-center gap-3">
-              {selected?.image ? (
-                <img src={selected.image} alt={selected?.name} className="w-8 h-8 rounded-full object-cover" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center">
-                  <span className="text-green-800 font-bold text-xs">{selected?.name?.charAt(0)}</span>
+
+          {lastPayment ? (
+            /* Receipt view */
+            <div className="space-y-4">
+              <div className="bg-green-50 rounded-lg p-4 text-center">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Check className="w-5 h-5 text-green-700" />
                 </div>
-              )}
-              <div>
-                <p className="font-semibold text-green-800 text-sm">{selected?.name}</p>
-                {selected?.phone && <p className="text-xs text-green-600">{selected.phone}</p>}
+                <p className="font-semibold text-green-800">{lastPayment.name}</p>
+                {lastPayment.phone && <p className="text-xs text-green-600">{lastPayment.phone}</p>}
+              </div>
+              <div className="border border-gray-100 rounded-lg p-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-gray-500">Amount Received</span><span className="font-bold text-green-700">{formatCurrency(lastPayment.amount)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Method</span><span>{lastPayment.method.replace("_", " ")}</span></div>
+                {lastPayment.notes && <div className="flex justify-between"><span className="text-gray-500">Reference</span><span className="text-xs">{lastPayment.notes}</span></div>}
+                <div className="border-t pt-2 flex justify-between font-semibold">
+                  <span className="text-gray-600">Remaining Balance</span>
+                  <span className={lastPayment.balance > 0 ? "text-red-600" : "text-green-700"}>{formatCurrency(lastPayment.balance)}</span>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => { setShowPaymentModal(false); setLastPayment(null) }} className="flex-1">Close</Button>
+                <Button onClick={() => window.print()} className="flex-1 bg-green-700 hover:bg-green-800 gap-2">
+                  <Printer className="w-4 h-4" /> Print Receipt
+                </Button>
               </div>
             </div>
-            <div>
-              <Label>Amount (PKR) *</Label>
-              <Input type="number" placeholder="Enter amount received"
-                value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} autoFocus />
-            </div>
-            <div>
-              <Label>Payment Method</Label>
-              <Select value={paymentForm.method} onValueChange={(v) => setPaymentForm({ ...paymentForm, method: v, bankId: v === "CASH" ? "" : paymentForm.bankId })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CASH">Cash</SelectItem>
-                  <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                  <SelectItem value="CHEQUE">Cheque</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {paymentForm.method !== "CASH" && banks.length > 0 && (
+          ) : (
+            /* Payment form */
+            <div className="space-y-4">
+              <div className="bg-green-50 rounded-lg p-3 flex items-center gap-3">
+                {selected?.image ? (
+                  <img src={selected.image} alt={selected?.name} className="w-8 h-8 rounded-full object-cover" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center">
+                    <span className="text-green-800 font-bold text-xs">{selected?.name?.charAt(0)}</span>
+                  </div>
+                )}
+                <div>
+                  <p className="font-semibold text-green-800 text-sm">{selected?.name}</p>
+                  {selected?.phone && <p className="text-xs text-green-600">{selected.phone}</p>}
+                </div>
+              </div>
               <div>
-                <Label>Bank Account</Label>
-                <Select value={paymentForm.bankId || "none"} onValueChange={(v) => setPaymentForm({ ...paymentForm, bankId: v === "none" ? "" : v })}>
-                  <SelectTrigger><SelectValue placeholder="Select bank..." /></SelectTrigger>
+                <Label>Amount (PKR) *</Label>
+                <Input type="number" placeholder="Enter amount received"
+                  value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} autoFocus />
+              </div>
+              <div>
+                <Label>Payment Method</Label>
+                <Select value={paymentForm.method} onValueChange={(v) => setPaymentForm({ ...paymentForm, method: v, bankId: v === "CASH" ? "" : paymentForm.bankId })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">— Not specified —</SelectItem>
-                    {banks.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>{b.name}{b.accountNumber ? ` (${b.accountNumber})` : ""}</SelectItem>
-                    ))}
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                    <SelectItem value="CHEQUE">Cheque</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
-            <div>
-              <Label>Notes (optional)</Label>
-              <Input placeholder="Cheque no., reference..."
-                value={paymentForm.notes} onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })} />
+              {paymentForm.method !== "CASH" && banks.length > 0 && (
+                <div>
+                  <Label>Bank Account</Label>
+                  <Select value={paymentForm.bankId || "none"} onValueChange={(v) => setPaymentForm({ ...paymentForm, bankId: v === "none" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Select bank..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Not specified —</SelectItem>
+                      {banks.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}{b.accountNumber ? ` (${b.accountNumber})` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div>
+                <Label>Notes (optional)</Label>
+                <Input placeholder="Cheque no., reference..."
+                  value={paymentForm.notes} onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })} />
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setShowPaymentModal(false)} className="flex-1">Cancel</Button>
+                <Button onClick={handlePayment} disabled={saving} className="flex-1 bg-green-700 hover:bg-green-800">
+                  {saving ? "Processing..." : "Confirm Payment"}
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowPaymentModal(false)} className="flex-1">Cancel</Button>
-              <Button onClick={handlePayment} disabled={saving} className="flex-1 bg-green-700 hover:bg-green-800">
-                {saving ? "Processing..." : "Confirm Payment"}
-              </Button>
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

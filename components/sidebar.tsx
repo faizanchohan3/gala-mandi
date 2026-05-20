@@ -28,24 +28,30 @@ const reportSubItems = [
   { href: "/reports/profit-loss", label: "Profit & Loss" },
   { href: "/reports/customer-ledger", label: "Customer Ledger" },
   { href: "/reports/supplier-ledger", label: "Supplier Ledger" },
+  { href: "/reports/farmer-ledger", label: "Farmer Ledger" },
   { href: "/reports/bank-transactions", label: "Bank Transactions" },
 ]
 
 const shopNavItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inventory", label: "Inventory", icon: Package },
-  { href: "/sales", label: "Sales", icon: ShoppingCart },
-  { href: "/purchases", label: "Purchases", icon: ShoppingBag },
   { href: "/customers", label: "Customers", icon: UserCheck },
-  { href: "/suppliers", label: "Suppliers", icon: Truck },
+  { href: "/farmers", label: "Farmers", icon: Tractor },
+
+  { href: "/agents", label: "Commission Agents", icon: UserCog },
+{ href: "/suppliers", label: "Suppliers", icon: Truck },
+ { href: "/purchases", label: "Purchases", icon: ShoppingBag },
+ 
+  { href: "/sales", label: "Sales", icon: ShoppingCart },
+  
   { href: "/pesticides", label: "Pesticides", icon: Sprout },
   { href: "/finance", label: "Finance", icon: Wallet },
   { href: "/banks", label: "Banks", icon: Building2 },
   { href: "/expenses", label: "Expenses", icon: Receipt },
-  { href: "/farmers", label: "Farmers", icon: Tractor },
-  { href: "/agents", label: "Commission Agents", icon: UserCog },
-  { href: "/warehouse", label: "Godowns", icon: Warehouse },
+
   { href: "/transport", label: "FeedMills", icon: Truck },
+  { href: "/warehouse", label: "Godowns", icon: Warehouse },
+
   { href: "/gate", label: "Gate / Weighbridge", icon: Scale },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/reports", label: "Reports", icon: BarChart3, hasChildren: true },

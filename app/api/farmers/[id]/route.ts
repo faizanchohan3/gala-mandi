@@ -11,19 +11,29 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     where: { id },
     include: {
       purchases: {
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: "asc" },
         include: {
           items: { include: { product: { select: { name: true, unit: true } } } },
           payments: { orderBy: { createdAt: "asc" } },
         },
       },
-      payments: { orderBy: { createdAt: "desc" } },
+      payments: { orderBy: { createdAt: "asc" } },
     },
   })
   if (!farmer) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  // Build ledger
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sales: any[] = await (db.sale as any).findMany({
+    where: { farmerId: id },
+    orderBy: { createdAt: "asc" },
+    include: {
+      items: { include: { product: { select: { name: true, unit: true } } } },
+    },
+  })
+
   const events: any[] = []
+
+  // FarmerPurchase records (mandi buys from farmer → debit)
   for (const purchase of farmer.purchases) {
     events.push({
       date: purchase.createdAt,
@@ -39,11 +49,41 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         type: "PAYMENT",
         description: `Payment — ${payment.method}`,
         debit: 0,
-        credit: payment.amount,
+        credit: Math.abs(payment.amount),
         ref: payment.id,
       })
     }
   }
+
+  // Standalone FarmerPayments (amount < 0 = received from farmer = Debit)
+  for (const payment of farmer.payments) {
+    if (!payment.purchaseId) {
+      const isReceive = payment.amount < 0
+      const displayAmt = Math.abs(payment.amount)
+      events.push({
+        date: payment.createdAt,
+        type: isReceive ? "INCOME" : "PAYMENT",
+        description: `${isReceive ? "Received from Farmer" : "Payment"} — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
+        debit: isReceive ? displayAmt : 0,
+        credit: isReceive ? 0 : displayAmt,
+        ref: payment.id,
+      })
+    }
+  }
+
+  // Sales to farmer (mandi sells to farmer → credit)
+  for (const sale of sales) {
+    const itemDesc = sale.items.map((i: any) => `${i.quantity} ${i.product.unit} ${i.product.name}`).join(", ")
+    events.push({
+      date: sale.createdAt,
+      type: "SALE",
+      description: `Sale #${sale.id.slice(-6).toUpperCase()}${itemDesc ? ` — ${itemDesc}` : ""}`,
+      debit: 0,
+      credit: sale.totalAmount,
+      ref: sale.id,
+    })
+  }
+
   events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
   let running = 0
@@ -53,6 +93,62 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   })
 
   return NextResponse.json({ farmer, ledger })
+}
+
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth()
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { id } = await params
+  const body = await req.json()
+  const { amount, method, notes, purchaseId, paymentType = "PAY" } = body
+
+  const amt = parseFloat(amount)
+  if (!amt || amt <= 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
+
+  // Store negative amount for RECEIVE (farmer pays mandi), positive for PAY (mandi pays farmer)
+  const storedAmount = paymentType === "RECEIVE" ? -amt : amt
+
+  // Balance convention: positive = mandi owes farmer
+  // PAY: mandi pays farmer → balance decrements
+  // RECEIVE: farmer pays mandi → balance increments
+  const balanceChange = paymentType === "RECEIVE"
+    ? { increment: amt }
+    : { decrement: amt }
+
+  await db.$transaction(async (tx) => {
+    await tx.farmerPayment.create({
+      data: {
+        farmerId: id,
+        purchaseId: purchaseId || null,
+        amount: storedAmount,
+        method: method || "CASH",
+        notes: notes || null,
+      },
+    })
+
+    await tx.farmer.update({
+      where: { id },
+      data: { balance: balanceChange },
+    })
+
+    if (purchaseId && paymentType === "PAY") {
+      const purchase = await tx.farmerPurchase.findUnique({ where: { id: purchaseId } })
+      if (purchase) {
+        const newPaid = purchase.paidAmount + amt
+        const newBalance = purchase.totalAmount - newPaid
+        await tx.farmerPurchase.update({
+          where: { id: purchaseId },
+          data: {
+            paidAmount: newPaid,
+            balance: newBalance,
+            status: newBalance <= 0 ? "PAID" : newPaid > 0 ? "PARTIAL" : "PENDING",
+          },
+        })
+      }
+    }
+  })
+
+  return NextResponse.json({ ok: true })
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {

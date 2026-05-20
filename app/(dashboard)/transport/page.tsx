@@ -20,8 +20,8 @@ const STATUS_COLORS: Record<string, string> = {
 const BLANK_FORM = {
   driverId: "", vehicleId: "", customerId: "",
   fromLocation: "", toLocation: "", commodity: "",
-  builtyNo: "", rate: "", weighbridge: "", bags: "",
-  mill: "", netWeight: "", freight: "", netAmount: "",
+  builtyNo: "", rate: "", weighbridge: "", loadingDate: "", bags: "",
+  mill: "", netWeight: "", netAmount: "",
   rent: "", deduction: "", labour: "", referenceNo: "", unloadDate: "", notes: "",
 }
 
@@ -255,15 +255,15 @@ export default function TransportPage() {
         <td>${s.builtyNo || s.slipNo}</td>
         <td>${s.rate > 0 ? s.rate : "—"}</td>
         <td>${s.vehicle?.vehicleNo || "—"}</td>
-        <td>${s.freight > 0 ? s.freight.toLocaleString() : "—"}</td>
         <td>${s.weighbridge ? s.weighbridge + " KG" : "—"}</td>
+        <td>${s.loadingDate ? new Date(s.loadingDate).toLocaleDateString("en-PK") : "—"}</td>
         <td>${s.bags || "—"}</td>
         <td>${s.mill || "—"}</td>
         <td>${s.netWeight ? s.netWeight + " KG" : "—"}</td>
         <td>${s.unloadDate ? new Date(s.unloadDate).toLocaleDateString("en-PK") : "—"}</td>
+        <td>${s.deduction > 0 ? s.deduction.toLocaleString() : "—"}</td>
         <td>${s.netAmount > 0 ? s.netAmount.toLocaleString() : "—"}</td>
         <td>${s.rent > 0 ? s.rent.toLocaleString() : "—"}</td>
-        <td>${s.deduction > 0 ? s.deduction.toLocaleString() : "—"}</td>
         <td>${s.labour > 0 ? s.labour.toLocaleString() : "—"}</td>
         <td>${s.referenceNo || "—"}</td>
       </tr>`).join("")
@@ -283,8 +283,8 @@ export default function TransportPage() {
 <table>
   <thead><tr>
     <th>#</th><th>Driver</th><th>Builty</th><th>Rate</th><th>Vehicle</th>
-    <th>Freight</th><th>Weighbridge</th><th>Bags</th><th>Mill</th><th>Net Wt</th>
-    <th>Unload Date</th><th>Net Amount</th><th>Rent</th><th>Deduction</th><th>Labour</th><th>Ref No</th>
+    <th>Weighbridge</th><th>Loading Date</th><th>Bags</th><th>Mill</th><th>Net Wt</th>
+    <th>Unload Date</th><th>Deduction</th><th>Net Amount</th><th>Rent</th><th>Labour</th><th>Ref No</th>
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
@@ -485,15 +485,15 @@ export default function TransportPage() {
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Builty</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Rate</th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Vehicle</th>
-                      <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Freight</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Weighbridge</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Loading Date</th>
                       <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Bags</th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Mill</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Net Wt</th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Unload Date</th>
+                      <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Deduction</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Net Amt</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Rent</th>
-                      <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Deduction</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Labour</th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ref No</th>
                       <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
@@ -511,15 +511,15 @@ export default function TransportPage() {
                         <td className="px-3 py-2.5 font-mono text-xs text-gray-600">{s.builtyNo || s.slipNo}</td>
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.rate > 0 ? s.rate : "—"}</td>
                         <td className="px-3 py-2.5 text-gray-700">{s.vehicle?.vehicleNo || "—"}</td>
-                        <td className="px-3 py-2.5 text-right text-teal-700 font-medium">{s.freight > 0 ? formatCurrency(s.freight) : "—"}</td>
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.weighbridge ? `${s.weighbridge} KG` : "—"}</td>
+                        <td className="px-3 py-2.5 text-gray-500 text-xs">{s.loadingDate ? formatDate(s.loadingDate) : "—"}</td>
                         <td className="px-3 py-2.5 text-center text-gray-700">{s.bags || "—"}</td>
                         <td className="px-3 py-2.5 text-gray-700">{s.mill || "—"}</td>
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.netWeight ? `${s.netWeight} KG` : "—"}</td>
                         <td className="px-3 py-2.5 text-gray-500 text-xs">{s.unloadDate ? formatDate(s.unloadDate) : "—"}</td>
+                        <td className="px-3 py-2.5 text-right text-red-500">{s.deduction > 0 ? formatCurrency(s.deduction) : "—"}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-gray-900">{s.netAmount > 0 ? formatCurrency(s.netAmount) : "—"}</td>
                         <td className="px-3 py-2.5 text-right text-orange-600 font-medium">{s.rent > 0 ? formatCurrency(s.rent) : "—"}</td>
-                        <td className="px-3 py-2.5 text-right text-red-500">{s.deduction > 0 ? formatCurrency(s.deduction) : "—"}</td>
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.labour > 0 ? formatCurrency(s.labour) : "—"}</td>
                         <td className="px-3 py-2.5 text-xs text-gray-500">{s.referenceNo || "—"}</td>
                         <td className="px-3 py-2.5 text-center">
@@ -639,7 +639,7 @@ export default function TransportPage() {
       {/* ── New Freight Slip Modal ── */}
       <Dialog open={showSlipModal} onOpenChange={setShowSlipModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>New Freight Slip</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New FeedMill</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Driver</Label>
@@ -670,12 +670,12 @@ export default function TransportPage() {
               </Select>
             </div>
             <div>
-              <Label>Freight (PKR)</Label>
-              <Input type="number" value={form.freight} onChange={(e) => setForm({ ...form, freight: e.target.value })} placeholder="0" />
-            </div>
-            <div>
               <Label>Weighbridge (KG)</Label>
               <Input type="number" value={form.weighbridge} onChange={(e) => setForm({ ...form, weighbridge: e.target.value })} />
+            </div>
+            <div>
+              <Label>Loading Date</Label>
+              <Input type="date" value={form.loadingDate} onChange={(e) => setForm({ ...form, loadingDate: e.target.value })} />
             </div>
             <div>
               <Label>Bags</Label>

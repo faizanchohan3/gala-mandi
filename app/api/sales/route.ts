@@ -21,6 +21,7 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
       include: {
         customer: true,
+        farmer: { select: { id: true, name: true, phone: true } },
         createdBy: { select: { name: true } },
         items: { include: { product: true } },
       },
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()
-  const { customerId, items, paidAmount, notes } = body
+  const { customerId, farmerId, items, paidAmount, notes } = body
 
   const totalAmount = items.reduce((s: number, i: any) => s + i.quantity * i.price, 0)
   const balance = totalAmount - (paidAmount || 0)
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
       data: {
         shopId: session.user.shopId || null,
         customerId: customerId || null,
+        farmerId: farmerId || null,
         totalAmount,
         paidAmount: paidAmount || 0,
         balance,

@@ -63,6 +63,7 @@ export async function POST(req: Request) {
           builtyNo: body.builtyNo || null,
           rate,
           weighbridge: body.weighbridge ? parseFloat(body.weighbridge) : null,
+          loadingDate: body.loadingDate ? new Date(body.loadingDate) : null,
           bags,
           mill: body.mill || null,
           netWeight,

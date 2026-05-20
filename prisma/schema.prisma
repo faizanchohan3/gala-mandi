@@ -231,6 +231,7 @@ model Sale {
   id          String     @id @default(cuid())
   shopId      String?
   customerId  String?
+  farmerId    String?
   totalAmount Float
   paidAmount  Float      @default(0)
   balance     Float      @default(0)
@@ -242,6 +243,7 @@ model Sale {
 
   shop      Shop?      @relation(fields: [shopId], references: [id])
   customer  Customer?  @relation(fields: [customerId], references: [id])
+  farmer    Farmer?    @relation(fields: [farmerId], references: [id])
   createdBy User       @relation(fields: [createdById], references: [id])
   items     SaleItem[]
   payments  Payment[]
@@ -265,6 +267,7 @@ model Purchase {
   id          String     @id @default(cuid())
   shopId      String?
   supplierId  String?
+  farmerId    String?
   totalAmount Float
   paidAmount  Float      @default(0)
   balance     Float      @default(0)
@@ -276,6 +279,7 @@ model Purchase {
 
   shop      Shop?          @relation(fields: [shopId], references: [id])
   supplier  Supplier?      @relation(fields: [supplierId], references: [id])
+  farmer    Farmer?        @relation(fields: [farmerId], references: [id])
   createdBy User           @relation(fields: [createdById], references: [id])
   items     PurchaseItem[]
   payments  Payment[]
@@ -436,10 +440,12 @@ model Farmer {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  shop      Shop?            @relation(fields: [shopId], references: [id])
-  purchases FarmerPurchase[]
-  payments  FarmerPayment[]
-  gateEntries GateEntry[]
+  shop             Shop?            @relation(fields: [shopId], references: [id])
+  purchases        FarmerPurchase[]
+  payments         FarmerPayment[]
+  gateEntries      GateEntry[]
+  sales            Sale[]
+  productPurchases Purchase[]
 }
 
 model FarmerPurchase {
@@ -667,6 +673,7 @@ model FreightSlip {
   rent         Float     @default(0)
   deduction    Float     @default(0)
   labour       Float     @default(0)
+  loadingDate  DateTime?
   referenceNo  String?
   unloadDate   DateTime?
   status       String    @default("PENDING")

@@ -149,7 +149,19 @@ export default function SalesReportPage() {
                 {sales.map((sale) => (
                   <tr key={sale.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(sale.createdAt)}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{sale.customer?.name || "—"}</td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900">{sale.customer?.name || sale.farmer?.name || "Walk-in"}</div>
+                      {(sale.customer || sale.farmer) && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${sale.farmer ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                            {sale.farmer ? "Farmer" : "Customer"}
+                          </span>
+                          {(sale.customer?.phone || sale.farmer?.phone) && (
+                            <span className="text-xs text-gray-400">{sale.customer?.phone || sale.farmer?.phone}</span>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-500 text-xs max-w-xs truncate">
                       {sale.items?.map((item: any) => `${item.quantity} ${item.product?.unit} ${item.product?.name}`).join(", ")}
                     </td>

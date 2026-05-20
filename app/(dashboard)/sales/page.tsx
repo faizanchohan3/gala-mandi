@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Textarea } from "@/components/ui/textarea"
-import { formatCurrency, formatDate, formatDateTime, getStatusColor } from "@/lib/utils"
+import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
 import { Plus, Search, Trash2, ShoppingCart, Eye, Printer, Sprout } from "lucide-react"
 
 export default function SalesPage() {
@@ -19,6 +20,7 @@ export default function SalesPage() {
   const [products, setProducts] = useState<any[]>([])
   const [pesticides, setPesticides] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
+  const [farmers, setFarmers] = useState<any[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"products" | "pesticides">("products")
@@ -37,18 +39,20 @@ export default function SalesPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const [sr, pr, cr, psr, pestr] = await Promise.allSettled([
+      const [sr, pr, cr, psr, pestr, fr] = await Promise.allSettled([
         fetch("/api/sales").then((r) => r.json()),
         fetch("/api/inventory").then((r) => r.json()),
         fetch("/api/customers").then((r) => r.json()),
         fetch("/api/pesticides/sales").then((r) => r.json()),
         fetch("/api/pesticides").then((r) => r.json()),
+        fetch("/api/farmers").then((r) => r.json()),
       ])
       if (sr.status === "fulfilled") setSales(sr.value.sales || [])
       if (pr.status === "fulfilled") setProducts(pr.value.products || [])
       if (cr.status === "fulfilled") setCustomers(cr.value.customers || [])
       if (psr.status === "fulfilled") setPesticideSales(psr.value.sales || [])
       if (pestr.status === "fulfilled") setPesticides(pestr.value.pesticides || [])
+      if (fr.status === "fulfilled") setFarmers(fr.value.farmers || [])
     } finally {
       setLoading(false)
     }
@@ -83,7 +87,8 @@ export default function SalesPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        customerId: (customerId && customerId !== "walk-in") ? customerId : null,
+        customerId: (customerId && customerId !== "walk-in" && !customerId.startsWith("farmer_")) ? customerId : null,
+        farmerId: customerId?.startsWith("farmer_") ? customerId.replace("farmer_", "") : null,
         items: items.filter((i) => i.productId).map((i) => ({
           productId: i.productId,
           quantity: parseFloat(i.quantity),
@@ -113,8 +118,11 @@ export default function SalesPage() {
     const qty = parseFloat(pesticideSaleForm.quantity)
     if (!qty || qty <= 0) return alert("Please enter a valid quantity")
     if (qty > selectedPesticide.quantity) return alert(`Insufficient stock. Available: ${selectedPesticide.quantity} ${selectedPesticide.unit}`)
-    const chosenCustomer = customers.find((c: any) => c.id === pesticideSaleForm.customerId)
-    const customerName = chosenCustomer ? chosenCustomer.name : pesticideSaleForm.customerName
+    const isFarmerSelected = pesticideSaleForm.customerId?.startsWith("farmer_")
+    const realCustomerId = isFarmerSelected ? null : (pesticideSaleForm.customerId || null)
+    const chosenCustomer = customers.find((c: any) => c.id === realCustomerId)
+    const chosenFarmer = isFarmerSelected ? farmers.find((f: any) => `farmer_${f.id}` === pesticideSaleForm.customerId) : null
+    const customerName = chosenCustomer ? chosenCustomer.name : (chosenFarmer ? chosenFarmer.name : pesticideSaleForm.customerName)
     try {
       const res = await fetch("/api/pesticides/sales", {
         method: "POST",
@@ -123,7 +131,7 @@ export default function SalesPage() {
           pesticideId: pesticideSaleForm.pesticideId,
           quantity: qty,
           unitPrice: selectedPesticide.salePrice,
-          customerId: pesticideSaleForm.customerId || null,
+          customerId: realCustomerId,
           customerName,
           paidAmount: parseFloat(pesticideSaleForm.paidAmount) || 0,
         }),
@@ -151,7 +159,7 @@ export default function SalesPage() {
   }
 
   const filtered = sales.filter((s) =>
-    s.customer?.name?.toLowerCase().includes(search.toLowerCase()) ||
+    (s.customer?.name || s.farmer?.name || "")?.toLowerCase().includes(search.toLowerCase()) ||
     s.status.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -270,9 +278,20 @@ export default function SalesPage() {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Bill To</p>
               {selectedSale.customer ? (
                 <div>
-                  <p className="text-base font-bold text-gray-900">{selectedSale.customer.name}</p>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-base font-bold text-gray-900">{selectedSale.customer.name}</p>
+                    <span className="text-xs border border-blue-300 text-blue-600 px-1.5 py-0.5 rounded font-medium">Customer</span>
+                  </div>
                   {selectedSale.customer.phone && <p className="text-sm text-gray-600">Phone: {selectedSale.customer.phone}</p>}
                   {selectedSale.customer.address && <p className="text-sm text-gray-600">Address: {selectedSale.customer.address}</p>}
+                </div>
+              ) : selectedSale.farmer ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-base font-bold text-gray-900">{selectedSale.farmer.name}</p>
+                    <span className="text-xs border border-green-400 text-green-700 px-1.5 py-0.5 rounded font-medium">Farmer</span>
+                  </div>
+                  {selectedSale.farmer.phone && <p className="text-sm text-gray-600">Phone: {selectedSale.farmer.phone}</p>}
                 </div>
               ) : (
                 <p className="text-base font-medium text-gray-700">Walk-in Customer</p>
@@ -401,7 +420,21 @@ export default function SalesPage() {
                       {filtered.map((s, i) => (
                         <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
                           <td className="py-3 px-3 text-gray-400 text-xs">{i + 1}</td>
-                          <td className="py-3 px-3 font-medium text-gray-800">{s.customer?.name || "Walk-in"}</td>
+                          <td className="py-3 px-3">
+                            <div className="font-medium text-gray-800">
+                              {s.customer?.name || s.farmer?.name || "Walk-in"}
+                            </div>
+                            {(s.customer || s.farmer) && (
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${s.farmer ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                                  {s.farmer ? "Farmer" : "Customer"}
+                                </span>
+                                {(s.customer?.phone || s.farmer?.phone) && (
+                                  <span className="text-xs text-gray-400">{s.customer?.phone || s.farmer?.phone}</span>
+                                )}
+                              </div>
+                            )}
+                          </td>
                           <td className="py-3 px-3 text-gray-700">{formatCurrency(s.totalAmount)}</td>
                           <td className="py-3 px-3 text-green-600">{formatCurrency(s.paidAmount)}</td>
                           <td className="py-3 px-3 text-red-600">{formatCurrency(s.balance)}</td>
@@ -510,13 +543,22 @@ export default function SalesPage() {
             <div className="space-y-4">
               <div>
                 <Label>Customer (optional)</Label>
-                <Select value={customerId} onValueChange={setCustomerId}>
-                  <SelectTrigger><SelectValue placeholder="Walk-in customer" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="walk-in">Walk-in</SelectItem>
-                    {customers.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={customerId}
+                  onValueChange={setCustomerId}
+                  placeholder="Walk-in customer"
+                  options={[{ value: "walk-in", label: "Walk-in" }]}
+                  groups={[
+                    {
+                      label: "Customers",
+                      options: customers.map((c: any) => ({ value: c.id, label: c.name, sub: c.phone || undefined })),
+                    },
+                    {
+                      label: "Farmers",
+                      options: farmers.map((f: any) => ({ value: `farmer_${f.id}`, label: f.name, sub: f.phone || undefined })),
+                    },
+                  ]}
+                />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -527,19 +569,16 @@ export default function SalesPage() {
                   {items.map((item, i) => (
                     <div key={i} className="grid grid-cols-12 gap-2 items-end">
                       <div className="col-span-5">
-                        <Select value={item.productId} onValueChange={(v) => updateItem(i, "productId", v)}>
-                          <SelectTrigger><SelectValue placeholder="Product" /></SelectTrigger>
-                          <SelectContent>
-                            {products.map((p: any) => (
-                              <SelectItem key={p.id} value={p.id} disabled={p.currentStock <= 0}>
-                                {p.name}
-                                {p.currentStock <= 0
-                                  ? " — Out of Stock"
-                                  : ` — ${p.currentStock} ${p.unit} left`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchableSelect
+                          value={item.productId}
+                          onValueChange={(v) => updateItem(i, "productId", v)}
+                          placeholder="Select product"
+                          options={products.map((p: any) => ({
+                            value: p.id,
+                            label: p.name,
+                            sub: p.currentStock <= 0 ? "Out of Stock" : `${p.currentStock} ${p.unit}`,
+                          }))}
+                        />
                       </div>
                       <div className="col-span-2">
                         <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(i, "quantity", e.target.value)} />
@@ -621,15 +660,22 @@ export default function SalesPage() {
               )}
               <div>
                 <Label>Customer (optional)</Label>
-                <Select value={pesticideSaleForm.customerId || "walk-in"} onValueChange={(v) => setPesticideSaleForm({ ...pesticideSaleForm, customerId: v === "walk-in" ? "" : v, customerName: "" })}>
-                  <SelectTrigger><SelectValue placeholder="Walk-in / select customer" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="walk-in">Walk-in</SelectItem>
-                    {customers.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}{c.phone ? ` — ${c.phone}` : ""}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={pesticideSaleForm.customerId || "walk-in"}
+                  onValueChange={(v) => setPesticideSaleForm({ ...pesticideSaleForm, customerId: v === "walk-in" ? "" : v, customerName: "" })}
+                  placeholder="Walk-in / select customer"
+                  options={[{ value: "walk-in", label: "Walk-in" }]}
+                  groups={[
+                    {
+                      label: "Customers",
+                      options: customers.map((c: any) => ({ value: c.id, label: c.name, sub: c.phone || undefined })),
+                    },
+                    {
+                      label: "Farmers",
+                      options: farmers.map((f: any) => ({ value: `farmer_${f.id}`, label: f.name, sub: f.phone || undefined })),
+                    },
+                  ]}
+                />
               </div>
               {!pesticideSaleForm.customerId && (
                 <div>
@@ -669,7 +715,7 @@ export default function SalesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-green-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500 font-medium uppercase mb-1">Customer</p>
-                    <p className="font-bold text-gray-900">{selectedSale.customer?.name || "Walk-in"}</p>
+                    <p className="font-bold text-gray-900">{selectedSale.customer?.name || selectedSale.farmer?.name || "Walk-in"}</p>
                     {selectedSale.customer?.phone && (
                       <p className="text-sm text-gray-600">{selectedSale.customer.phone}</p>
                     )}

@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Plus, Search, Tractor, Edit, Trash2, ChevronDown, ChevronRight, BookOpen } from "lucide-react"
+import { Plus, Search, Tractor, Edit, Trash2, ChevronDown, ChevronRight, BookOpen, Banknote, Printer, Check } from "lucide-react"
 
 export default function FarmersPage() {
   const [farmers, setFarmers] = useState<any[]>([])
@@ -20,6 +22,13 @@ export default function FarmersPage() {
   const [form, setForm] = useState({
     name: "", phone: "", address: "", village: "", cnic: "", creditLimit: "0",
   })
+
+  // Payment state
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [payingFarmer, setPayingFarmer] = useState<any>(null)
+  const [payForm, setPayForm] = useState({ amount: "", method: "CASH", notes: "", paymentType: "PAY" })
+  const [payLoading, setPayLoading] = useState(false)
+  const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; paymentType: string; balance: number } | null>(null)
 
   async function loadData() {
     try {
@@ -43,6 +52,13 @@ export default function FarmersPage() {
     setShowModal(true)
   }
 
+  function openPayment(f: any) {
+    setPayingFarmer(f)
+    setPayForm({ amount: "", method: "CASH", notes: "", paymentType: "PAY" })
+    setLastPayment(null)
+    setShowPayModal(true)
+  }
+
   async function handleSave() {
     if (!form.name.trim()) return alert("Name is required")
     const url = editing ? `/api/farmers/${editing.id}` : "/api/farmers"
@@ -58,6 +74,32 @@ export default function FarmersPage() {
     if (!confirm(`Deactivate farmer: "${name}"?`)) return
     await fetch(`/api/farmers/${id}`, { method: "DELETE" })
     loadData()
+  }
+
+  async function handlePayment() {
+    if (!payingFarmer) return
+    const amt = parseFloat(payForm.amount)
+    if (!amt || amt <= 0) return alert("Enter a valid amount")
+    setPayLoading(true)
+    const res = await fetch(`/api/farmers/${payingFarmer.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: amt, method: payForm.method, notes: payForm.notes, paymentType: payForm.paymentType }),
+    })
+    setPayLoading(false)
+    if (res.ok) {
+      const balanceChange = payForm.paymentType === "RECEIVE" ? amt : -amt
+      const newBalance = (payingFarmer.balance || 0) + balanceChange
+      setLastPayment({ amount: amt, method: payForm.method, notes: payForm.notes, paymentType: payForm.paymentType, name: payingFarmer.name, phone: payingFarmer.phone, balance: newBalance })
+      await loadData()
+      if (expanded[payingFarmer.id]) {
+        const d = await fetch(`/api/farmers/${payingFarmer.id}`).then((r) => r.json())
+        setExpanded((p) => ({ ...p, [payingFarmer.id]: d }))
+      }
+    } else {
+      const data = await res.json().catch(() => ({}))
+      alert(data?.error || "Failed to record payment")
+    }
   }
 
   async function toggleExpand(id: string) {
@@ -172,6 +214,13 @@ export default function FarmersPage() {
                       <td className="px-4 py-3 text-center text-gray-700">{f._count?.purchases || 0}</td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openPayment(f)}
+                            className="p-1 text-gray-400 hover:text-green-700"
+                            title="Record Payment"
+                          >
+                            <Banknote className="w-4 h-4" />
+                          </button>
                           <button onClick={() => openEdit(f)} className="p-1 text-gray-400 hover:text-blue-600">
                             <Edit className="w-4 h-4" />
                           </button>
@@ -187,9 +236,17 @@ export default function FarmersPage() {
                       <tr key={`${f.id}-ledger`} className="bg-green-50/20 border-b border-green-100">
                         <td colSpan={10} className="px-4 py-4">
                           <div className="ml-6">
-                            <p className="text-xs font-semibold text-gray-600 mb-3 flex items-center gap-1">
-                              <BookOpen className="w-3.5 h-3.5" /> Farmer Ledger
-                            </p>
+                            <div className="flex items-center justify-between mb-3">
+                              <p className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                                <BookOpen className="w-3.5 h-3.5" /> Farmer Ledger
+                              </p>
+                              <button
+                                onClick={() => openPayment(f)}
+                                className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 font-medium border border-green-200 rounded px-2 py-1 hover:bg-green-50"
+                              >
+                                <Banknote className="w-3 h-3" /> Record Payment
+                              </button>
+                            </div>
                             {expanded[f.id].ledger?.length === 0 ? (
                               <p className="text-xs text-gray-400">No transactions yet</p>
                             ) : (
@@ -233,7 +290,7 @@ export default function FarmersPage() {
         </CardContent>
       </Card>
 
-      {/* Modal */}
+      {/* Add/Edit Farmer Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -263,6 +320,131 @@ export default function FarmersPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Receipt Print Template */}
+      {lastPayment && showPayModal && (
+        <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-10">
+          <div className="max-w-xs mx-auto">
+            <div className="text-center border-b-2 border-gray-800 pb-4 mb-5">
+              <h1 className="text-2xl font-bold text-gray-900">Gala Mandi</h1>
+              <p className="text-sm text-gray-500">{lastPayment.paymentType === "RECEIVE" ? "Payment Receipt (Received)" : "Payment Receipt"}</p>
+              <p className="text-xs text-gray-400 mt-1">{new Date().toLocaleString("en-PK")}</p>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-gray-500">Farmer:</span><span className="font-semibold">{lastPayment.name}</span></div>
+              {lastPayment.phone && <div className="flex justify-between"><span className="text-gray-500">Phone:</span><span>{lastPayment.phone}</span></div>}
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">{lastPayment.paymentType === "RECEIVE" ? "Amount Received:" : "Amount Paid:"}</span>
+                  <span className="text-lg font-bold text-green-700">{formatCurrency(lastPayment.amount)}</span>
+                </div>
+                <div className="flex justify-between mt-1"><span className="text-gray-500">Method:</span><span>{lastPayment.method.replace("_", " ")}</span></div>
+                {lastPayment.notes && <div className="flex justify-between mt-1"><span className="text-gray-500">Notes:</span><span>{lastPayment.notes}</span></div>}
+              </div>
+              <div className="border-t-2 border-gray-800 pt-2 flex justify-between font-bold text-base">
+                <span>Balance:</span>
+                <span className={lastPayment.balance > 0 ? "text-red-700" : lastPayment.balance < 0 ? "text-blue-700" : "text-green-700"}>
+                  {formatCurrency(Math.abs(lastPayment.balance))} {lastPayment.balance > 0 ? "Payable" : lastPayment.balance < 0 ? "Advance" : "Settled"}
+                </span>
+              </div>
+            </div>
+            <p className="mt-8 text-center text-xs text-gray-400 border-t pt-4">Gala Mandi — Farmer Account</p>
+          </div>
+        </div>
+      )}
+
+      {/* Record Payment Modal */}
+      <Dialog open={showPayModal} onOpenChange={(open) => { setShowPayModal(open); if (!open) setLastPayment(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {lastPayment ? <Check className="w-5 h-5 text-green-600" /> : <Banknote className="w-5 h-5 text-green-700" />}
+              {lastPayment ? "Payment Recorded" : "Record Payment"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {lastPayment ? (
+            <div className="space-y-4">
+              <div className={`rounded-lg p-4 text-center ${lastPayment.paymentType === "RECEIVE" ? "bg-blue-50" : "bg-green-50"}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${lastPayment.paymentType === "RECEIVE" ? "bg-blue-100" : "bg-green-100"}`}>
+                  <Check className={`w-5 h-5 ${lastPayment.paymentType === "RECEIVE" ? "text-blue-700" : "text-green-700"}`} />
+                </div>
+                <p className="font-semibold text-gray-900">{lastPayment.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{lastPayment.paymentType === "RECEIVE" ? "Received from Farmer" : "Paid to Farmer"}</p>
+              </div>
+              <div className="border border-gray-100 rounded-lg p-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-gray-500">Amount</span><span className="font-bold text-green-700">{formatCurrency(lastPayment.amount)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Method</span><span>{lastPayment.method.replace("_", " ")}</span></div>
+                {lastPayment.notes && <div className="flex justify-between"><span className="text-gray-500">Notes</span><span className="text-xs">{lastPayment.notes}</span></div>}
+                <div className="border-t pt-2 flex justify-between font-semibold">
+                  <span className="text-gray-600">New Balance</span>
+                  <span className={lastPayment.balance > 0 ? "text-red-600" : lastPayment.balance < 0 ? "text-blue-600" : "text-green-700"}>
+                    {formatCurrency(Math.abs(lastPayment.balance))} {lastPayment.balance > 0 ? "Payable" : lastPayment.balance < 0 ? "Advance" : ""}
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => { setShowPayModal(false); setLastPayment(null) }} className="flex-1">Close</Button>
+                <Button onClick={() => window.print()} className="flex-1 bg-green-700 hover:bg-green-800 gap-2">
+                  <Printer className="w-4 h-4" /> Print Receipt
+                </Button>
+              </div>
+            </div>
+          ) : payingFarmer && (
+            <div className="space-y-4">
+              <div className="bg-green-50 rounded-lg px-4 py-3">
+                <p className="text-sm font-semibold text-gray-900">{payingFarmer.name}</p>
+                {payingFarmer.phone && <p className="text-xs text-gray-500">{payingFarmer.phone}</p>}
+                {(payingFarmer.balance || 0) > 0 && (
+                  <p className="text-xs text-red-600 mt-1">Outstanding: {formatCurrency(payingFarmer.balance)}</p>
+                )}
+              </div>
+
+              <div>
+                <Label className="mb-2 block">Payment Type</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setPayForm({ ...payForm, paymentType: "PAY" })}
+                    className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${payForm.paymentType === "PAY" ? "bg-green-700 text-white border-green-700" : "bg-white text-gray-600 border-gray-200 hover:border-green-300"}`}>
+                    Pay to Farmer
+                    <p className="text-xs font-normal opacity-75 mt-0.5">Paying farmer (Cr)</p>
+                  </button>
+                  <button type="button" onClick={() => setPayForm({ ...payForm, paymentType: "RECEIVE" })}
+                    className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${payForm.paymentType === "RECEIVE" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200 hover:border-blue-300"}`}>
+                    Receive from Farmer
+                    <p className="text-xs font-normal opacity-75 mt-0.5">Income received (Dr)</p>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <Label>Amount (PKR) *</Label>
+                <Input type="number" placeholder="0" value={payForm.amount} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} autoFocus />
+              </div>
+              <div>
+                <Label>Payment Method</Label>
+                <Select value={payForm.method} onValueChange={(v) => setPayForm({ ...payForm, method: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                    <SelectItem value="CHEQUE">Cheque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Notes</Label>
+                <Textarea rows={2} placeholder="Optional notes..." value={payForm.notes} onChange={(e) => setPayForm({ ...payForm, notes: e.target.value })} />
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setShowPayModal(false)} className="flex-1">Cancel</Button>
+                <Button onClick={handlePayment} disabled={payLoading} className="flex-1 bg-green-700 hover:bg-green-800">
+                  {payLoading ? "Saving..." : "Record Payment"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

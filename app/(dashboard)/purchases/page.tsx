@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
 import { Plus, Search, Trash2, ShoppingBag } from "lucide-react"
@@ -15,10 +15,11 @@ export default function PurchasesPage() {
   const [purchases, setPurchases] = useState<any[]>([])
   const [products, setProducts] = useState<any[]>([])
   const [suppliers, setSuppliers] = useState<any[]>([])
+  const [farmers, setFarmers] = useState<any[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [supplierId, setSupplierId] = useState("")
+  const [partyId, setPartyId] = useState("")
   const [paidAmount, setPaidAmount] = useState("0")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState([{ productId: "", quantity: "1", price: "0" }])
@@ -26,14 +27,16 @@ export default function PurchasesPage() {
   async function loadData() {
     try {
       setLoading(true)
-      const [pr, prod, sup] = await Promise.all([
+      const [pr, prod, sup, fr] = await Promise.all([
         fetch("/api/purchases").then((r) => r.json()),
         fetch("/api/inventory").then((r) => r.json()),
         fetch("/api/suppliers").then((r) => r.json()),
+        fetch("/api/farmers").then((r) => r.json()),
       ])
       setPurchases(pr.purchases || [])
       setProducts(prod.products || [])
       setSuppliers(sup.suppliers || [])
+      setFarmers(fr.farmers || [])
     } finally {
       setLoading(false)
     }
@@ -58,11 +61,16 @@ export default function PurchasesPage() {
 
   async function handleSave() {
     if (!items[0].productId) return alert("Add at least one item")
+    const isFarmer = partyId.startsWith("farmer_")
+    const supplierId = (!isFarmer && partyId && partyId !== "direct") ? partyId : null
+    const farmerId = isFarmer ? partyId.replace("farmer_", "") : null
+
     const res = await fetch("/api/purchases", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        supplierId: (supplierId && supplierId !== "direct") ? supplierId : null,
+        supplierId,
+        farmerId,
         items: items.filter((i) => i.productId).map((i) => ({
           productId: i.productId,
           quantity: parseFloat(i.quantity),
@@ -75,13 +83,16 @@ export default function PurchasesPage() {
     if (res.ok) {
       setShowModal(false)
       setItems([{ productId: "", quantity: "1", price: "0" }])
-      setSupplierId(""); setPaidAmount("0"); setNotes("")
+      setPartyId(""); setPaidAmount("0"); setNotes("")
       loadData()
+    } else {
+      const data = await res.json().catch(() => ({}))
+      alert(data?.error || "Failed to create purchase")
     }
   }
 
   const filtered = purchases.filter((p) =>
-    p.supplier?.name?.toLowerCase().includes(search.toLowerCase()) ||
+    (p.supplier?.name || p.farmer?.name || "").toLowerCase().includes(search.toLowerCase()) ||
     p.status.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -92,7 +103,7 @@ export default function PurchasesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Purchases</h2>
           <p className="text-gray-500 text-sm">{purchases.length} total purchases</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
+        <Button onClick={() => { setPartyId(""); setPaidAmount("0"); setNotes(""); setItems([{ productId: "", quantity: "1", price: "0" }]); setShowModal(true) }}>
           <Plus className="w-4 h-4" /> New Purchase
         </Button>
       </div>
@@ -112,7 +123,7 @@ export default function PurchasesPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["#", "Supplier", "Total", "Paid", "Balance", "Status", "Date", "By"].map((h) => (
+                    {["#", "From", "Type", "Total", "Paid", "Balance", "Status", "Date", "By"].map((h) => (
                       <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
                     ))}
                   </tr>
@@ -121,7 +132,18 @@ export default function PurchasesPage() {
                   {filtered.map((p, i) => (
                     <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-3 px-3 text-gray-400 text-xs">{i + 1}</td>
-                      <td className="py-3 px-3 font-medium text-gray-800">{p.supplier?.name || "Direct"}</td>
+                      <td className="py-3 px-3 font-medium text-gray-800">
+                        {p.farmer?.name || p.supplier?.name || "Direct"}
+                      </td>
+                      <td className="py-3 px-3">
+                        {p.farmer ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Farmer</span>
+                        ) : p.supplier ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Supplier</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">Direct</span>
+                        )}
+                      </td>
                       <td className="py-3 px-3 text-gray-700">{formatCurrency(p.totalAmount)}</td>
                       <td className="py-3 px-3 text-green-600">{formatCurrency(p.paidAmount)}</td>
                       <td className="py-3 px-3 text-red-600">{formatCurrency(p.balance)}</td>
@@ -133,7 +155,7 @@ export default function PurchasesPage() {
                     </tr>
                   ))}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={8} className="text-center py-8 text-gray-400">No purchases found</td></tr>
+                    <tr><td colSpan={9} className="text-center py-8 text-gray-400">No purchases found</td></tr>
                   )}
                 </tbody>
               </table>
@@ -151,14 +173,23 @@ export default function PurchasesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Supplier (optional)</Label>
-              <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="direct">Direct Purchase</SelectItem>
-                  {suppliers.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>From (Supplier / Farmer)</Label>
+              <SearchableSelect
+                value={partyId}
+                onValueChange={setPartyId}
+                placeholder="Direct purchase"
+                options={[{ value: "direct", label: "Direct Purchase" }]}
+                groups={[
+                  {
+                    label: "Suppliers",
+                    options: suppliers.map((s: any) => ({ value: s.id, label: s.name, sub: s.phone || undefined })),
+                  },
+                  {
+                    label: "Farmers",
+                    options: farmers.map((f: any) => ({ value: `farmer_${f.id}`, label: f.name, sub: f.village || f.phone || undefined })),
+                  },
+                ]}
+              />
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -169,12 +200,12 @@ export default function PurchasesPage() {
                 {items.map((item, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-5">
-                      <Select value={item.productId} onValueChange={(v) => updateItem(i, "productId", v)}>
-                        <SelectTrigger><SelectValue placeholder="Product" /></SelectTrigger>
-                        <SelectContent>
-                          {products.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={item.productId}
+                        onValueChange={(v) => updateItem(i, "productId", v)}
+                        placeholder="Select product"
+                        options={products.map((p: any) => ({ value: p.id, label: p.name }))}
+                      />
                     </div>
                     <div className="col-span-2">
                       <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(i, "quantity", e.target.value)} />

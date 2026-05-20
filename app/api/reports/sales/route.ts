@@ -30,6 +30,7 @@ export async function GET(req: Request) {
     orderBy: { createdAt: "desc" },
     include: {
       customer: { select: { name: true, phone: true } },
+      farmer: { select: { name: true, phone: true } },
       items: { include: { product: { select: { name: true, unit: true } } } },
       createdBy: { select: { name: true } },
     },
