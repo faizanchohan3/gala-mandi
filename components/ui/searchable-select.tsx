@@ -238,6 +238,7 @@ function OptionRow({
   return (
     <button
       type="button"
+      onMouseDown={(e) => e.preventDefault()}
       onClick={() => onSelect(option.value)}
       className={cn(
         "w-full flex items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm text-left hover:bg-gray-100 transition-colors",
