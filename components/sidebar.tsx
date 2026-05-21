@@ -38,7 +38,7 @@ const shopNavItems: NavItem[] = [
   { href: "/customers", label: "Customers", icon: UserCheck },
   { href: "/farmers", label: "Farmers", icon: Tractor },
 
-  { href: "/agents", label: "Commission Agents", icon: UserCog },
+  { href: "/commission", label: "Commission", icon: UserCog },
 { href: "/suppliers", label: "Suppliers", icon: Truck },
  { href: "/purchases", label: "Purchases", icon: ShoppingBag },
  

@@ -90,6 +90,7 @@ model Shop {
   tasks               Task[]
   auditLogs           AuditLog[]
   banks               Bank[]
+  commissions         Commission[]
 }
 
 // ── BANKS ─────────────────────────────────────────────────────────────────────
@@ -135,6 +136,7 @@ model User {
   stockAdjustments StockAdjustment[]
   freightSlips     FreightSlip[]
   gateEntries      GateEntry[]
+  commissions      Commission[]
 }
 
 // ── INVENTORY ────────────────────────────────────────────────────────────────
@@ -207,6 +209,7 @@ model Customer {
   sales          Sale[]
   pesticideSales PesticideSale[]
   freightSlips   FreightSlip[]
+  commissions    Commission[]
 }
 
 // ── SUPPLIERS ────────────────────────────────────────────────────────────────
@@ -221,8 +224,9 @@ model Supplier {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  shop      Shop?      @relation(fields: [shopId], references: [id])
-  purchases Purchase[]
+  shop        Shop?        @relation(fields: [shopId], references: [id])
+  purchases   Purchase[]
+  commissions Commission[]
 }
 
 // ── SALES ────────────────────────────────────────────────────────────────────
@@ -446,6 +450,7 @@ model Farmer {
   gateEntries      GateEntry[]
   sales            Sale[]
   productPurchases Purchase[]
+  commissions      Commission[]
 }
 
 model FarmerPurchase {
@@ -760,4 +765,46 @@ model WeighbridgeEntry {
   createdAt   DateTime @default(now())
 
   gateEntry GateEntry @relation(fields: [entryId], references: [id])
+}
+
+// ── COMMISSION TRANSACTIONS ──────────────────────────────────────────────────
+
+model Commission {
+  id               String     @id @default(cuid())
+  shopId           String?
+  farmerId         String?
+  supplierId       String?
+  customerId       String
+  commodity        String?
+  bags             Int?
+  weight           Float?
+  rate             Float      @default(0)
+  totalValue       Float
+  commissionRate   Float      @default(2.5)
+  commissionAmount Float
+  paidAmount       Float      @default(0)
+  balance          Float      @default(0)
+  status           SaleStatus @default(PENDING)
+  notes            String?
+  createdById      String
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  shop       Shop?               @relation(fields: [shopId], references: [id])
+  farmer     Farmer?             @relation(fields: [farmerId], references: [id])
+  supplier   Supplier?           @relation(fields: [supplierId], references: [id])
+  customer   Customer            @relation(fields: [customerId], references: [id])
+  createdBy  User                @relation(fields: [createdById], references: [id])
+  payments   CommissionPayment[]
+}
+
+model CommissionPayment {
+  id           String        @id @default(cuid())
+  commissionId String
+  amount       Float
+  method       PaymentMethod @default(CASH)
+  notes        String?
+  createdAt    DateTime      @default(now())
+
+  commission Commission @relation(fields: [commissionId], references: [id])
 }

@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const customer = await db.customer.findUnique({ where: { id } })
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const [sales, pesticideSales] = await Promise.all([
+  const [sales, pesticideSales, customerCommissions] = await Promise.all([
     db.sale.findMany({
       where: { customerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
@@ -38,6 +38,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       where: { customerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
       include: { pesticide: { select: { name: true, unit: true } } },
+    }),
+    db.commission.findMany({
+      where: { customerId: id, ...dateWhere },
+      orderBy: { createdAt: "asc" },
+      include: { payments: { orderBy: { createdAt: "asc" } } },
     }),
   ])
 
@@ -70,6 +75,27 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         description: `Payment received — CASH (recorded at sale)`,
         debit: 0,
         credit: sale.paidAmount,
+      })
+    }
+  }
+
+  // Commission transactions (customer is buyer)
+  for (const comm of customerCommissions) {
+    const desc = [comm.commodity, comm.bags ? `${comm.bags} bags` : null, comm.weight ? `${comm.weight} kg` : null].filter(Boolean).join(", ")
+    events.push({
+      date: comm.createdAt,
+      type: "COMMISSION",
+      description: `Commission #${comm.id.slice(-6).toUpperCase()}${desc ? ` — ${desc}` : ""}`,
+      debit: comm.totalValue,
+      credit: 0,
+    })
+    for (const payment of comm.payments) {
+      events.push({
+        date: payment.createdAt,
+        type: "PAYMENT",
+        description: `Payment received — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
+        debit: 0,
+        credit: payment.amount,
       })
     }
   }
