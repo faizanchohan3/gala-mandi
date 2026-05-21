@@ -23,16 +23,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   await db.$transaction(async (tx) => {
     await tx.commissionPayment.create({
-      data: { commissionId: id, amount: amt, method: method || "CASH", notes: notes || null },
+      data: { commissionId: id, amount: amt, method: method || "CASH", notes: notes || undefined },
     })
     await tx.commission.update({
       where: { id },
       data: { paidAmount: newPaid, balance: Math.max(0, newBalance), status },
     })
-    await tx.customer.update({
-      where: { id: commission.customerId },
-      data: { balance: { decrement: amt } },
-    })
+    if (commission.customerId) {
+      await tx.customer.update({
+        where: { id: commission.customerId },
+        data: { balance: { decrement: amt } },
+      })
+    }
   })
 
   return NextResponse.json({ ok: true })
