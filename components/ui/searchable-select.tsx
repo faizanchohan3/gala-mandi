@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
+import { DismissableLayerBranch } from "@radix-ui/react-dismissable-layer"
 import { Check, ChevronDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -106,7 +107,6 @@ export function SearchableSelect({
     setOpen(true)
   }
 
-  // Both onFocus (tab-in) and onClick (click on already-focused input) should open
   function handleActivate() {
     if (!open) openDropdown()
   }
@@ -120,6 +120,7 @@ export function SearchableSelect({
     onValueChange(v)
     setOpen(false)
     setSearch("")
+    setTimeout(() => inputRef.current?.focus(), 0)
   }
 
   function clearValue(e: React.MouseEvent) {
@@ -131,12 +132,14 @@ export function SearchableSelect({
     setTimeout(() => inputRef.current?.focus(), 0)
   }
 
+  // DismissableLayerBranch is the official Radix way to tell the Dialog
+  // "this portalled DOM node belongs to me — don't treat clicks here as outside".
+  // It registers its DOM node in the DismissableLayerContext.branches set,
+  // which Radix checks before firing onPointerDownOutside or onFocusOutside.
   const dropdown = open ? (
-    <div
+    <DismissableLayerBranch
       ref={dropdownRef}
       style={dropdownStyle}
-      // Stop pointer events from bubbling to Radix Dialog's outside-click detector
-      onPointerDown={(e) => e.stopPropagation()}
       className="rounded-md border border-gray-200 bg-white shadow-lg"
     >
       <div className="max-h-56 overflow-y-auto p-1">
@@ -155,7 +158,7 @@ export function SearchableSelect({
         ))}
         {!hasResults && <p className="py-4 text-center text-sm text-gray-400">No results</p>}
       </div>
-    </div>
+    </DismissableLayerBranch>
   ) : null
 
   return (
@@ -206,17 +209,8 @@ function OptionRow({ option, selected, onSelect }: {
   return (
     <button
       type="button"
-      onPointerDown={(e) => {
-        // preventDefault: keeps focus on the input inside the Dialog
-        //   so Radix's focusout-outside detector doesn't close the dialog
-        // stopPropagation: prevents Radix's pointerdown-outside detector
-        //   from seeing this event and closing the dialog
-        // Select here (not onClick) so selection happens regardless of
-        //   whether the browser fires click after preventDefault
-        e.preventDefault()
-        e.stopPropagation()
-        onSelect(option.value)
-      }}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => onSelect(option.value)}
       className={cn(
         "w-full flex items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm text-left hover:bg-gray-100 transition-colors",
         selected && "bg-green-50 text-green-700 font-medium"
