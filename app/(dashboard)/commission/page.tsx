@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
-import { Plus, Search, Percent, CreditCard } from "lucide-react"
+import { Plus, Search, Percent, CreditCard, Printer } from "lucide-react"
 
 export default function CommissionPage() {
   const [commissions, setCommissions] = useState<any[]>([])
@@ -181,6 +181,111 @@ export default function CommissionPage() {
   const totalCommEarned = commissions.reduce((s, c) => s + c.commissionAmount, 0)
   const totalPending = commissions.filter((c) => c.status !== "PAID").reduce((s, c) => s + c.balance, 0)
 
+  function printCommission(c: any) {
+    const seller = c.farmer?.name || c.supplier?.name || c.walkInSeller || "—"
+    const buyer = c.customer?.name || c.walkInCustomer || "—"
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Commission — ${c.id.slice(-6).toUpperCase()}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; padding: 24px; max-width: 600px; margin: 0 auto; }
+  h2 { font-size: 18px; margin: 0 0 2px; }
+  .sub { color: #666; font-size: 11px; margin-bottom: 16px; }
+  .grid { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; }
+  .grid div { font-size: 11px; min-width: 120px; }
+  .lbl { color: #888; text-transform: uppercase; font-size: 10px; }
+  .val { font-weight: bold; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  th, td { border: 1px solid #ddd; padding: 6px 10px; }
+  th { background: #f5f5f5; font-size: 10px; text-transform: uppercase; text-align: left; }
+  td.right { text-align: right; }
+  .status { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 10px; font-weight: bold;
+    background: ${c.status === "PAID" ? "#dcfce7" : c.status === "PARTIAL" ? "#fef9c3" : "#fee2e2"};
+    color: ${c.status === "PAID" ? "#15803d" : c.status === "PARTIAL" ? "#854d0e" : "#b91c1c"}; }
+</style></head><body>
+<h2>Commission Receipt</h2>
+<div class="sub">Ref: #${c.id.slice(-6).toUpperCase()} &nbsp;|&nbsp; ${new Date(c.createdAt).toLocaleDateString("en-PK")} &nbsp;|&nbsp; By: ${c.createdBy?.name || "—"}</div>
+<div class="grid">
+  <div><div class="lbl">Seller</div><div class="val">${seller}</div></div>
+  <div><div class="lbl">Buyer</div><div class="val">${buyer}</div></div>
+  <div><div class="lbl">Commodity</div><div class="val">${c.commodity || "—"}${c.bags ? ` / ${c.bags} bags` : ""}${c.weight ? ` / ${c.weight} kg` : ""}</div></div>
+  <div><div class="lbl">Status</div><div class="val"><span class="status">${c.status}</span></div></div>
+</div>
+<table>
+  <tr><th>Description</th><th class="right">Amount</th></tr>
+  <tr><td>Total Value (buyer owes)</td><td class="right">PKR ${(c.totalValue || 0).toLocaleString()}</td></tr>
+  <tr><td>Commission @ ${c.commissionRate}%</td><td class="right" style="color:#15803d;font-weight:bold">PKR ${(c.commissionAmount || 0).toLocaleString()}</td></tr>
+  <tr><td>Seller Payable</td><td class="right" style="color:#1d4ed8">PKR ${(c.sellerPayable || 0).toLocaleString()}</td></tr>
+  <tr><td>Paid by Buyer</td><td class="right" style="color:#15803d">PKR ${(c.paidAmount || 0).toLocaleString()}</td></tr>
+  <tr><td><strong>Balance Due</strong></td><td class="right" style="color:${c.balance > 0 ? "#b91c1c" : "#15803d"};font-weight:bold">PKR ${(c.balance || 0).toLocaleString()}</td></tr>
+</table>
+${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.notes}</p>` : ""}
+</body></html>`)
+    w.print()
+  }
+
+  function printAllCommissions(list: any[]) {
+    const rows = list.map((c, i) => {
+      const seller = c.farmer?.name || c.supplier?.name || c.walkInSeller || "—"
+      const buyer = c.customer?.name || c.walkInCustomer || "—"
+      const commodity = [c.commodity, c.bags ? `${c.bags} bags` : null, c.weight ? `${c.weight} kg` : null].filter(Boolean).join(", ")
+      return `<tr>
+        <td>${i + 1}</td>
+        <td>${seller}</td>
+        <td>${buyer}</td>
+        <td>${commodity || "—"}</td>
+        <td style="text-align:right">PKR ${(c.totalValue || 0).toLocaleString()}</td>
+        <td style="text-align:right;color:#15803d;font-weight:bold">PKR ${(c.commissionAmount || 0).toLocaleString()}</td>
+        <td style="text-align:right;color:#1d4ed8">PKR ${(c.sellerPayable || 0).toLocaleString()}</td>
+        <td style="text-align:right;color:#15803d">PKR ${(c.paidAmount || 0).toLocaleString()}</td>
+        <td style="text-align:right;color:${c.balance > 0 ? "#b91c1c" : "#15803d"}">PKR ${(c.balance || 0).toLocaleString()}</td>
+        <td>${c.status}</td>
+        <td>${new Date(c.createdAt).toLocaleDateString("en-PK")}</td>
+      </tr>`
+    }).join("")
+    const totVal = list.reduce((s, c) => s + (c.totalValue || 0), 0)
+    const totComm = list.reduce((s, c) => s + (c.commissionAmount || 0), 0)
+    const totPay = list.reduce((s, c) => s + (c.sellerPayable || 0), 0)
+    const totPaid = list.reduce((s, c) => s + (c.paidAmount || 0), 0)
+    const totBal = list.reduce((s, c) => s + (c.balance || 0), 0)
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>All Commissions</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 11px; padding: 16px; }
+  h2 { font-size: 15px; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 10px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
+  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+  tr:nth-child(even) { background: #fafafa; }
+  tfoot td { font-weight: bold; background: #f0f0f0; }
+</style></head><body>
+<h2>All Commissions</h2>
+<p class="sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; Total: ${list.length} entries</p>
+<table>
+  <thead><tr>
+    <th>#</th><th>Seller</th><th>Buyer</th><th>Commodity</th>
+    <th style="text-align:right">Total Value</th>
+    <th style="text-align:right">Commission</th>
+    <th style="text-align:right">Seller Payable</th>
+    <th style="text-align:right">Paid</th>
+    <th style="text-align:right">Balance</th>
+    <th>Status</th><th>Date</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr>
+    <td colspan="4" style="text-align:right">Totals</td>
+    <td style="text-align:right">PKR ${totVal.toLocaleString()}</td>
+    <td style="text-align:right;color:#15803d">PKR ${totComm.toLocaleString()}</td>
+    <td style="text-align:right">PKR ${totPay.toLocaleString()}</td>
+    <td style="text-align:right">PKR ${totPaid.toLocaleString()}</td>
+    <td style="text-align:right">PKR ${totBal.toLocaleString()}</td>
+    <td colspan="2"></td>
+  </tr></tfoot>
+</table>
+</body></html>`)
+    w.print()
+  }
+
   const sellerOptions = [
     { value: "walkin", label: "Walk-in / Direct (enter name)" },
     ...farmers.map((f: any) => ({ value: `farmer_${f.id}`, label: f.name, sub: f.village || f.phone || undefined })),
@@ -199,9 +304,14 @@ export default function CommissionPage() {
           <h2 className="text-2xl font-bold text-gray-900">Commission</h2>
           <p className="text-gray-500 text-sm">{commissions.length} total transactions</p>
         </div>
-        <Button onClick={() => { resetNewForm(); setShowNew(true) }}>
-          <Plus className="w-4 h-4" /> New Commission
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => printAllCommissions(filtered)}>
+            <Printer className="w-4 h-4" /> Print All
+          </Button>
+          <Button onClick={() => { resetNewForm(); setShowNew(true) }}>
+            <Plus className="w-4 h-4" /> New Commission
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -234,7 +344,7 @@ export default function CommissionPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["#", "Seller", "Buyer", "Commodity", "Total Value", "Comm %", "Commission", "Seller Payable", "Paid", "Balance", "Status", "Date", "Action"].map((h) => (
+                    {["#", "Seller", "Buyer", "Commodity", "Total Value", "Comm %", "Commission", "Seller Payable", "Paid", "Balance", "Status", "Date", "Action", ""].map((h) => (
                       <th key={h} className="text-left py-3 px-2 text-gray-500 font-medium whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -275,10 +385,15 @@ export default function CommissionPage() {
                           </Button>
                         )}
                       </td>
+                      <td className="py-3 px-2">
+                        <button onClick={() => printCommission(c)} className="text-gray-400 hover:text-green-700" title="Print">
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={13} className="text-center py-8 text-gray-400">No commissions found</td></tr>
+                    <tr><td colSpan={14} className="text-center py-8 text-gray-400">No commissions found</td></tr>
                   )}
                 </tbody>
               </table>
