@@ -139,7 +139,7 @@ export function SearchableSelect({
   const dropdown = open ? (
     <DismissableLayerBranch
       ref={dropdownRef}
-      style={dropdownStyle}
+      style={{ ...dropdownStyle, pointerEvents: "auto" }}
       className="rounded-md border border-gray-200 bg-white shadow-lg"
     >
       <div className="max-h-56 overflow-y-auto p-1">
