@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
-import { Plus, Search, Trash2, ShoppingBag } from "lucide-react"
+import { Plus, Search, Trash2, ShoppingBag, Printer } from "lucide-react"
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState<any[]>([])
@@ -91,6 +91,111 @@ export default function PurchasesPage() {
     }
   }
 
+  function printPurchase(p: any) {
+    const from = p.farmer?.name || p.supplier?.name || "Direct"
+    const itemRows = (p.items || []).map((i: any) => `
+      <tr>
+        <td>${i.product?.name || "—"}</td>
+        <td style="text-align:center">${i.quantity} ${i.product?.unit || ""}</td>
+        <td style="text-align:right">PKR ${(i.price || 0).toLocaleString()}</td>
+        <td style="text-align:right">PKR ${(i.total || 0).toLocaleString()}</td>
+      </tr>`).join("")
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Purchase — ${p.id.slice(-6).toUpperCase()}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; padding: 24px; max-width: 600px; margin: 0 auto; }
+  h2 { font-size: 18px; margin: 0 0 2px; }
+  .sub { color: #666; font-size: 11px; margin-bottom: 16px; }
+  .info { display: flex; gap: 32px; margin-bottom: 16px; }
+  .info div { font-size: 11px; }
+  .info .lbl { color: #888; text-transform: uppercase; font-size: 10px; }
+  .info .val { font-weight: bold; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  th, td { border: 1px solid #ddd; padding: 6px 10px; }
+  th { background: #f5f5f5; font-size: 10px; text-transform: uppercase; text-align: left; }
+  .totals { margin-left: auto; width: 240px; }
+  .totals td { border: none; padding: 3px 8px; font-size: 12px; }
+  .totals .grand { font-weight: bold; font-size: 14px; border-top: 2px solid #333; }
+  .status { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 10px; font-weight: bold;
+    background: ${p.status === "PAID" ? "#dcfce7" : p.status === "PARTIAL" ? "#fef9c3" : "#fee2e2"};
+    color: ${p.status === "PAID" ? "#15803d" : p.status === "PARTIAL" ? "#854d0e" : "#b91c1c"}; }
+</style></head><body>
+<h2>Purchase Receipt</h2>
+<div class="sub">Ref: #${p.id.slice(-6).toUpperCase()} &nbsp;|&nbsp; ${new Date(p.createdAt).toLocaleDateString("en-PK")} &nbsp;|&nbsp; By: ${p.createdBy?.name || "—"}</div>
+<div class="info">
+  <div><div class="lbl">From</div><div class="val">${from}</div>${p.farmer?.phone || p.supplier?.phone ? `<div style="color:#555;margin-top:2px">${p.farmer?.phone || p.supplier?.phone}</div>` : ""}</div>
+  <div><div class="lbl">Type</div><div class="val">${p.farmer ? "Farmer" : p.supplier ? "Supplier" : "Direct"}</div></div>
+  <div><div class="lbl">Status</div><div class="val"><span class="status">${p.status}</span></div></div>
+</div>
+<table>
+  <thead><tr><th>Product</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr></thead>
+  <tbody>${itemRows}</tbody>
+</table>
+<table class="totals">
+  <tr><td>Subtotal</td><td style="text-align:right">PKR ${(p.totalAmount || 0).toLocaleString()}</td></tr>
+  <tr><td>Paid</td><td style="text-align:right;color:#15803d">PKR ${(p.paidAmount || 0).toLocaleString()}</td></tr>
+  <tr class="grand"><td>Balance Due</td><td style="text-align:right;color:${p.balance > 0 ? "#b91c1c" : "#15803d"}">PKR ${(p.balance || 0).toLocaleString()}</td></tr>
+</table>
+${p.notes ? `<p style="color:#555;font-size:11px;margin-top:8px"><strong>Notes:</strong> ${p.notes}</p>` : ""}
+</body></html>`)
+    w.print()
+  }
+
+  function printAllPurchases(list: any[]) {
+    const rows = list.map((p, i) => {
+      const from = p.farmer?.name || p.supplier?.name || "Direct"
+      const type = p.farmer ? "Farmer" : p.supplier ? "Supplier" : "Direct"
+      const items = (p.items || []).map((it: any) => `${it.quantity} ${it.product?.unit || ""} ${it.product?.name || ""}`).join(", ")
+      return `<tr>
+        <td>${i + 1}</td>
+        <td>${from}</td>
+        <td>${type}</td>
+        <td style="font-size:10px;color:#555">${items || "—"}</td>
+        <td style="text-align:right">PKR ${(p.totalAmount || 0).toLocaleString()}</td>
+        <td style="text-align:right;color:#15803d">PKR ${(p.paidAmount || 0).toLocaleString()}</td>
+        <td style="text-align:right;color:${p.balance > 0 ? "#b91c1c" : "#15803d"}">PKR ${(p.balance || 0).toLocaleString()}</td>
+        <td style="text-align:center">${p.status}</td>
+        <td>${new Date(p.createdAt).toLocaleDateString("en-PK")}</td>
+        <td>${p.createdBy?.name || "—"}</td>
+      </tr>`
+    }).join("")
+    const totalAmt = list.reduce((s, p) => s + (p.totalAmount || 0), 0)
+    const totalPaid = list.reduce((s, p) => s + (p.paidAmount || 0), 0)
+    const totalBal = list.reduce((s, p) => s + (p.balance || 0), 0)
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>All Purchases</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 11px; padding: 16px; }
+  h2 { font-size: 15px; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 10px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
+  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+  tr:nth-child(even) { background: #fafafa; }
+  tfoot td { font-weight: bold; background: #f0f0f0; }
+</style></head><body>
+<h2>All Purchases</h2>
+<p class="sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; Total: ${list.length} purchases</p>
+<table>
+  <thead><tr>
+    <th>#</th><th>From</th><th>Type</th><th>Items</th>
+    <th style="text-align:right">Total</th><th style="text-align:right">Paid</th>
+    <th style="text-align:right">Balance</th><th style="text-align:center">Status</th>
+    <th>Date</th><th>By</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr>
+    <td colspan="4" style="text-align:right">Totals</td>
+    <td style="text-align:right">PKR ${totalAmt.toLocaleString()}</td>
+    <td style="text-align:right">PKR ${totalPaid.toLocaleString()}</td>
+    <td style="text-align:right">PKR ${totalBal.toLocaleString()}</td>
+    <td colspan="3"></td>
+  </tr></tfoot>
+</table>
+</body></html>`)
+    w.print()
+  }
+
   const filtered = purchases.filter((p) =>
     (p.supplier?.name || p.farmer?.name || "").toLowerCase().includes(search.toLowerCase()) ||
     p.status.toLowerCase().includes(search.toLowerCase())
@@ -103,9 +208,14 @@ export default function PurchasesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Purchases</h2>
           <p className="text-gray-500 text-sm">{purchases.length} total purchases</p>
         </div>
-        <Button onClick={() => { setPartyId(""); setPaidAmount("0"); setNotes(""); setItems([{ productId: "", quantity: "1", price: "0" }]); setShowModal(true) }}>
-          <Plus className="w-4 h-4" /> New Purchase
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => printAllPurchases(filtered)}>
+            <Printer className="w-4 h-4" /> Print All
+          </Button>
+          <Button onClick={() => { setPartyId(""); setPaidAmount("0"); setNotes(""); setItems([{ productId: "", quantity: "1", price: "0" }]); setShowModal(true) }}>
+            <Plus className="w-4 h-4" /> New Purchase
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -123,7 +233,7 @@ export default function PurchasesPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["#", "From", "Type", "Total", "Paid", "Balance", "Status", "Date", "By"].map((h) => (
+                    {["#", "From", "Type", "Total", "Paid", "Balance", "Status", "Date", "By", ""].map((h) => (
                       <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
                     ))}
                   </tr>
@@ -152,10 +262,15 @@ export default function PurchasesPage() {
                       </td>
                       <td className="py-3 px-3 text-gray-500">{formatDate(p.createdAt)}</td>
                       <td className="py-3 px-3 text-gray-500">{p.createdBy?.name}</td>
+                      <td className="py-3 px-3">
+                        <button onClick={() => printPurchase(p)} className="text-gray-400 hover:text-green-700" title="Print">
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={9} className="text-center py-8 text-gray-400">No purchases found</td></tr>
+                    <tr><td colSpan={10} className="text-center py-8 text-gray-400">No purchases found</td></tr>
                   )}
                 </tbody>
               </table>
