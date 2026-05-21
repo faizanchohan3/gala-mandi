@@ -16,6 +16,7 @@ export default function CommissionPage() {
   const [customers, setCustomers] = useState<any[]>([])
   const [suppliers, setSuppliers] = useState<any[]>([])
   const [farmers, setFarmers] = useState<any[]>([])
+  const [products, setProducts] = useState<any[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
 
@@ -23,7 +24,7 @@ export default function CommissionPage() {
   const [showNew, setShowNew] = useState(false)
   const [customerId, setCustomerId] = useState("")
   const [partyId, setPartyId] = useState("")
-  const [commodity, setCommodity] = useState("")
+  const [productId, setProductId] = useState("")
   const [bags, setBags] = useState("")
   const [weight, setWeight] = useState("")
   const [rate, setRate] = useState("")
@@ -40,22 +41,31 @@ export default function CommissionPage() {
   const [payNotes, setPayNotes] = useState("")
   const [paying, setPaying] = useState(false)
 
-  async function loadData() {
+  async function safeFetch(url: string, fallback: any = {}) {
     try {
-      setLoading(true)
-      const [cm, cu, su, fa] = await Promise.all([
-        fetch("/api/commissions").then((r) => r.json()),
-        fetch("/api/customers").then((r) => r.json()),
-        fetch("/api/suppliers").then((r) => r.json()),
-        fetch("/api/farmers").then((r) => r.json()),
-      ])
-      setCommissions(cm.commissions || [])
-      setCustomers(cu.customers || [])
-      setSuppliers(su.suppliers || [])
-      setFarmers(fa.farmers || [])
-    } finally {
-      setLoading(false)
+      const r = await fetch(url)
+      if (!r.ok) return fallback
+      return await r.json()
+    } catch {
+      return fallback
     }
+  }
+
+  async function loadData() {
+    setLoading(true)
+    const [cm, cu, su, fa, pr] = await Promise.all([
+      safeFetch("/api/commissions", { commissions: [] }),
+      safeFetch("/api/customers", { customers: [] }),
+      safeFetch("/api/suppliers", { suppliers: [] }),
+      safeFetch("/api/farmers", { farmers: [] }),
+      safeFetch("/api/inventory", { products: [] }),
+    ])
+    setCommissions(cm.commissions || [])
+    setCustomers(cu.customers || [])
+    setSuppliers(su.suppliers || [])
+    setFarmers(fa.farmers || [])
+    setProducts(pr.products || [])
+    setLoading(false)
   }
 
   useEffect(() => { loadData() }, [])
@@ -67,11 +77,19 @@ export default function CommissionPage() {
     if (w > 0 && r > 0) setTotalValue((w * r).toFixed(2))
   }, [weight, rate])
 
+  // When product is selected, auto-fill rate from salePrice
+  useEffect(() => {
+    if (productId) {
+      const prod = products.find((p: any) => p.id === productId)
+      if (prod && prod.salePrice) setRate(String(prod.salePrice))
+    }
+  }, [productId])
+
   const commAmount = totalValue ? parseFloat(((parseFloat(totalValue) * parseFloat(commissionRate || "0")) / 100).toFixed(2)) : 0
   const balance = totalValue ? parseFloat(totalValue) - parseFloat(paidAmount || "0") : 0
 
   function resetNewForm() {
-    setCustomerId(""); setPartyId(""); setCommodity(""); setBags(""); setWeight("")
+    setCustomerId(""); setPartyId(""); setProductId(""); setBags(""); setWeight("")
     setRate(""); setTotalValue(""); setCommissionRate("2.5"); setPaidAmount("0"); setNotes("")
   }
 
@@ -82,7 +100,10 @@ export default function CommissionPage() {
     try {
       const isFarmer = partyId.startsWith("farmer_")
       const farmerId = isFarmer ? partyId.replace("farmer_", "") : null
-      const supplierId = (!isFarmer && partyId && partyId !== "") ? partyId : null
+      const supplierId = (!isFarmer && partyId) ? partyId : null
+
+      const selectedProduct = products.find((p: any) => p.id === productId)
+      const commodity = selectedProduct?.name || null
 
       const res = await fetch("/api/commissions", {
         method: "POST",
@@ -256,11 +277,16 @@ export default function CommissionPage() {
                 options={customers.map((c: any) => ({ value: c.id, label: c.name, sub: c.phone || undefined }))}
               />
             </div>
+            <div>
+              <Label>Product / Commodity</Label>
+              <SearchableSelect
+                value={productId}
+                onValueChange={setProductId}
+                placeholder="Select product..."
+                options={products.map((p: any) => ({ value: p.id, label: p.name, sub: p.unit }))}
+              />
+            </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-3">
-                <Label>Commodity</Label>
-                <Input placeholder="e.g. Wheat, Rice..." value={commodity} onChange={(e) => setCommodity(e.target.value)} />
-              </div>
               <div>
                 <Label>Bags</Label>
                 <Input type="number" placeholder="0" value={bags} onChange={(e) => setBags(e.target.value)} />
