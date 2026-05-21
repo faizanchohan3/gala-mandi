@@ -44,7 +44,7 @@ export function SearchableSelect({
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Resolve display label for current value from props
+  // Resolve display label for current value directly from props
   let selectedLabel = ""
   for (const o of options) {
     if (o.value === value) { selectedLabel = o.label; break }
@@ -57,16 +57,14 @@ export function SearchableSelect({
     }
   }
 
-  // What the input shows: search text while open, selected label while closed
+  // Show search text while open, selected label while closed
   const displayValue = open ? search : selectedLabel
 
-  // Close on outside click
+  // Close when clicking outside both the input and the dropdown
   useEffect(() => {
     function onDown(e: MouseEvent) {
       const t = e.target as Node
-      const insideInput = inputRef.current?.contains(t)
-      const insideDropdown = dropdownRef.current?.contains(t)
-      if (!insideInput && !insideDropdown) {
+      if (!inputRef.current?.contains(t) && !dropdownRef.current?.contains(t)) {
         setOpen(false)
         setSearch("")
       }
@@ -75,7 +73,7 @@ export function SearchableSelect({
     return () => document.removeEventListener("mousedown", onDown)
   }, [])
 
-  // Reposition dropdown on scroll/resize
+  // Keep dropdown aligned to input on scroll / resize
   useEffect(() => {
     if (!open) return
     function pos() {
@@ -90,7 +88,9 @@ export function SearchableSelect({
   }, [open])
 
   const q = search.toLowerCase()
-  const filteredOptions = options.filter(o => o.label.toLowerCase().includes(q) || (o.sub || "").toLowerCase().includes(q))
+  const filteredOptions = options.filter(o =>
+    o.label.toLowerCase().includes(q) || (o.sub || "").toLowerCase().includes(q)
+  )
   const filteredGroups = groups
     .map(g => ({ ...g, options: g.options.filter(o => o.label.toLowerCase().includes(q) || (o.sub || "").toLowerCase().includes(q)) }))
     .filter(g => g.options.length > 0)
@@ -106,7 +106,8 @@ export function SearchableSelect({
     setOpen(true)
   }
 
-  function handleFocus() {
+  // Both onFocus (tab-in) and onClick (click on already-focused input) should open
+  function handleActivate() {
     if (!open) openDropdown()
   }
 
@@ -127,13 +128,14 @@ export function SearchableSelect({
     onValueChange("")
     setOpen(false)
     setSearch("")
-    inputRef.current?.focus()
+    setTimeout(() => inputRef.current?.focus(), 0)
   }
 
   const dropdown = open ? (
     <div
       ref={dropdownRef}
       style={dropdownStyle}
+      // Stop pointer events from bubbling to Radix Dialog's outside-click detector
       onPointerDown={(e) => e.stopPropagation()}
       className="rounded-md border border-gray-200 bg-white shadow-lg"
     >
@@ -143,7 +145,9 @@ export function SearchableSelect({
         ))}
         {filteredGroups.map(g => (
           <div key={g.label}>
-            <p className="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide select-none">{g.label}</p>
+            <p className="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide select-none">
+              {g.label}
+            </p>
             {g.options.map(o => (
               <OptionRow key={o.value} option={o} selected={value === o.value} onSelect={select} />
             ))}
@@ -162,7 +166,8 @@ export function SearchableSelect({
           type="text"
           value={displayValue}
           onChange={handleChange}
-          onFocus={handleFocus}
+          onFocus={handleActivate}
+          onClick={handleActivate}
           disabled={disabled}
           placeholder={placeholder}
           autoComplete="off"
@@ -173,8 +178,12 @@ export function SearchableSelect({
           )}
         />
         {value ? (
-          <button type="button" onMouseDown={clearValue} tabIndex={-1}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          <button
+            type="button"
+            onMouseDown={clearValue}
+            tabIndex={-1}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
             <X className="h-3.5 w-3.5" />
           </button>
         ) : (
@@ -197,8 +206,17 @@ function OptionRow({ option, selected, onSelect }: {
   return (
     <button
       type="button"
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={() => onSelect(option.value)}
+      onPointerDown={(e) => {
+        // preventDefault: keeps focus on the input inside the Dialog
+        //   so Radix's focusout-outside detector doesn't close the dialog
+        // stopPropagation: prevents Radix's pointerdown-outside detector
+        //   from seeing this event and closing the dialog
+        // Select here (not onClick) so selection happens regardless of
+        //   whether the browser fires click after preventDefault
+        e.preventDefault()
+        e.stopPropagation()
+        onSelect(option.value)
+      }}
       className={cn(
         "w-full flex items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm text-left hover:bg-gray-100 transition-colors",
         selected && "bg-green-50 text-green-700 font-medium"
