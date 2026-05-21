@@ -22,8 +22,10 @@ export default function CommissionPage() {
 
   // New commission modal state
   const [showNew, setShowNew] = useState(false)
-  const [customerId, setCustomerId] = useState("")
-  const [partyId, setPartyId] = useState("")
+  const [customerId, setCustomerId] = useState("")        // "" = none selected, "walkin" = walk-in
+  const [walkInCustomer, setWalkInCustomer] = useState("")
+  const [partyId, setPartyId] = useState("")              // "" = none, "walkin" = walk-in, "farmer_X" or supplier id
+  const [walkInSeller, setWalkInSeller] = useState("")
   const [productId, setProductId] = useState("")
   const [bags, setBags] = useState("")
   const [weight, setWeight] = useState("")
@@ -70,37 +72,44 @@ export default function CommissionPage() {
 
   useEffect(() => { loadData() }, [])
 
-  // Auto-compute total value from weight × rate
   useEffect(() => {
     const w = parseFloat(weight)
     const r = parseFloat(rate)
     if (w > 0 && r > 0) setTotalValue((w * r).toFixed(2))
   }, [weight, rate])
 
-  // When product is selected, auto-fill rate from salePrice
   useEffect(() => {
     if (productId) {
       const prod = products.find((p: any) => p.id === productId)
-      if (prod && prod.salePrice) setRate(String(prod.salePrice))
+      if (prod?.salePrice) setRate(String(prod.salePrice))
     }
   }, [productId])
 
-  const commAmount = totalValue ? parseFloat(((parseFloat(totalValue) * parseFloat(commissionRate || "0")) / 100).toFixed(2)) : 0
-  const balance = totalValue ? parseFloat(totalValue) - parseFloat(paidAmount || "0") : 0
+  const total = parseFloat(totalValue || "0")
+  const commRate = parseFloat(commissionRate || "0")
+  const commAmount = total > 0 ? parseFloat(((total * commRate) / 100).toFixed(2)) : 0
+  const sellerPayable = total > 0 ? parseFloat((total - commAmount).toFixed(2)) : 0
+  const balance = total - parseFloat(paidAmount || "0")
 
   function resetNewForm() {
-    setCustomerId(""); setPartyId(""); setProductId(""); setBags(""); setWeight("")
+    setCustomerId(""); setWalkInCustomer("")
+    setPartyId(""); setWalkInSeller("")
+    setProductId(""); setBags(""); setWeight("")
     setRate(""); setTotalValue(""); setCommissionRate("2.5"); setPaidAmount("0"); setNotes("")
   }
 
   async function handleSave() {
-    if (!customerId) return alert("Please select a buyer (customer)")
+    const hasCustomer = customerId && customerId !== "walkin"
+    const hasWalkIn = customerId === "walkin" && walkInCustomer.trim()
+    if (!hasCustomer && !hasWalkIn) return alert("Please select or enter a buyer")
     if (!totalValue || parseFloat(totalValue) <= 0) return alert("Total value is required")
+
     setSaving(true)
     try {
       const isFarmer = partyId.startsWith("farmer_")
+      const isWalkInSeller = partyId === "walkin"
       const farmerId = isFarmer ? partyId.replace("farmer_", "") : null
-      const supplierId = (!isFarmer && partyId) ? partyId : null
+      const supplierId = (!isFarmer && !isWalkInSeller && partyId) ? partyId : null
 
       const selectedProduct = products.find((p: any) => p.id === productId)
       const commodity = selectedProduct?.name || null
@@ -108,7 +117,21 @@ export default function CommissionPage() {
       const res = await fetch("/api/commissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerId, farmerId, supplierId, commodity, bags, weight, rate, totalValue, commissionRate, paidAmount, notes }),
+        body: JSON.stringify({
+          customerId: hasCustomer ? customerId : null,
+          walkInCustomer: hasWalkIn ? walkInCustomer.trim() : null,
+          farmerId,
+          supplierId,
+          walkInSeller: isWalkInSeller ? walkInSeller.trim() || null : null,
+          commodity,
+          bags,
+          weight,
+          rate,
+          totalValue,
+          commissionRate,
+          paidAmount,
+          notes,
+        }),
       })
       if (res.ok) {
         setShowNew(false)
@@ -146,16 +169,28 @@ export default function CommissionPage() {
 
   const filtered = commissions.filter((c) => {
     const q = search.toLowerCase()
+    const buyerName = c.customer?.name || c.walkInCustomer || ""
+    const sellerName = c.farmer?.name || c.supplier?.name || c.walkInSeller || ""
     return (
-      c.customer?.name?.toLowerCase().includes(q) ||
-      c.farmer?.name?.toLowerCase().includes(q) ||
-      c.supplier?.name?.toLowerCase().includes(q) ||
+      buyerName.toLowerCase().includes(q) ||
+      sellerName.toLowerCase().includes(q) ||
       (c.commodity || "").toLowerCase().includes(q)
     )
   })
 
   const totalCommEarned = commissions.reduce((s, c) => s + c.commissionAmount, 0)
   const totalPending = commissions.filter((c) => c.status !== "PAID").reduce((s, c) => s + c.balance, 0)
+
+  const sellerOptions = [
+    { value: "walkin", label: "Walk-in / Direct (enter name)" },
+    ...farmers.map((f: any) => ({ value: `farmer_${f.id}`, label: f.name, sub: f.village || f.phone || undefined })),
+    ...suppliers.map((s: any) => ({ value: s.id, label: s.name, sub: s.phone || undefined })),
+  ]
+
+  const customerOptions = [
+    { value: "walkin", label: "Walk-in / Direct (enter name)" },
+    ...customers.map((c: any) => ({ value: c.id, label: c.name, sub: c.phone || undefined })),
+  ]
 
   return (
     <div className="space-y-6">
@@ -199,7 +234,7 @@ export default function CommissionPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["#", "Seller", "Buyer", "Commodity", "Total Value", "Comm %", "Commission", "Paid", "Balance", "Status", "Date", "Action"].map((h) => (
+                    {["#", "Seller", "Buyer", "Commodity", "Total Value", "Comm %", "Commission", "Seller Payable", "Paid", "Balance", "Status", "Date", "Action"].map((h) => (
                       <th key={h} className="text-left py-3 px-2 text-gray-500 font-medium whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -209,9 +244,13 @@ export default function CommissionPage() {
                     <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-3 px-2 text-gray-400 text-xs">{i + 1}</td>
                       <td className="py-3 px-2 font-medium text-gray-800">
-                        {c.farmer?.name || c.supplier?.name || <span className="text-gray-400">—</span>}
+                        {c.farmer?.name || c.supplier?.name || c.walkInSeller || <span className="text-gray-400">—</span>}
+                        {c.walkInSeller && <span className="ml-1 text-xs text-orange-500">(walk-in)</span>}
                       </td>
-                      <td className="py-3 px-2 font-medium text-gray-800">{c.customer?.name}</td>
+                      <td className="py-3 px-2 font-medium text-gray-800">
+                        {c.customer?.name || c.walkInCustomer}
+                        {c.walkInCustomer && <span className="ml-1 text-xs text-orange-500">(walk-in)</span>}
+                      </td>
                       <td className="py-3 px-2 text-gray-600">
                         {c.commodity || "—"}
                         {c.bags ? <span className="ml-1 text-xs text-gray-400">{c.bags} bags</span> : null}
@@ -220,6 +259,7 @@ export default function CommissionPage() {
                       <td className="py-3 px-2 text-gray-700">{formatCurrency(c.totalValue)}</td>
                       <td className="py-3 px-2 text-gray-600">{c.commissionRate}%</td>
                       <td className="py-3 px-2 text-green-700 font-medium">{formatCurrency(c.commissionAmount)}</td>
+                      <td className="py-3 px-2 text-blue-700">{formatCurrency(c.sellerPayable)}</td>
                       <td className="py-3 px-2 text-green-600">{formatCurrency(c.paidAmount)}</td>
                       <td className="py-3 px-2 text-red-600">{formatCurrency(c.balance)}</td>
                       <td className="py-3 px-2">
@@ -238,7 +278,7 @@ export default function CommissionPage() {
                     </tr>
                   ))}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={12} className="text-center py-8 text-gray-400">No commissions found</td></tr>
+                    <tr><td colSpan={13} className="text-center py-8 text-gray-400">No commissions found</td></tr>
                   )}
                 </tbody>
               </table>
@@ -256,27 +296,46 @@ export default function CommissionPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+
+            {/* Seller */}
             <div>
               <Label>Seller (Farmer / Supplier) <span className="text-gray-400 font-normal">— optional</span></Label>
               <SearchableSelect
                 value={partyId}
-                onValueChange={setPartyId}
-                placeholder="Select seller..."
-                groups={[
-                  { label: "Farmers", options: farmers.map((f: any) => ({ value: `farmer_${f.id}`, label: f.name, sub: f.village || f.phone || undefined })) },
-                  { label: "Suppliers", options: suppliers.map((s: any) => ({ value: s.id, label: s.name, sub: s.phone || undefined })) },
-                ]}
+                onValueChange={(v) => { setPartyId(v); if (v !== "walkin") setWalkInSeller("") }}
+                placeholder="Select seller or walk-in..."
+                options={sellerOptions}
               />
+              {partyId === "walkin" && (
+                <Input
+                  className="mt-2"
+                  placeholder="Enter seller name..."
+                  value={walkInSeller}
+                  onChange={(e) => setWalkInSeller(e.target.value)}
+                />
+              )}
             </div>
+
+            {/* Buyer */}
             <div>
               <Label>Buyer (Customer) <span className="text-red-500">*</span></Label>
               <SearchableSelect
                 value={customerId}
-                onValueChange={setCustomerId}
-                placeholder="Select customer..."
-                options={customers.map((c: any) => ({ value: c.id, label: c.name, sub: c.phone || undefined }))}
+                onValueChange={(v) => { setCustomerId(v); if (v !== "walkin") setWalkInCustomer("") }}
+                placeholder="Select customer or walk-in..."
+                options={customerOptions}
               />
+              {customerId === "walkin" && (
+                <Input
+                  className="mt-2"
+                  placeholder="Enter buyer name..."
+                  value={walkInCustomer}
+                  onChange={(e) => setWalkInCustomer(e.target.value)}
+                />
+              )}
             </div>
+
+            {/* Product */}
             <div>
               <Label>Product / Commodity</Label>
               <SearchableSelect
@@ -286,6 +345,8 @@ export default function CommissionPage() {
                 options={products.map((p: any) => ({ value: p.id, label: p.name, sub: p.unit }))}
               />
             </div>
+
+            {/* Bags / Weight / Rate */}
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label>Bags</Label>
@@ -300,6 +361,8 @@ export default function CommissionPage() {
                 <Input type="number" placeholder="0" value={rate} onChange={(e) => setRate(e.target.value)} />
               </div>
             </div>
+
+            {/* Total + Commission % */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Total Value <span className="text-red-500">*</span></Label>
@@ -311,25 +374,35 @@ export default function CommissionPage() {
                 <Input type="number" placeholder="2.5" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} />
               </div>
             </div>
-            <div className="bg-green-50 rounded-lg p-3 space-y-1 text-sm">
+
+            {/* Summary box */}
+            <div className="bg-green-50 rounded-lg p-3 space-y-1.5 text-sm border border-green-100">
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Value:</span>
-                <span className="font-medium">{formatCurrency(parseFloat(totalValue || "0"))}</span>
+                <span className="text-gray-600">Total Value (buyer owes):</span>
+                <span className="font-medium">{formatCurrency(total)}</span>
               </div>
               <div className="flex justify-between text-green-700">
                 <span>Your Commission ({commissionRate}%):</span>
                 <span className="font-bold">{formatCurrency(commAmount)}</span>
               </div>
+              <div className="flex justify-between text-blue-700 border-t border-green-200 pt-1.5">
+                <span>Seller Payable (owed to them):</span>
+                <span className="font-semibold">{formatCurrency(sellerPayable)}</span>
+              </div>
             </div>
+
+            {/* Initial payment */}
             <div className="flex items-center gap-3">
               <Label className="whitespace-nowrap">Initial Payment:</Label>
               <Input type="number" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} className="max-w-[150px]" />
               <span className="text-sm text-gray-500">Balance: {formatCurrency(balance)}</span>
             </div>
+
             <div>
               <Label>Notes</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
             </div>
+
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setShowNew(false)} className="flex-1">Cancel</Button>
               <Button onClick={handleSave} disabled={saving} className="flex-1">
@@ -351,7 +424,7 @@ export default function CommissionPage() {
               <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Buyer:</span>
-                  <span className="font-medium">{payTarget.customer?.name}</span>
+                  <span className="font-medium">{payTarget.customer?.name || payTarget.walkInCustomer}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Outstanding:</span>

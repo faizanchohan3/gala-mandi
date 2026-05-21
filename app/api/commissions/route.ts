@@ -39,8 +39,10 @@ export async function POST(req: Request) {
   const body = await req.json()
   const {
     customerId,
+    walkInCustomer,
     farmerId,
     supplierId,
+    walkInSeller,
     commodity,
     bags,
     weight,
@@ -49,25 +51,38 @@ export async function POST(req: Request) {
     commissionRate,
     notes,
     paidAmount: initialPaid,
+    paymentMethod,
   } = body
 
-  if (!customerId) return NextResponse.json({ error: "Customer is required" }, { status: 400 })
-  if (!totalValue || totalValue <= 0) return NextResponse.json({ error: "Total value must be greater than 0" }, { status: 400 })
+  if (!customerId && !walkInCustomer) {
+    return NextResponse.json({ error: "Buyer (customer) is required" }, { status: 400 })
+  }
+  if (!totalValue || parseFloat(totalValue) <= 0) {
+    return NextResponse.json({ error: "Total value must be greater than 0" }, { status: 400 })
+  }
 
   const commRate = parseFloat(commissionRate) || 2.5
   const total = parseFloat(totalValue)
   const commAmount = parseFloat(((total * commRate) / 100).toFixed(2))
+  // Amount owed to seller after deducting our commission
+  const sellerPayable = parseFloat((total - commAmount).toFixed(2))
   const paid = parseFloat(initialPaid || "0")
   const balance = total - paid
   const status = balance <= 0 ? "PAID" : paid > 0 ? "PARTIAL" : "PENDING"
+
+  const sellerName = walkInSeller ||
+    (farmerId ? "Farmer" : supplierId ? "Supplier" : null)
+  const buyerName = walkInCustomer || "Customer"
 
   const commission = await db.$transaction(async (tx) => {
     const c = await tx.commission.create({
       data: {
         shopId: session.user.shopId || null,
-        customerId,
+        customerId: customerId || null,
+        walkInCustomer: walkInCustomer || null,
         farmerId: farmerId || null,
         supplierId: supplierId || null,
+        walkInSeller: walkInSeller || null,
         commodity: commodity || null,
         bags: bags ? parseInt(bags) : null,
         weight: weight ? parseFloat(weight) : null,
@@ -75,6 +90,7 @@ export async function POST(req: Request) {
         totalValue: total,
         commissionRate: commRate,
         commissionAmount: commAmount,
+        sellerPayable,
         paidAmount: paid,
         balance,
         status,
@@ -83,21 +99,54 @@ export async function POST(req: Request) {
       },
     })
 
-    // Debit customer for full transaction value
-    await tx.customer.update({
-      where: { id: customerId },
-      data: { balance: { increment: total } },
+    // Debit customer for full transaction value (they owe us totalValue)
+    if (customerId) {
+      await tx.customer.update({
+        where: { id: customerId },
+        data: { balance: { increment: total } },
+      })
+    }
+
+    // Credit farmer with what we owe them (totalValue - our commission)
+    if (farmerId) {
+      await tx.farmer.update({
+        where: { id: farmerId },
+        data: { balance: { increment: sellerPayable } },
+      })
+    }
+
+    // Credit supplier with what we owe them (totalValue - our commission)
+    if (supplierId) {
+      await tx.supplier.update({
+        where: { id: supplierId },
+        data: { balance: { increment: sellerPayable } },
+      })
+    }
+
+    // Record commission as income in finance/transactions
+    await tx.transaction.create({
+      data: {
+        shopId: session.user.shopId || null,
+        type: "CREDIT",
+        amount: commAmount,
+        description: `Commission — ${commodity || "goods"}${sellerName ? ` from ${sellerName}` : ""} to ${buyerName}`,
+        reference: c.id,
+        category: "Commission Income",
+        createdById: session.user.id,
+      },
     })
 
     // Record initial payment if any
     if (paid > 0) {
       await tx.commissionPayment.create({
-        data: { commissionId: c.id, amount: paid, method: body.paymentMethod || "CASH", notes: "Initial payment" },
+        data: { commissionId: c.id, amount: paid, method: paymentMethod || "CASH", notes: "Initial payment" },
       })
-      await tx.customer.update({
-        where: { id: customerId },
-        data: { balance: { decrement: paid } },
-      })
+      if (customerId) {
+        await tx.customer.update({
+          where: { id: customerId },
+          data: { balance: { decrement: paid } },
+        })
+      }
     }
 
     return c

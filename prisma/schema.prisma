@@ -774,7 +774,9 @@ model Commission {
   shopId           String?
   farmerId         String?
   supplierId       String?
-  customerId       String
+  customerId       String?
+  walkInSeller     String?
+  walkInCustomer   String?
   commodity        String?
   bags             Int?
   weight           Float?
@@ -782,6 +784,7 @@ model Commission {
   totalValue       Float
   commissionRate   Float      @default(2.5)
   commissionAmount Float
+  sellerPayable    Float      @default(0)
   paidAmount       Float      @default(0)
   balance          Float      @default(0)
   status           SaleStatus @default(PENDING)
@@ -793,7 +796,7 @@ model Commission {
   shop       Shop?               @relation(fields: [shopId], references: [id])
   farmer     Farmer?             @relation(fields: [farmerId], references: [id])
   supplier   Supplier?           @relation(fields: [supplierId], references: [id])
-  customer   Customer            @relation(fields: [customerId], references: [id])
+  customer   Customer?           @relation(fields: [customerId], references: [id])
   createdBy  User                @relation(fields: [createdById], references: [id])
   payments   CommissionPayment[]
 }
