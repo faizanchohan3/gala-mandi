@@ -13,8 +13,10 @@ export default function ProductReportPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<"all" | "low">("all")
+  const [shop, setShop] = useState<any>(null)
 
   useEffect(() => {
+    fetch("/api/settings").then((r) => r.json()).then((d) => setShop(d.shop || null)).catch(() => {})
     fetch("/api/reports/products")
       .then((r) => r.json())
       .then((d) => {
@@ -38,26 +40,34 @@ export default function ProductReportPage() {
     <div className="space-y-6">
       {/* ── Print Header ── */}
       <div className="hidden print:block">
-        <div className="flex items-start justify-between pb-4 mb-4 border-b-2 border-gray-900">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Gala Mandi</h1>
-            <p className="text-sm text-gray-500">Shop Management System</p>
+        <style>{`@media print { thead { display: table-header-group; } tfoot { display: table-footer-group; } tr { page-break-inside: avoid; } @page { margin: 12mm; size: A4 landscape; } }`}</style>
+        <div style={{background:"linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%)",color:"#fff",padding:"16px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+            {shop?.logo
+              ? <img src={shop.logo} style={{width:"52px",height:"52px",borderRadius:"8px",background:"#fff",padding:"3px",objectFit:"contain"}} alt="" />
+              : <div style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px",fontWeight:900,border:"2px solid rgba(255,255,255,0.3)"}}>{(shop?.name||"G")[0].toUpperCase()}</div>
+            }
+            <div>
+              <div style={{fontSize:"20px",fontWeight:900,letterSpacing:"-0.5px"}}>{shop?.name||"Gala Mandi"}</div>
+              {shop?.ownerName && <div style={{fontSize:"11px",opacity:0.8,marginTop:"2px"}}>{shop.ownerName}</div>}
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500">Printed: {today}</p>
+          <div style={{textAlign:"right",fontSize:"11px",lineHeight:1.9,opacity:0.9}}>
+            {shop?.phone && <div>&#9990;&nbsp;{shop.phone}</div>}
+            {shop?.address && <div>&#9679;&nbsp;{shop.address}</div>}
+            <div style={{fontSize:"10px",opacity:0.75}}>Printed: {today}</div>
           </div>
         </div>
-        <h2 className="text-xl font-bold mb-1">Product Inventory Report</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          All active products — stock levels, valuations and sales performance
-        </p>
-
-        {/* Print summary strip */}
-        <div className="flex gap-8 mb-6 p-3 bg-gray-50 rounded text-sm">
-          <span><strong>{totals.totalProducts}</strong> Products</span>
-          <span>Stock Value: <strong>{formatCurrency(totals.totalStockValue)}</strong></span>
-          <span>Total Sold: <strong>{formatCurrency(totals.totalSaleAmount)}</strong></span>
-          <span className="text-red-700">Low Stock: <strong>{totals.lowStockCount}</strong></span>
+        <div style={{height:"4px",background:"linear-gradient(90deg,#fbbf24 0%,#f59e0b 50%,#d97706 100%)"}}></div>
+        <div style={{padding:"10px 22px 8px",background:"#f8fdf8",borderBottom:"1px solid #e5e7eb",marginBottom:"8px"}}>
+          <h2 style={{margin:0,fontSize:"16px",fontWeight:800,color:"#14532d"}}>Product Inventory Report</h2>
+          <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>All active products — stock levels, valuations and sales performance</div>
+          <div style={{display:"flex",gap:"24px",marginTop:"8px",fontSize:"11px"}}>
+            <span><strong>{totals.totalProducts}</strong> Products</span>
+            <span>Stock Value: <strong>{formatCurrency(totals.totalStockValue)}</strong></span>
+            <span>Total Sold: <strong>{formatCurrency(totals.totalSaleAmount)}</strong></span>
+            <span style={{color:"#b91c1c"}}>Low Stock: <strong>{totals.lowStockCount}</strong></span>
+          </div>
         </div>
       </div>
 

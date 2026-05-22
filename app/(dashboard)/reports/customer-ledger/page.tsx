@@ -17,15 +17,18 @@ export default function CustomerLedgerPage() {
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [loading, setLoading] = useState(false)
+  const [shop, setShop] = useState<any>(null)
 
   useEffect(() => {
-    fetch("/api/customers")
-      .then((r) => r.json())
-      .then((d) => {
-        setCustomers(d.customers || [])
-        const preselect = searchParams.get("id")
-        if (preselect) setCustomerId(preselect)
-      })
+    Promise.all([
+      fetch("/api/customers").then((r) => r.json()),
+      fetch("/api/settings").then((r) => r.json()).catch(() => ({ shop: null })),
+    ]).then(([customersData, settingsData]) => {
+      setCustomers(customersData.customers || [])
+      setShop(settingsData.shop || null)
+      const preselect = searchParams.get("id")
+      if (preselect) setCustomerId(preselect)
+    })
   }, [])
 
   // Auto-load when customerId is set via URL param
@@ -52,19 +55,36 @@ export default function CustomerLedgerPage() {
   return (
     <div className="space-y-6">
       {/* Print header */}
-      <div className="hidden print:block mb-6">
-        <div className="flex items-center justify-between border-b-2 border-gray-800 pb-3 mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gala Mandi</h1>
-            <p className="text-sm text-gray-500">Shop Management System</p>
+      <div className="hidden print:block mb-4">
+        <style>{`@media print { thead { display: table-header-group; } tfoot { display: table-footer-group; } tr { page-break-inside: avoid; } @page { margin: 12mm; size: A4; } }`}</style>
+        <div style={{background:"linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%)",color:"#fff",padding:"16px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+            {shop?.logo
+              ? <img src={shop.logo} style={{width:"52px",height:"52px",borderRadius:"8px",background:"#fff",padding:"3px",objectFit:"contain"}} alt="" />
+              : <div style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px",fontWeight:900,border:"2px solid rgba(255,255,255,0.3)"}}>{(shop?.name||"G")[0].toUpperCase()}</div>
+            }
+            <div>
+              <div style={{fontSize:"20px",fontWeight:900,letterSpacing:"-0.5px"}}>{shop?.name||"Gala Mandi"}</div>
+              {shop?.ownerName && <div style={{fontSize:"11px",opacity:0.8,marginTop:"2px"}}>{shop.ownerName}</div>}
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500">Generated: {new Date().toLocaleDateString("en-PK")}</p>
+          <div style={{textAlign:"right",fontSize:"11px",lineHeight:1.9,opacity:0.9}}>
+            {shop?.phone && <div>&#9990;&nbsp;{shop.phone}</div>}
+            {shop?.address && <div>&#9679;&nbsp;{shop.address}</div>}
+            <div style={{fontSize:"10px",opacity:0.75}}>Generated: {new Date().toLocaleDateString("en-PK")}</div>
           </div>
         </div>
-        <h2 className="text-xl font-bold">Customer Ledger</h2>
-        {ledger?.customer && <p className="text-base font-medium text-gray-700">{ledger.customer.name}</p>}
-        <p className="text-sm text-gray-600">Period: {dateLabel}</p>
+        <div style={{height:"4px",background:"linear-gradient(90deg,#fbbf24 0%,#f59e0b 50%,#d97706 100%)"}}></div>
+        <div style={{padding:"10px 22px 8px",background:"#f8fdf8",borderBottom:"1px solid #e5e7eb"}}>
+          <h2 style={{margin:0,fontSize:"16px",fontWeight:800,color:"#14532d"}}>Customer Ledger</h2>
+          {ledger?.customer && (
+            <div style={{marginTop:"6px",fontSize:"13px"}}>
+              <span style={{fontWeight:700,color:"#111827"}}>{ledger.customer.name}</span>
+              {ledger.customer.phone && <span style={{color:"#6b7280",marginLeft:"8px"}}>Ph: {ledger.customer.phone}</span>}
+            </div>
+          )}
+          <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>Period: {dateLabel}</div>
+        </div>
       </div>
 
       {/* Screen header */}
