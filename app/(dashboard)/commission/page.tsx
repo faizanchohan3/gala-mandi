@@ -181,44 +181,75 @@ export default function CommissionPage() {
   const totalCommEarned = commissions.reduce((s, c) => s + c.commissionAmount, 0)
   const totalPending = commissions.filter((c) => c.status !== "PAID").reduce((s, c) => s + c.balance, 0)
 
-  function printCommission(c: any) {
+  const printStyles = `
+    body { font-family: Arial, sans-serif; font-size: 12px; padding: 24px; max-width: 600px; margin: 0 auto; }
+    h2 { font-size: 18px; margin: 0 0 2px; }
+    .sub { color: #666; font-size: 11px; margin-bottom: 16px; }
+    .grid { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; }
+    .grid div { font-size: 11px; min-width: 120px; }
+    .lbl { color: #888; text-transform: uppercase; font-size: 10px; }
+    .val { font-weight: bold; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    th, td { border: 1px solid #ddd; padding: 6px 10px; }
+    th { background: #f5f5f5; font-size: 10px; text-transform: uppercase; text-align: left; }
+    td.r { text-align: right; }
+    .status { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 10px; font-weight: bold; }
+  `
+
+  // Seller copy: shows only what seller will receive — buyer total and commission hidden
+  function printForSeller(c: any) {
     const seller = c.farmer?.name || c.supplier?.name || c.walkInSeller || "—"
     const buyer = c.customer?.name || c.walkInCustomer || "—"
+    const commodity = [c.commodity, c.bags ? `${c.bags} bags` : null, c.weight ? `${c.weight} kg` : null].filter(Boolean).join(" / ") || "—"
     const w = window.open("", "_blank")!
-    w.document.write(`<html><head><title>Commission — ${c.id.slice(-6).toUpperCase()}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 12px; padding: 24px; max-width: 600px; margin: 0 auto; }
-  h2 { font-size: 18px; margin: 0 0 2px; }
-  .sub { color: #666; font-size: 11px; margin-bottom: 16px; }
-  .grid { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; }
-  .grid div { font-size: 11px; min-width: 120px; }
-  .lbl { color: #888; text-transform: uppercase; font-size: 10px; }
-  .val { font-weight: bold; margin-top: 2px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-  th, td { border: 1px solid #ddd; padding: 6px 10px; }
-  th { background: #f5f5f5; font-size: 10px; text-transform: uppercase; text-align: left; }
-  td.right { text-align: right; }
-  .status { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 10px; font-weight: bold;
-    background: ${c.status === "PAID" ? "#dcfce7" : c.status === "PARTIAL" ? "#fef9c3" : "#fee2e2"};
-    color: ${c.status === "PAID" ? "#15803d" : c.status === "PARTIAL" ? "#854d0e" : "#b91c1c"}; }
-</style></head><body>
-<h2>Commission Receipt</h2>
-<div class="sub">Ref: #${c.id.slice(-6).toUpperCase()} &nbsp;|&nbsp; ${new Date(c.createdAt).toLocaleDateString("en-PK")} &nbsp;|&nbsp; By: ${c.createdBy?.name || "—"}</div>
+    w.document.write(`<html><head><title>Seller Copy — ${c.id.slice(-6).toUpperCase()}</title>
+<style>${printStyles}</style></head><body>
+<h2>Seller Copy</h2>
+<div class="sub">Ref: #${c.id.slice(-6).toUpperCase()} &nbsp;|&nbsp; ${new Date(c.createdAt).toLocaleDateString("en-PK")}</div>
 <div class="grid">
   <div><div class="lbl">Seller</div><div class="val">${seller}</div></div>
   <div><div class="lbl">Buyer</div><div class="val">${buyer}</div></div>
-  <div><div class="lbl">Commodity</div><div class="val">${c.commodity || "—"}${c.bags ? ` / ${c.bags} bags` : ""}${c.weight ? ` / ${c.weight} kg` : ""}</div></div>
-  <div><div class="lbl">Status</div><div class="val"><span class="status">${c.status}</span></div></div>
+  <div><div class="lbl">Commodity</div><div class="val">${commodity}</div></div>
+  ${c.rate ? `<div><div class="lbl">Rate</div><div class="val">PKR ${c.rate}/kg</div></div>` : ""}
 </div>
 <table>
-  <tr><th>Description</th><th class="right">Amount</th></tr>
-  <tr><td>Total Value (buyer owes)</td><td class="right">PKR ${(c.totalValue || 0).toLocaleString()}</td></tr>
-  <tr><td>Commission @ ${c.commissionRate}%</td><td class="right" style="color:#15803d;font-weight:bold">PKR ${(c.commissionAmount || 0).toLocaleString()}</td></tr>
-  <tr><td>Seller Payable</td><td class="right" style="color:#1d4ed8">PKR ${(c.sellerPayable || 0).toLocaleString()}</td></tr>
-  <tr><td>Paid by Buyer</td><td class="right" style="color:#15803d">PKR ${(c.paidAmount || 0).toLocaleString()}</td></tr>
-  <tr><td><strong>Balance Due</strong></td><td class="right" style="color:${c.balance > 0 ? "#b91c1c" : "#15803d"};font-weight:bold">PKR ${(c.balance || 0).toLocaleString()}</td></tr>
+  <tr><th>Description</th><th class="r">Amount</th></tr>
+  ${c.weight ? `<tr><td>Weight</td><td class="r">${c.weight} KG</td></tr>` : ""}
+  ${c.bags ? `<tr><td>Bags</td><td class="r">${c.bags}</td></tr>` : ""}
+  <tr><td><strong>Amount Payable to You</strong></td><td class="r" style="color:#1d4ed8;font-weight:bold;font-size:14px">PKR ${(c.sellerPayable || 0).toLocaleString()}</td></tr>
 </table>
 ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.notes}</p>` : ""}
+<p style="margin-top:32px;font-size:11px;color:#888">Signature: _______________________</p>
+</body></html>`)
+    w.print()
+  }
+
+  // Buyer copy: shows only what buyer owes — seller amount and commission hidden
+  function printForBuyer(c: any) {
+    const seller = c.farmer?.name || c.supplier?.name || c.walkInSeller || "—"
+    const buyer = c.customer?.name || c.walkInCustomer || "—"
+    const commodity = [c.commodity, c.bags ? `${c.bags} bags` : null, c.weight ? `${c.weight} kg` : null].filter(Boolean).join(" / ") || "—"
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Buyer Copy — ${c.id.slice(-6).toUpperCase()}</title>
+<style>${printStyles}</style></head><body>
+<h2>Buyer Copy</h2>
+<div class="sub">Ref: #${c.id.slice(-6).toUpperCase()} &nbsp;|&nbsp; ${new Date(c.createdAt).toLocaleDateString("en-PK")}</div>
+<div class="grid">
+  <div><div class="lbl">Buyer</div><div class="val">${buyer}</div></div>
+  <div><div class="lbl">Seller</div><div class="val">${seller}</div></div>
+  <div><div class="lbl">Commodity</div><div class="val">${commodity}</div></div>
+  ${c.rate ? `<div><div class="lbl">Rate</div><div class="val">PKR ${c.rate}/kg</div></div>` : ""}
+</div>
+<table>
+  <tr><th>Description</th><th class="r">Amount</th></tr>
+  ${c.weight ? `<tr><td>Weight</td><td class="r">${c.weight} KG</td></tr>` : ""}
+  ${c.bags ? `<tr><td>Bags</td><td class="r">${c.bags}</td></tr>` : ""}
+  <tr><td>Total Amount</td><td class="r">PKR ${(c.totalValue || 0).toLocaleString()}</td></tr>
+  <tr><td>Paid</td><td class="r" style="color:#15803d">PKR ${(c.paidAmount || 0).toLocaleString()}</td></tr>
+  <tr><td><strong>Balance Due</strong></td><td class="r" style="color:${c.balance > 0 ? "#b91c1c" : "#15803d"};font-weight:bold;font-size:14px">PKR ${(c.balance || 0).toLocaleString()}</td></tr>
+</table>
+${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.notes}</p>` : ""}
+<p style="margin-top:32px;font-size:11px;color:#888">Signature: _______________________</p>
 </body></html>`)
     w.print()
   }
@@ -234,8 +265,6 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
         <td>${buyer}</td>
         <td>${commodity || "—"}</td>
         <td style="text-align:right">PKR ${(c.totalValue || 0).toLocaleString()}</td>
-        <td style="text-align:right;color:#15803d;font-weight:bold">PKR ${(c.commissionAmount || 0).toLocaleString()}</td>
-        <td style="text-align:right;color:#1d4ed8">PKR ${(c.sellerPayable || 0).toLocaleString()}</td>
         <td style="text-align:right;color:#15803d">PKR ${(c.paidAmount || 0).toLocaleString()}</td>
         <td style="text-align:right;color:${c.balance > 0 ? "#b91c1c" : "#15803d"}">PKR ${(c.balance || 0).toLocaleString()}</td>
         <td>${c.status}</td>
@@ -243,8 +272,6 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
       </tr>`
     }).join("")
     const totVal = list.reduce((s, c) => s + (c.totalValue || 0), 0)
-    const totComm = list.reduce((s, c) => s + (c.commissionAmount || 0), 0)
-    const totPay = list.reduce((s, c) => s + (c.sellerPayable || 0), 0)
     const totPaid = list.reduce((s, c) => s + (c.paidAmount || 0), 0)
     const totBal = list.reduce((s, c) => s + (c.balance || 0), 0)
     const w = window.open("", "_blank")!
@@ -265,8 +292,6 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
   <thead><tr>
     <th>#</th><th>Seller</th><th>Buyer</th><th>Commodity</th>
     <th style="text-align:right">Total Value</th>
-    <th style="text-align:right">Commission</th>
-    <th style="text-align:right">Seller Payable</th>
     <th style="text-align:right">Paid</th>
     <th style="text-align:right">Balance</th>
     <th>Status</th><th>Date</th>
@@ -275,9 +300,7 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
   <tfoot><tr>
     <td colspan="4" style="text-align:right">Totals</td>
     <td style="text-align:right">PKR ${totVal.toLocaleString()}</td>
-    <td style="text-align:right;color:#15803d">PKR ${totComm.toLocaleString()}</td>
-    <td style="text-align:right">PKR ${totPay.toLocaleString()}</td>
-    <td style="text-align:right">PKR ${totPaid.toLocaleString()}</td>
+    <td style="text-align:right;color:#15803d">PKR ${totPaid.toLocaleString()}</td>
     <td style="text-align:right">PKR ${totBal.toLocaleString()}</td>
     <td colspan="2"></td>
   </tr></tfoot>
@@ -386,9 +409,14 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
                         )}
                       </td>
                       <td className="py-3 px-2">
-                        <button onClick={() => printCommission(c)} className="text-gray-400 hover:text-green-700" title="Print">
-                          <Printer className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-1">
+                          <button onClick={() => printForSeller(c)} className="text-gray-400 hover:text-blue-600" title="Print Seller Copy">
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => printForBuyer(c)} className="text-gray-400 hover:text-green-700" title="Print Buyer Copy">
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
