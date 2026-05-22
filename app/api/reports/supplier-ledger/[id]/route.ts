@@ -25,14 +25,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const supplier = await db.supplier.findUnique({ where: { id } })
   if (!supplier) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const purchases = await db.purchase.findMany({
-    where: { supplierId: id, ...dateWhere },
-    orderBy: { createdAt: "asc" },
-    include: {
-      items: { include: { product: { select: { name: true, unit: true } } } },
-      payments: { orderBy: { createdAt: "asc" } },
-    },
-  })
+  const [purchases, commissions] = await Promise.all([
+    db.purchase.findMany({
+      where: { supplierId: id, ...dateWhere },
+      orderBy: { createdAt: "asc" },
+      include: {
+        items: { include: { product: { select: { name: true, unit: true } } } },
+        payments: { orderBy: { createdAt: "asc" } },
+      },
+    }),
+    db.commission.findMany({
+      where: { supplierId: id, ...dateWhere },
+      orderBy: { createdAt: "asc" },
+    }),
+  ])
 
   const events: any[] = []
 
@@ -66,6 +72,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         credit: purchase.paidAmount,
       })
     }
+  }
+
+  // Commission transactions where supplier is the seller — mandi owes supplier sellerPayable
+  for (const comm of commissions) {
+    const parts = [comm.commodity, comm.bags ? `${comm.bags} bags` : null, comm.weight ? `${comm.weight} kg` : null].filter(Boolean).join(", ")
+    events.push({
+      date: comm.createdAt,
+      type: "COMMISSION",
+      description: `Commission #${comm.id.slice(-6).toUpperCase()}${parts ? ` — ${parts}` : ""}`,
+      debit: comm.sellerPayable,
+      credit: 0,
+    })
   }
 
   events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())

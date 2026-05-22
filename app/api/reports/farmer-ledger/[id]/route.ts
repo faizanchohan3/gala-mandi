@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const farmer = await db.farmer.findUnique({ where: { id } })
   if (!farmer) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const [farmerPurchases, productPurchases, payments, farmerSales] = await Promise.all([
+  const [farmerPurchases, productPurchases, payments, farmerSales, commissions] = await Promise.all([
     db.farmerPurchase.findMany({
       where: { farmerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
@@ -51,6 +51,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       include: {
         items: { include: { product: { select: { name: true, unit: true } } } },
       },
+    }),
+    db.commission.findMany({
+      where: { farmerId: id, ...dateWhere },
+      orderBy: { createdAt: "asc" },
     }),
   ])
 
@@ -113,6 +117,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       description: `Sale #${sale.id.slice(-6).toUpperCase()}${itemDesc ? ` — ${itemDesc}` : ""}`,
       debit: 0,
       credit: sale.totalAmount,
+    })
+  }
+
+  // Commission transactions where farmer is the seller — mandi owes farmer sellerPayable
+  for (const comm of commissions) {
+    const parts = [comm.commodity, comm.bags ? `${comm.bags} bags` : null, comm.weight ? `${comm.weight} kg` : null].filter(Boolean).join(", ")
+    events.push({
+      date: comm.createdAt,
+      type: "COMMISSION",
+      description: `Commission #${comm.id.slice(-6).toUpperCase()}${parts ? ` — ${parts}` : ""}`,
+      debit: comm.sellerPayable,
+      credit: 0,
     })
   }
 
