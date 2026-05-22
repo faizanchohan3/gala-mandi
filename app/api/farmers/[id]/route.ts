@@ -23,13 +23,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!farmer) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sales: any[] = await (db.sale as any).findMany({
-    where: { farmerId: id },
-    orderBy: { createdAt: "asc" },
-    include: {
-      items: { include: { product: { select: { name: true, unit: true } } } },
-    },
-  })
+  const [sales, commissions]: [any[], any[]] = await Promise.all([
+    (db.sale as any).findMany({
+      where: { farmerId: id },
+      orderBy: { createdAt: "asc" },
+      include: {
+        items: { include: { product: { select: { name: true, unit: true } } } },
+      },
+    }),
+    db.commission.findMany({
+      where: { farmerId: id },
+      orderBy: { createdAt: "asc" },
+    }),
+  ])
 
   const events: any[] = []
 
@@ -81,6 +87,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       debit: 0,
       credit: sale.totalAmount,
       ref: sale.id,
+    })
+  }
+
+  // Commission transactions where farmer is the seller — mandi owes farmer sellerPayable
+  for (const comm of commissions) {
+    const parts = [comm.commodity, comm.bags ? `${comm.bags} bags` : null, comm.weight ? `${comm.weight} kg` : null].filter(Boolean).join(", ")
+    events.push({
+      date: comm.createdAt,
+      type: "COMMISSION",
+      description: `Commission #${comm.id.slice(-6).toUpperCase()}${parts ? ` — ${parts}` : ""}`,
+      debit: comm.sellerPayable,
+      credit: 0,
+      ref: comm.id,
     })
   }
 
