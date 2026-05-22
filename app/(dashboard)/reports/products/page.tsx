@@ -40,7 +40,7 @@ export default function ProductReportPage() {
     <div className="space-y-6">
       {/* ── Print Header ── */}
       <div className="hidden print:block">
-        <style>{`@media print { thead { display: table-header-group; } tfoot { display: table-footer-group; } tr { page-break-inside: avoid; } @page { margin: 12mm; size: A4 landscape; } }`}</style>
+        <style>{`@media print { @page { size: A4 landscape; } }`}</style>
         <div style={{background:"linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%)",color:"#fff",padding:"16px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
             {shop?.logo
