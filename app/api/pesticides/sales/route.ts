@@ -12,6 +12,7 @@ export async function GET() {
     include: {
       pesticide: true,
       customer: { select: { id: true, name: true, phone: true } },
+      farmer: { select: { id: true, name: true, phone: true } },
       soldBy: { select: { name: true } },
     },
   })
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const { pesticideId, quantity, unitPrice, customerId, customerName, paidAmount, notes } = await req.json()
+    const { pesticideId, quantity, unitPrice, customerId, farmerId, customerName, paidAmount, notes } = await req.json()
 
     if (!pesticideId) return NextResponse.json({ error: "Pesticide is required" }, { status: 400 })
     if (!quantity || quantity <= 0) return NextResponse.json({ error: "Invalid quantity" }, { status: 400 })
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
           shopId: session.user.shopId || null,
           pesticideId,
           customerId: customerId || null,
+          farmerId: farmerId || null,
           quantity,
           unitPrice,
           totalAmount,
@@ -57,6 +59,7 @@ export async function POST(req: Request) {
         include: {
           pesticide: true,
           customer: { select: { id: true, name: true, phone: true } },
+          farmer: { select: { id: true, name: true, phone: true } },
           soldBy: { select: { name: true } },
         },
       })
@@ -70,6 +73,13 @@ export async function POST(req: Request) {
         await tx.customer.update({
           where: { id: customerId },
           data: { balance: { increment: balance } },
+        })
+      }
+
+      if (farmerId && balance > 0) {
+        await tx.farmer.update({
+          where: { id: farmerId },
+          data: { balance: { decrement: balance } },
         })
       }
 

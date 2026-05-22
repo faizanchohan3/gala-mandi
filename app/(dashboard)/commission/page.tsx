@@ -435,12 +435,12 @@ ${buildPrintHeader(shop)}
                         )}
                       </td>
                       <td className="py-3 px-2">
-                        <div className="flex gap-1">
-                          <button onClick={() => printForSeller(c)} className="text-gray-400 hover:text-blue-600" title="Print Seller Copy">
-                            <Printer className="w-3.5 h-3.5" />
+                        <div className="flex gap-1 flex-nowrap">
+                          <button onClick={() => printForSeller(c)} className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 whitespace-nowrap">
+                            <Printer className="w-3 h-3" /> Seller
                           </button>
-                          <button onClick={() => printForBuyer(c)} className="text-gray-400 hover:text-green-700" title="Print Buyer Copy">
-                            <Printer className="w-3.5 h-3.5" />
+                          <button onClick={() => printForBuyer(c)} className="flex items-center gap-1 px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 whitespace-nowrap">
+                            <Printer className="w-3 h-3" /> Buyer
                           </button>
                         </div>
                       </td>

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
+import { buildPrintHeader, receiptCSS } from "@/lib/print-utils"
 import { Plus, Search, Trash2, ShoppingCart, Eye, Printer, Sprout } from "lucide-react"
 
 export default function SalesPage() {
@@ -18,6 +19,7 @@ export default function SalesPage() {
   const [sales, setSales] = useState<any[]>([])
   const [pesticideSales, setPesticideSales] = useState<any[]>([])
   const [products, setProducts] = useState<any[]>([])
+  const [shop, setShop] = useState<any>(null)
   const [pesticides, setPesticides] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
   const [farmers, setFarmers] = useState<any[]>([])
@@ -39,13 +41,14 @@ export default function SalesPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const [sr, pr, cr, psr, pestr, fr] = await Promise.allSettled([
+      const [sr, pr, cr, psr, pestr, fr, shr] = await Promise.allSettled([
         fetch("/api/sales").then((r) => r.json()),
         fetch("/api/inventory").then((r) => r.json()),
         fetch("/api/customers").then((r) => r.json()),
         fetch("/api/pesticides/sales").then((r) => r.json()),
         fetch("/api/pesticides").then((r) => r.json()),
         fetch("/api/farmers").then((r) => r.json()),
+        fetch("/api/settings").then((r) => r.json()),
       ])
       if (sr.status === "fulfilled") setSales(sr.value.sales || [])
       if (pr.status === "fulfilled") setProducts(pr.value.products || [])
@@ -53,6 +56,7 @@ export default function SalesPage() {
       if (psr.status === "fulfilled") setPesticideSales(psr.value.sales || [])
       if (pestr.status === "fulfilled") setPesticides(pestr.value.pesticides || [])
       if (fr.status === "fulfilled") setFarmers(fr.value.farmers || [])
+      if (shr.status === "fulfilled") setShop(shr.value.shop || null)
     } finally {
       setLoading(false)
     }
@@ -132,6 +136,7 @@ export default function SalesPage() {
           quantity: qty,
           unitPrice: selectedPesticide.salePrice,
           customerId: realCustomerId,
+          farmerId: chosenFarmer ? chosenFarmer.id : null,
           customerName,
           paidAmount: parseFloat(pesticideSaleForm.paidAmount) || 0,
         }),
@@ -156,6 +161,61 @@ export default function SalesPage() {
 
   function handlePrint() {
     window.print()
+  }
+
+  function printPesticideSale(s: any) {
+    const buyer = s.customer?.name || s.farmer?.name || s.customerName || "Walk-in"
+    const phone = s.customer?.phone || s.farmer?.phone || ""
+    const ref = s.id.slice(-6).toUpperCase()
+    const date = new Date(s.createdAt).toLocaleDateString("en-PK")
+    const bal = s.balance ?? (s.totalAmount - s.paidAmount)
+    const statusCls = bal <= 0 ? "PAID" : s.paidAmount > 0 ? "PARTIAL" : "PENDING"
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Pesticide Sale — ${ref}</title>
+<style>${receiptCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Pesticide Sale Receipt</div>
+    <div class="doc-sub">Ref: #${ref} &nbsp;|&nbsp; By: ${s.soldBy?.name || "—"}</div>
+  </div>
+  <div class="doc-meta"><div>${date}</div><span class="badge badge-${statusCls}">${statusCls}</span></div>
+</div>
+<div class="body-pad">
+  <div class="info-grid">
+    <div><div class="lbl">Bill To</div><div class="val">${buyer}</div>${phone ? `<div style="color:#6b7280;font-size:10px;margin-top:2px">${phone}</div>` : ""}</div>
+    <div><div class="lbl">Type</div><div class="val">${s.farmer ? "Farmer" : s.customer ? "Customer" : "Walk-in"}</div></div>
+    <div><div class="lbl">Date</div><div class="val">${date}</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Pesticide</th><th style="text-align:center">Qty</th><th style="text-align:center">Unit</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>${s.pesticide?.name || "—"}</td>
+        <td style="text-align:center">${s.quantity}</td>
+        <td style="text-align:center">${s.pesticide?.unit || ""}</td>
+        <td style="text-align:right">PKR ${(s.unitPrice || 0).toLocaleString()}</td>
+        <td style="text-align:right">PKR ${(s.totalAmount || 0).toLocaleString()}</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="totals-box">
+    <table>
+      <tbody>
+        <tr><td>Sub Total</td><td style="text-align:right">PKR ${(s.totalAmount || 0).toLocaleString()}</td></tr>
+        <tr><td>Paid</td><td style="text-align:right;color:#15803d">PKR ${(s.paidAmount || 0).toLocaleString()}</td></tr>
+      </tbody>
+      <tfoot><tr class="grand"><td>Balance Due</td><td style="text-align:right;color:${bal > 0 ? "#b91c1c" : "#15803d"}">PKR ${bal.toLocaleString()}</td></tr></tfoot>
+    </table>
+  </div>
+  ${s.notes ? `<p style="font-size:11px;color:#555;margin-top:12px"><strong>Notes:</strong> ${s.notes}</p>` : ""}
+  <div class="sig-row">
+    <span>Customer Signature: _______________________</span>
+    <span>Authorized By: _______________________</span>
+  </div>
+</div>
+</body></html>`)
+    w.print()
   }
 
   const filtered = sales.filter((s) =>
@@ -510,13 +570,22 @@ export default function SalesPage() {
                             <td className="py-3 px-3 text-gray-500">{formatDate(s.createdAt)}</td>
                             <td className="py-3 px-3 text-gray-500">{s.soldBy?.name}</td>
                             <td className="py-3 px-3">
-                              <button
-                                onClick={() => { setSelectedPesticideSaleDetail(s); setShowPesticideDetailModal(true) }}
-                                className="p-1.5 text-gray-400 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
-                                title="View & Print"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => { setSelectedPesticideSaleDetail(s); setShowPesticideDetailModal(true) }}
+                                  className="p-1.5 text-gray-400 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                                  title="View Details"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => printPesticideSale(s)}
+                                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  title="Print Invoice"
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         )

@@ -356,6 +356,7 @@ model PesticideSale {
   shopId       String?
   pesticideId  String
   customerId   String?
+  farmerId     String?
   quantity     Float
   unitPrice    Float
   totalAmount  Float
@@ -369,6 +370,7 @@ model PesticideSale {
   shop      Shop?     @relation(fields: [shopId], references: [id])
   pesticide Pesticide @relation(fields: [pesticideId], references: [id])
   customer  Customer? @relation(fields: [customerId], references: [id])
+  farmer    Farmer?   @relation(fields: [farmerId], references: [id])
   soldBy    User      @relation(fields: [soldById], references: [id])
 }
 
@@ -451,6 +453,7 @@ model Farmer {
   sales            Sale[]
   productPurchases Purchase[]
   commissions      Commission[]
+  pesticideSales   PesticideSale[]
 }
 
 model FarmerPurchase {

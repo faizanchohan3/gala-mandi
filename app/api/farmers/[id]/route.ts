@@ -23,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!farmer) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [sales, commissions]: [any[], any[]] = await Promise.all([
+  const [sales, commissions, pesticideSales]: [any[], any[], any[]] = await Promise.all([
     (db.sale as any).findMany({
       where: { farmerId: id },
       orderBy: { createdAt: "asc" },
@@ -34,6 +34,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     db.commission.findMany({
       where: { farmerId: id },
       orderBy: { createdAt: "asc" },
+    }),
+    db.pesticideSale.findMany({
+      where: { farmerId: id },
+      orderBy: { createdAt: "asc" },
+      include: { pesticide: { select: { name: true, unit: true } } },
     }),
   ])
 
@@ -88,6 +93,28 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       credit: sale.totalAmount,
       ref: sale.id,
     })
+  }
+
+  // Pesticide sales to farmer — farmer owes mandi (debit their account, credit when paid)
+  for (const ps of pesticideSales) {
+    events.push({
+      date: ps.createdAt,
+      type: "PESTICIDE_SALE",
+      description: `Pesticide Sale #${ps.id.slice(-6).toUpperCase()} — ${ps.quantity} ${ps.pesticide?.unit || ""} ${ps.pesticide?.name || ""}`,
+      debit: 0,
+      credit: ps.totalAmount,
+      ref: ps.id,
+    })
+    if (ps.paidAmount > 0) {
+      events.push({
+        date: ps.createdAt,
+        type: "PAYMENT",
+        description: `Payment received — Pesticide sale`,
+        debit: ps.paidAmount,
+        credit: 0,
+        ref: ps.id,
+      })
+    }
   }
 
   // Commission transactions where farmer is the seller — mandi owes farmer sellerPayable
