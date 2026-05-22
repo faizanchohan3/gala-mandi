@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
+import { buildPrintHeader, receiptCSS, reportCSS } from "@/lib/print-utils"
 import { Plus, Search, Trash2, ShoppingBag, Printer, Percent, Package } from "lucide-react"
 
 export default function PurchasesPage() {
@@ -17,6 +18,7 @@ export default function PurchasesPage() {
   const [suppliers, setSuppliers] = useState<any[]>([])
   const [farmers, setFarmers] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
+  const [shop, setShop] = useState<any>(null)
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -55,18 +57,20 @@ export default function PurchasesPage() {
 
   async function loadData() {
     setLoading(true)
-    const [pr, prod, sup, fr, cu] = await Promise.all([
+    const [pr, prod, sup, fr, cu, sh] = await Promise.all([
       safeFetch("/api/purchases", { purchases: [] }),
       safeFetch("/api/inventory", { products: [] }),
       safeFetch("/api/suppliers", { suppliers: [] }),
       safeFetch("/api/farmers", { farmers: [] }),
       safeFetch("/api/customers", { customers: [] }),
+      safeFetch("/api/settings", { shop: null }),
     ])
     setPurchases(pr.purchases || [])
     setProducts(prod.products || [])
     setSuppliers(sup.suppliers || [])
     setFarmers(fr.farmers || [])
     setCustomers(cu.customers || [])
+    setShop(sh.shop || null)
     setLoading(false)
   }
 
@@ -183,6 +187,9 @@ export default function PurchasesPage() {
 
   function printPurchase(p: any) {
     const from = p.farmer?.name || p.supplier?.name || "Direct"
+    const ref = p.id.slice(-6).toUpperCase()
+    const date = new Date(p.createdAt).toLocaleDateString("en-PK")
+    const statusCls = p.status === "PAID" ? "PAID" : p.status === "PARTIAL" ? "PARTIAL" : "PENDING"
     const itemRows = (p.items || []).map((i: any) => `
       <tr>
         <td>${i.product?.name || "—"}</td>
@@ -191,42 +198,41 @@ export default function PurchasesPage() {
         <td style="text-align:right">PKR ${(i.total || 0).toLocaleString()}</td>
       </tr>`).join("")
     const w = window.open("", "_blank")!
-    w.document.write(`<html><head><title>Purchase — ${p.id.slice(-6).toUpperCase()}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 12px; padding: 24px; max-width: 600px; margin: 0 auto; }
-  h2 { font-size: 18px; margin: 0 0 2px; }
-  .sub { color: #666; font-size: 11px; margin-bottom: 16px; }
-  .info { display: flex; gap: 32px; margin-bottom: 16px; }
-  .info div { font-size: 11px; }
-  .info .lbl { color: #888; text-transform: uppercase; font-size: 10px; }
-  .info .val { font-weight: bold; margin-top: 2px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-  th, td { border: 1px solid #ddd; padding: 6px 10px; }
-  th { background: #f5f5f5; font-size: 10px; text-transform: uppercase; text-align: left; }
-  .totals { margin-left: auto; width: 240px; }
-  .totals td { border: none; padding: 3px 8px; font-size: 12px; }
-  .totals .grand { font-weight: bold; font-size: 14px; border-top: 2px solid #333; }
-  .status { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 10px; font-weight: bold;
-    background: ${p.status === "PAID" ? "#dcfce7" : p.status === "PARTIAL" ? "#fef9c3" : "#fee2e2"};
-    color: ${p.status === "PAID" ? "#15803d" : p.status === "PARTIAL" ? "#854d0e" : "#b91c1c"}; }
-</style></head><body>
-<h2>Purchase Receipt</h2>
-<div class="sub">Ref: #${p.id.slice(-6).toUpperCase()} &nbsp;|&nbsp; ${new Date(p.createdAt).toLocaleDateString("en-PK")} &nbsp;|&nbsp; By: ${p.createdBy?.name || "—"}</div>
-<div class="info">
-  <div><div class="lbl">From</div><div class="val">${from}</div>${p.farmer?.phone || p.supplier?.phone ? `<div style="color:#555;margin-top:2px">${p.farmer?.phone || p.supplier?.phone}</div>` : ""}</div>
-  <div><div class="lbl">Type</div><div class="val">${p.farmer ? "Farmer" : p.supplier ? "Supplier" : "Direct"}</div></div>
-  <div><div class="lbl">Status</div><div class="val"><span class="status">${p.status}</span></div></div>
+    w.document.write(`<html><head><title>Purchase — ${ref}</title>
+<style>${receiptCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Purchase Receipt</div>
+    <div class="doc-sub">Ref: #${ref} &nbsp;|&nbsp; By: ${p.createdBy?.name || "—"}</div>
+  </div>
+  <div class="doc-meta"><div>${date}</div><span class="badge badge-${statusCls}">${p.status}</span></div>
 </div>
-<table>
-  <thead><tr><th>Product</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr></thead>
-  <tbody>${itemRows}</tbody>
-</table>
-<table class="totals">
-  <tr><td>Subtotal</td><td style="text-align:right">PKR ${(p.totalAmount || 0).toLocaleString()}</td></tr>
-  <tr><td>Paid</td><td style="text-align:right;color:#15803d">PKR ${(p.paidAmount || 0).toLocaleString()}</td></tr>
-  <tr class="grand"><td>Balance Due</td><td style="text-align:right;color:${p.balance > 0 ? "#b91c1c" : "#15803d"}">PKR ${(p.balance || 0).toLocaleString()}</td></tr>
-</table>
-${p.notes ? `<p style="color:#555;font-size:11px;margin-top:8px"><strong>Notes:</strong> ${p.notes}</p>` : ""}
+<div class="body-pad">
+  <div class="info-grid">
+    <div><div class="lbl">From</div><div class="val">${from}</div>${p.farmer?.phone || p.supplier?.phone ? `<div style="color:#6b7280;font-size:10px;margin-top:2px">${p.farmer?.phone || p.supplier?.phone}</div>` : ""}</div>
+    <div><div class="lbl">Type</div><div class="val">${p.farmer ? "Farmer" : p.supplier ? "Supplier" : "Direct"}</div></div>
+    <div><div class="lbl">Date</div><div class="val">${date}</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Product</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody>${itemRows}</tbody>
+  </table>
+  <div class="totals-box">
+    <table>
+      <tbody>
+        <tr><td>Subtotal</td><td style="text-align:right">PKR ${(p.totalAmount || 0).toLocaleString()}</td></tr>
+        <tr><td>Paid</td><td style="text-align:right;color:#15803d">PKR ${(p.paidAmount || 0).toLocaleString()}</td></tr>
+      </tbody>
+      <tfoot><tr class="grand"><td>Balance Due</td><td style="text-align:right;color:${p.balance > 0 ? "#b91c1c" : "#15803d"}">PKR ${(p.balance || 0).toLocaleString()}</td></tr></tfoot>
+    </table>
+  </div>
+  ${p.notes ? `<p style="font-size:11px;color:#555;margin-top:12px"><strong>Notes:</strong> ${p.notes}</p>` : ""}
+  <div class="sig-row">
+    <span>Received By: _______________________</span>
+    <span>Authorized By: _______________________</span>
+  </div>
+</div>
 </body></html>`)
     w.print()
   }
@@ -236,13 +242,14 @@ ${p.notes ? `<p style="color:#555;font-size:11px;margin-top:8px"><strong>Notes:<
       const from = p.farmer?.name || p.supplier?.name || "Direct"
       const type = p.farmer ? "Farmer" : p.supplier ? "Supplier" : "Direct"
       const its = (p.items || []).map((it: any) => `${it.quantity} ${it.product?.unit || ""} ${it.product?.name || ""}`).join(", ")
+      const statusCls = p.status === "PAID" ? "PAID" : p.status === "PARTIAL" ? "PARTIAL" : "PENDING"
       return `<tr>
         <td>${i + 1}</td><td>${from}</td><td>${type}</td>
-        <td style="font-size:10px;color:#555">${its || "—"}</td>
+        <td style="font-size:9px;color:#555">${its || "—"}</td>
         <td style="text-align:right">PKR ${(p.totalAmount || 0).toLocaleString()}</td>
         <td style="text-align:right;color:#15803d">PKR ${(p.paidAmount || 0).toLocaleString()}</td>
         <td style="text-align:right;color:${p.balance > 0 ? "#b91c1c" : "#15803d"}">PKR ${(p.balance || 0).toLocaleString()}</td>
-        <td style="text-align:center">${p.status}</td>
+        <td><span class="badge badge-${statusCls}">${p.status}</span></td>
         <td>${new Date(p.createdAt).toLocaleDateString("en-PK")}</td>
         <td>${p.createdBy?.name || "—"}</td>
       </tr>`
@@ -252,22 +259,20 @@ ${p.notes ? `<p style="color:#555;font-size:11px;margin-top:8px"><strong>Notes:<
     const totalBal = list.reduce((s, p) => s + (p.balance || 0), 0)
     const w = window.open("", "_blank")!
     w.document.write(`<html><head><title>All Purchases</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 11px; padding: 16px; }
-  h2 { font-size: 15px; margin-bottom: 4px; }
-  .sub { color: #666; font-size: 10px; margin-bottom: 12px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
-  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-  tr:nth-child(even) { background: #fafafa; }
-  tfoot td { font-weight: bold; background: #f0f0f0; }
-</style></head><body>
-<h2>All Purchases</h2>
-<p class="sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; Total: ${list.length} purchases</p>
+<style>${reportCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Purchase Report</div>
+    <div class="doc-sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; ${list.length} purchases</div>
+  </div>
+  <div class="doc-meta"><div>${new Date().toLocaleString("en-PK")}</div></div>
+</div>
+<div class="body-pad">
 <table>
   <thead><tr><th>#</th><th>From</th><th>Type</th><th>Items</th>
     <th style="text-align:right">Total</th><th style="text-align:right">Paid</th>
-    <th style="text-align:right">Balance</th><th style="text-align:center">Status</th>
+    <th style="text-align:right">Balance</th><th>Status</th>
     <th>Date</th><th>By</th>
   </tr></thead>
   <tbody>${rows}</tbody>
@@ -279,6 +284,7 @@ ${p.notes ? `<p style="color:#555;font-size:11px;margin-top:8px"><strong>Notes:<
     <td colspan="3"></td>
   </tr></tfoot>
 </table>
+</div>
 </body></html>`)
     w.print()
   }

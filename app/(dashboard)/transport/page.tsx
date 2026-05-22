@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { buildPrintHeader, receiptCSS, reportCSS } from "@/lib/print-utils"
 import { Plus, Truck, Printer, Search, User, BookOpen, ArrowDownCircle, Edit } from "lucide-react"
 
 const STATUS_COLORS: Record<string, string> = {
@@ -31,6 +32,7 @@ export default function TransportPage() {
   const [customers, setCustomers] = useState<any[]>([])
   const [drivers, setDrivers] = useState<any[]>([])
   const [banks, setBanks] = useState<any[]>([])
+  const [shop, setShop] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
@@ -66,17 +68,19 @@ export default function TransportPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const [sr, vr, cr, dr, br] = await Promise.allSettled([
+      const [sr, vr, cr, dr, br, shr] = await Promise.allSettled([
         fetch("/api/freight").then((r) => r.json()),
         fetch("/api/vehicles").then((r) => r.json()),
         fetch("/api/customers").then((r) => r.json()),
         fetch("/api/drivers").then((r) => r.json()),
         fetch("/api/banks").then((r) => r.json()),
+        fetch("/api/settings").then((r) => r.json()),
       ])
       if (sr.status === "fulfilled") setSlips(sr.value.slips || [])
       if (vr.status === "fulfilled") setVehicles(vr.value.vehicles || [])
       if (cr.status === "fulfilled") setCustomers(cr.value.customers || [])
       if (dr.status === "fulfilled") setDrivers(dr.value.drivers || [])
+      if (shr.status === "fulfilled") setShop(shr.value.shop || null)
       if (br.status === "fulfilled") setBanks(br.value.banks || [])
     } finally {
       setLoading(false)
@@ -261,33 +265,33 @@ export default function TransportPage() {
         <td>${s.mill || "—"}</td>
         <td>${s.netWeight ? s.netWeight + " KG" : "—"}</td>
         <td>${s.unloadDate ? new Date(s.unloadDate).toLocaleDateString("en-PK") : "—"}</td>
-        <td>${s.deduction > 0 ? s.deduction.toLocaleString() : "—"}</td>
-        <td>${s.netAmount > 0 ? s.netAmount.toLocaleString() : "—"}</td>
-        <td>${s.rent > 0 ? s.rent.toLocaleString() : "—"}</td>
-        <td>${s.labour > 0 ? s.labour.toLocaleString() : "—"}</td>
+        <td style="text-align:right">${s.deduction > 0 ? s.deduction.toLocaleString() : "—"}</td>
+        <td style="text-align:right">${s.netAmount > 0 ? "PKR " + s.netAmount.toLocaleString() : "—"}</td>
+        <td style="text-align:right">${s.rent > 0 ? "PKR " + s.rent.toLocaleString() : "—"}</td>
+        <td style="text-align:right">${s.labour > 0 ? "PKR " + s.labour.toLocaleString() : "—"}</td>
         <td>${s.referenceNo || "—"}</td>
       </tr>`).join("")
     const w = window.open("", "_blank")!
     w.document.write(`<html><head><title>All FeedMills</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 11px; padding: 16px; }
-  h2 { font-size: 15px; margin-bottom: 4px; }
-  p.sub { color: #666; font-size: 10px; margin-bottom: 12px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; white-space: nowrap; }
-  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-  tr:nth-child(even) { background: #fafafa; }
-</style></head><body>
-<h2>All FeedMills</h2>
-<p class="sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; Total: ${sorted.length} slips</p>
+<style>${reportCSS} th,td{white-space:nowrap;}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">FeedMill Slips</div>
+    <div class="doc-sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; ${sorted.length} slips</div>
+  </div>
+  <div class="doc-meta"><div>${new Date().toLocaleString("en-PK")}</div></div>
+</div>
+<div class="body-pad">
 <table>
   <thead><tr>
     <th>#</th><th>Driver</th><th>Builty</th><th>Rate</th><th>Vehicle</th>
     <th>Weighbridge</th><th>Loading Date</th><th>Bags</th><th>Mill</th><th>Net Wt</th>
-    <th>Unload Date</th><th>Deduction</th><th>Net Amount</th><th>Rent</th><th>Labour</th><th>Ref No</th>
+    <th>Unload Date</th><th style="text-align:right">Deduction</th><th style="text-align:right">Net Amt</th><th style="text-align:right">Rent</th><th style="text-align:right">Labour</th><th>Ref No</th>
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
+</div>
 </body></html>`)
     w.print()
   }
@@ -305,21 +309,21 @@ export default function TransportPage() {
       </tr>`).join("")
     const w = window.open("", "_blank")!
     w.document.write(`<html><head><title>Drivers List</title>
-<style>
-  body { font-family: Arial; font-size: 11px; padding: 16px; }
-  h2 { font-size: 15px; margin-bottom: 4px; }
-  p.sub { color: #666; font-size: 10px; margin-bottom: 12px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
-  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-  tr:nth-child(even) { background: #fafafa; }
-</style></head><body>
-<h2>Drivers List</h2>
-<p class="sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; Total: ${drivers.length} drivers</p>
+<style>${reportCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Drivers List</div>
+    <div class="doc-sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; ${drivers.length} drivers</div>
+  </div>
+  <div class="doc-meta"><div>${new Date().toLocaleString("en-PK")}</div></div>
+</div>
+<div class="body-pad">
 <table>
-  <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>CNIC</th><th>License</th><th>Trips</th><th>Balance Payable</th></tr></thead>
+  <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>CNIC</th><th>License</th><th style="text-align:center">Trips</th><th style="text-align:right">Balance Payable</th></tr></thead>
   <tbody>${rows}</tbody>
 </table>
+</div>
 </body></html>`)
     w.print()
   }
@@ -340,59 +344,82 @@ export default function TransportPage() {
     const bal = driverDetail.balance || 0
     const w = window.open("", "_blank")!
     w.document.write(`<html><head><title>Driver Ledger — ${selectedDriver.name}</title>
-<style>
-  body { font-family: Arial; font-size: 11px; padding: 16px; }
-  h2 { font-size: 15px; margin-bottom: 2px; }
-  p.sub { color: #666; font-size: 10px; margin-bottom: 10px; }
-  .summary { display: flex; gap: 16px; margin-bottom: 14px; }
-  .summary div { border: 1px solid #ccc; padding: 8px 14px; }
-  .summary .lbl { font-size: 9px; text-transform: uppercase; color: #666; }
-  .summary .val { font-size: 14px; font-weight: bold; margin-top: 2px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
-  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-  tfoot td { font-weight: bold; background: #f0f0f0; }
-  tr:nth-child(even) { background: #fafafa; }
-</style></head><body>
-<h2>Driver Ledger — ${selectedDriver.name}</h2>
-<p class="sub">
-  ${selectedDriver.phone ? "Phone: " + selectedDriver.phone + " &nbsp;|&nbsp; " : ""}
-  ${selectedDriver.cnic ? "CNIC: " + selectedDriver.cnic + " &nbsp;|&nbsp; " : ""}
-  Printed on ${new Date().toLocaleDateString("en-PK")}
-</p>
-<div class="summary">
-  <div><div class="lbl">Total Earned (Cr)</div><div class="val">PKR ${(driverDetail.totalEarned || 0).toLocaleString()}</div></div>
-  <div><div class="lbl">Total Paid (Dr)</div><div class="val">PKR ${(driverDetail.totalPaid || 0).toLocaleString()}</div></div>
-  <div><div class="lbl">Balance Payable</div><div class="val" style="color:${bal > 0 ? "#dc2626" : "#16a34a"}">PKR ${Math.abs(bal).toLocaleString()} ${bal > 0 ? "Cr" : bal < 0 ? "Dr" : ""}</div></div>
+<style>${reportCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Driver Ledger</div>
+    <div class="doc-sub">${selectedDriver.name}${selectedDriver.phone ? " &nbsp;|&nbsp; " + selectedDriver.phone : ""}${selectedDriver.cnic ? " &nbsp;|&nbsp; CNIC: " + selectedDriver.cnic : ""}</div>
+  </div>
+  <div class="doc-meta"><div>Printed: ${new Date().toLocaleDateString("en-PK")}</div></div>
 </div>
-<table>
-  <thead><tr><th>#</th><th>Date</th><th>Description</th><th>Paid (Dr)</th><th>Earned (Cr)</th><th>Balance</th></tr></thead>
-  <tbody>${rows}</tbody>
-  <tfoot><tr>
-    <td colspan="3">Closing Balance</td>
-    <td style="text-align:right">PKR ${(driverDetail.totalPaid || 0).toLocaleString()}</td>
-    <td style="text-align:right">PKR ${(driverDetail.totalEarned || 0).toLocaleString()}</td>
-    <td style="text-align:right;color:${bal > 0 ? "#dc2626" : "#16a34a"}">PKR ${Math.abs(bal).toLocaleString()} ${bal > 0 ? "Cr" : bal < 0 ? "Dr" : ""}</td>
-  </tr></tfoot>
-</table>
+<div class="body-pad">
+  <div style="display:flex;gap:14px;margin-bottom:14px;">
+    <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 14px;">
+      <div style="font-size:9px;text-transform:uppercase;color:#6b7280;font-weight:700">Total Earned (Cr)</div>
+      <div style="font-size:15px;font-weight:900;color:#15803d;margin-top:3px">PKR ${(driverDetail.totalEarned || 0).toLocaleString()}</div>
+    </div>
+    <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;">
+      <div style="font-size:9px;text-transform:uppercase;color:#6b7280;font-weight:700">Total Paid (Dr)</div>
+      <div style="font-size:15px;font-weight:900;color:#dc2626;margin-top:3px">PKR ${(driverDetail.totalPaid || 0).toLocaleString()}</div>
+    </div>
+    <div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 14px;">
+      <div style="font-size:9px;text-transform:uppercase;color:#6b7280;font-weight:700">Balance Payable</div>
+      <div style="font-size:15px;font-weight:900;color:${bal > 0 ? "#dc2626" : "#16a34a"};margin-top:3px">PKR ${Math.abs(bal).toLocaleString()} ${bal > 0 ? "Cr" : bal < 0 ? "Dr" : ""}</div>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Date</th><th>Description</th><th style="text-align:right">Paid (Dr)</th><th style="text-align:right">Earned (Cr)</th><th style="text-align:right">Balance</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="3">Closing Balance</td>
+      <td style="text-align:right">PKR ${(driverDetail.totalPaid || 0).toLocaleString()}</td>
+      <td style="text-align:right">PKR ${(driverDetail.totalEarned || 0).toLocaleString()}</td>
+      <td style="text-align:right;color:${bal > 0 ? "#dc2626" : "#16a34a"}">PKR ${Math.abs(bal).toLocaleString()} ${bal > 0 ? "Cr" : bal < 0 ? "Dr" : ""}</td>
+    </tr></tfoot>
+  </table>
+</div>
 </body></html>`)
     w.print()
   }
 
   const printChallan = (slip: any) => {
     const challan = slip.deliveryChallan
+    const ref = challan?.challanNo || slip.builtyNo || slip.slipNo || "—"
     const w = window.open("", "_blank")!
-    w.document.write(`<html><head><title>Delivery Challan — ${challan?.challanNo || slip.slipNo}</title>
-<style>body{font-family:Arial;padding:20px;} h1{font-size:18px} table{width:100%;border-collapse:collapse;} td,th{border:1px solid #ccc;padding:8px;}</style></head><body>
-<h1>Delivery Challan</h1>
-<p><strong>Challan No:</strong> ${challan?.challanNo || "—"} &nbsp; <strong>Builty No:</strong> ${slip.builtyNo || "—"} &nbsp; <strong>Date:</strong> ${new Date().toLocaleDateString("en-PK")}</p>
-<p><strong>Driver:</strong> ${slip.driver?.name || "—"} &nbsp; <strong>Vehicle:</strong> ${slip.vehicle?.vehicleNo || "—"}</p>
-<p><strong>From:</strong> ${slip.fromLocation || "—"} &nbsp; <strong>To:</strong> ${slip.toLocation || "—"}</p>
-<p><strong>Mill:</strong> ${slip.mill || "—"} &nbsp; <strong>Commodity:</strong> ${slip.commodity || "—"}</p>
-<p><strong>Bags:</strong> ${slip.bags || "—"} &nbsp; <strong>Weighbridge:</strong> ${slip.weighbridge || "—"} KG &nbsp; <strong>Net Weight:</strong> ${slip.netWeight || "—"} KG</p>
-<p><strong>Rate:</strong> ${slip.rate || "—"} &nbsp; <strong>Net Amount:</strong> PKR ${slip.netAmount || "—"} &nbsp; <strong>Rent:</strong> PKR ${slip.rent || "—"}</p>
-<p><strong>Ref No:</strong> ${slip.referenceNo || "—"} &nbsp; <strong>Unload Date:</strong> ${slip.unloadDate ? new Date(slip.unloadDate).toLocaleDateString("en-PK") : "—"}</p>
-<br/><p>Received By: _____________________________ &nbsp; Signature: _____________________________</p>
+    w.document.write(`<html><head><title>Delivery Challan — ${ref}</title>
+<style>${receiptCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Delivery Challan</div>
+    <div class="doc-sub">Challan No: ${challan?.challanNo || "—"} &nbsp;|&nbsp; Builty No: ${slip.builtyNo || "—"}</div>
+  </div>
+  <div class="doc-meta"><div>${new Date().toLocaleDateString("en-PK")}</div></div>
+</div>
+<div class="body-pad">
+  <div class="info-grid">
+    <div><div class="lbl">Driver</div><div class="val">${slip.driver?.name || "—"}</div></div>
+    <div><div class="lbl">Vehicle</div><div class="val">${slip.vehicle?.vehicleNo || "—"}</div></div>
+    <div><div class="lbl">From</div><div class="val">${slip.fromLocation || "—"}</div></div>
+    <div><div class="lbl">To</div><div class="val">${slip.toLocation || "—"}</div></div>
+    <div><div class="lbl">Mill</div><div class="val">${slip.mill || "—"}</div></div>
+    <div><div class="lbl">Commodity</div><div class="val">${slip.commodity || "—"}</div></div>
+    <div><div class="lbl">Bags</div><div class="val">${slip.bags || "—"}</div></div>
+    <div><div class="lbl">Weighbridge</div><div class="val">${slip.weighbridge ? slip.weighbridge + " KG" : "—"}</div></div>
+    <div><div class="lbl">Net Weight</div><div class="val">${slip.netWeight ? slip.netWeight + " KG" : "—"}</div></div>
+    <div><div class="lbl">Rate</div><div class="val">${slip.rate || "—"}</div></div>
+    <div><div class="lbl">Net Amount</div><div class="val">PKR ${slip.netAmount ? slip.netAmount.toLocaleString() : "—"}</div></div>
+    <div><div class="lbl">Rent</div><div class="val">PKR ${slip.rent ? slip.rent.toLocaleString() : "—"}</div></div>
+    <div><div class="lbl">Ref No</div><div class="val">${slip.referenceNo || "—"}</div></div>
+    ${slip.unloadDate ? `<div><div class="lbl">Unload Date</div><div class="val">${new Date(slip.unloadDate).toLocaleDateString("en-PK")}</div></div>` : ""}
+  </div>
+  <div class="sig-row">
+    <span>Received By: _______________________</span>
+    <span>Guard Signature: _______________________</span>
+    <span>Authorized By: _______________________</span>
+  </div>
+</div>
 </body></html>`)
     w.print()
   }

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatDate } from "@/lib/utils"
+import { buildPrintHeader, receiptCSS } from "@/lib/print-utils"
 import { Plus, DoorOpen, Scale, FileCheck, LogOut, Clock, Printer } from "lucide-react"
 
 const STATUS_COLORS: Record<string, string> = {
@@ -24,6 +25,7 @@ export default function GatePage() {
   const [farmers, setFarmers] = useState<any[]>([])
   const [agents, setAgents] = useState<any[]>([])
   const [vehicles, setVehicles] = useState<any[]>([])
+  const [shop, setShop] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [showEntryModal, setShowEntryModal] = useState(false)
   const [showWeighModal, setShowWeighModal] = useState<any>(null)
@@ -33,16 +35,18 @@ export default function GatePage() {
 
   async function loadData() {
     setLoading(true)
-    const [e, f, a, v] = await Promise.all([
+    const [e, f, a, v, sh] = await Promise.all([
       fetch(`/api/gate?date=${filterDate}`).then((r) => r.json()),
       fetch("/api/farmers").then((r) => r.json()),
       fetch("/api/agents").then((r) => r.json()),
       fetch("/api/vehicles").then((r) => r.json()),
+      fetch("/api/settings").then((r) => r.json()).catch(() => ({ shop: null })),
     ])
     setEntries(e.entries || [])
     setFarmers(f.farmers || [])
     setAgents(a.agents || [])
     setVehicles(v.vehicles || [])
+    setShop(sh.shop || null)
     setLoading(false)
   }
   useEffect(() => { loadData() }, [filterDate])
@@ -95,30 +99,36 @@ export default function GatePage() {
 
   const printGatePass = (entry: any) => {
     const pass = entry.gatePass
+    const ref = pass?.passNo || entry.entryNo
     const w = window.open("", "_blank")!
-    w.document.write(`<html><head><title>Gate Pass — ${pass?.passNo || entry.entryNo}</title>
-<style>body{font-family:Arial;padding:30px;} h1{font-size:20px;border-bottom:2px solid #000;padding-bottom:10px;}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:20px 0;} .field{margin:8px 0;}
-.label{font-size:12px;color:#666;} .value{font-size:14px;font-weight:bold;border-bottom:1px solid #ccc;padding-bottom:3px;}
-.sig{margin-top:60px;display:flex;justify-content:space-between;}</style></head><body>
-<h1>GATE PASS — Gala Mandi</h1>
-<div class="grid">
-<div class="field"><div class="label">Pass No</div><div class="value">${pass?.passNo || "—"}</div></div>
-<div class="field"><div class="label">Entry No</div><div class="value">${entry.entryNo}</div></div>
-<div class="field"><div class="label">Date & Time</div><div class="value">${new Date(entry.entryTime).toLocaleString("en-PK")}</div></div>
-<div class="field"><div class="label">Type</div><div class="value">${entry.type}</div></div>
-<div class="field"><div class="label">Vehicle No</div><div class="value">${entry.vehicle?.vehicleNo || entry.vehicleNo || "—"}</div></div>
-<div class="field"><div class="label">Driver</div><div class="value">${entry.driverName || entry.vehicle?.driverName || "—"}</div></div>
-<div class="field"><div class="label">Farmer</div><div class="value">${entry.farmer?.name || "—"}</div></div>
-<div class="field"><div class="label">Agent</div><div class="value">${entry.agent?.name || "—"}</div></div>
-<div class="field"><div class="label">Commodity</div><div class="value">${entry.commodity || "—"}</div></div>
-<div class="field"><div class="label">Bags</div><div class="value">${entry.bags || "—"}</div></div>
-${entry.weighbridgeEntries?.[0] ? `<div class="field"><div class="label">Net Weight</div><div class="value">${entry.weighbridgeEntries[0].netWeight} KG</div></div>` : ""}
+    w.document.write(`<html><head><title>Gate Pass — ${ref}</title>
+<style>${receiptCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Gate Pass</div>
+    <div class="doc-sub">Pass No: ${pass?.passNo || "—"} &nbsp;|&nbsp; Entry No: ${entry.entryNo}</div>
+  </div>
+  <div class="doc-meta">
+    <div>${new Date(entry.entryTime).toLocaleString("en-PK")}</div>
+    <div style="margin-top:3px;padding:2px 8px;background:${entry.type === "IN" ? "#dbeafe" : "#ffedd5"};color:${entry.type === "IN" ? "#1d4ed8" : "#c2410c"};border-radius:99px;font-size:9px;font-weight:700;display:inline-block">${entry.type}</div>
+  </div>
 </div>
-<p><strong>Purpose:</strong> ${entry.purpose || "—"}</p>
-<div class="sig">
-<div>Authorized By: _____________________</div>
-<div>Guard Signature: _____________________</div>
+<div class="body-pad">
+  <div class="info-grid">
+    <div><div class="lbl">Vehicle No</div><div class="val">${entry.vehicle?.vehicleNo || entry.vehicleNo || "—"}</div></div>
+    <div><div class="lbl">Driver</div><div class="val">${entry.driverName || entry.vehicle?.driverName || "—"}</div></div>
+    <div><div class="lbl">Farmer</div><div class="val">${entry.farmer?.name || "—"}</div></div>
+    <div><div class="lbl">Agent</div><div class="val">${entry.agent?.name || "—"}</div></div>
+    <div><div class="lbl">Commodity</div><div class="val">${entry.commodity || "—"}</div></div>
+    <div><div class="lbl">Bags</div><div class="val">${entry.bags || "—"}</div></div>
+    ${entry.weighbridgeEntries?.[0] ? `<div><div class="lbl">Net Weight</div><div class="val">${entry.weighbridgeEntries[0].netWeight} KG</div></div>` : ""}
+    ${entry.purpose ? `<div><div class="lbl">Purpose</div><div class="val">${entry.purpose}</div></div>` : ""}
+  </div>
+  <div class="sig-row" style="margin-top:48px">
+    <span>Authorized By: _______________________</span>
+    <span>Guard Signature: _______________________</span>
+  </div>
 </div>
 </body></html>`)
     w.print()

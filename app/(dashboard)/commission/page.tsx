@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
+import { buildPrintHeader, receiptCSS, reportCSS } from "@/lib/print-utils"
 import { Plus, Search, Percent, CreditCard, Printer } from "lucide-react"
 
 export default function CommissionPage() {
@@ -17,6 +18,7 @@ export default function CommissionPage() {
   const [suppliers, setSuppliers] = useState<any[]>([])
   const [farmers, setFarmers] = useState<any[]>([])
   const [products, setProducts] = useState<any[]>([])
+  const [shop, setShop] = useState<any>(null)
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
 
@@ -55,18 +57,20 @@ export default function CommissionPage() {
 
   async function loadData() {
     setLoading(true)
-    const [cm, cu, su, fa, pr] = await Promise.all([
+    const [cm, cu, su, fa, pr, sh] = await Promise.all([
       safeFetch("/api/commissions", { commissions: [] }),
       safeFetch("/api/customers", { customers: [] }),
       safeFetch("/api/suppliers", { suppliers: [] }),
       safeFetch("/api/farmers", { farmers: [] }),
       safeFetch("/api/inventory", { products: [] }),
+      safeFetch("/api/settings", { shop: null }),
     ])
     setCommissions(cm.commissions || [])
     setCustomers(cu.customers || [])
     setSuppliers(su.suppliers || [])
     setFarmers(fa.farmers || [])
     setProducts(pr.products || [])
+    setShop(sh.shop || null)
     setLoading(false)
   }
 
@@ -181,45 +185,48 @@ export default function CommissionPage() {
   const totalCommEarned = commissions.reduce((s, c) => s + c.commissionAmount, 0)
   const totalPending = commissions.filter((c) => c.status !== "PAID").reduce((s, c) => s + c.balance, 0)
 
-  const printStyles = `
-    body { font-family: Arial, sans-serif; font-size: 12px; padding: 24px; max-width: 600px; margin: 0 auto; }
-    h2 { font-size: 18px; margin: 0 0 2px; }
-    .sub { color: #666; font-size: 11px; margin-bottom: 16px; }
-    .grid { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; }
-    .grid div { font-size: 11px; min-width: 120px; }
-    .lbl { color: #888; text-transform: uppercase; font-size: 10px; }
-    .val { font-weight: bold; margin-top: 2px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-    th, td { border: 1px solid #ddd; padding: 6px 10px; }
-    th { background: #f5f5f5; font-size: 10px; text-transform: uppercase; text-align: left; }
-    td.r { text-align: right; }
-    .status { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 10px; font-weight: bold; }
-  `
-
   // Seller copy: shows only what seller will receive — buyer total and commission hidden
   function printForSeller(c: any) {
     const seller = c.farmer?.name || c.supplier?.name || c.walkInSeller || "—"
     const buyer = c.customer?.name || c.walkInCustomer || "—"
-    const commodity = [c.commodity, c.bags ? `${c.bags} bags` : null, c.weight ? `${c.weight} kg` : null].filter(Boolean).join(" / ") || "—"
+    const ref = c.id.slice(-6).toUpperCase()
+    const date = new Date(c.createdAt).toLocaleDateString("en-PK")
     const w = window.open("", "_blank")!
-    w.document.write(`<html><head><title>Seller Copy — ${c.id.slice(-6).toUpperCase()}</title>
-<style>${printStyles}</style></head><body>
-<h2>Seller Copy</h2>
-<div class="sub">Ref: #${c.id.slice(-6).toUpperCase()} &nbsp;|&nbsp; ${new Date(c.createdAt).toLocaleDateString("en-PK")}</div>
-<div class="grid">
-  <div><div class="lbl">Seller</div><div class="val">${seller}</div></div>
-  <div><div class="lbl">Buyer</div><div class="val">${buyer}</div></div>
-  <div><div class="lbl">Commodity</div><div class="val">${commodity}</div></div>
-  ${c.rate ? `<div><div class="lbl">Rate</div><div class="val">PKR ${c.rate}/kg</div></div>` : ""}
+    w.document.write(`<html><head><title>Seller Copy — ${ref}</title>
+<style>${receiptCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Seller Copy</div>
+    <div class="doc-sub">Ref: #${ref} &nbsp;|&nbsp; ${date}</div>
+  </div>
+  <div class="doc-meta"><div>${date}</div></div>
 </div>
-<table>
-  <tr><th>Description</th><th class="r">Amount</th></tr>
-  ${c.weight ? `<tr><td>Weight</td><td class="r">${c.weight} KG</td></tr>` : ""}
-  ${c.bags ? `<tr><td>Bags</td><td class="r">${c.bags}</td></tr>` : ""}
-  <tr><td><strong>Amount Payable to You</strong></td><td class="r" style="color:#1d4ed8;font-weight:bold;font-size:14px">PKR ${(c.sellerPayable || 0).toLocaleString()}</td></tr>
-</table>
-${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.notes}</p>` : ""}
-<p style="margin-top:32px;font-size:11px;color:#888">Signature: _______________________</p>
+<div class="body-pad">
+  <div class="info-grid">
+    <div><div class="lbl">Seller</div><div class="val">${seller}</div></div>
+    <div><div class="lbl">Buyer</div><div class="val">${buyer}</div></div>
+    ${c.commodity ? `<div><div class="lbl">Commodity</div><div class="val">${c.commodity}</div></div>` : ""}
+    ${c.rate ? `<div><div class="lbl">Rate</div><div class="val">PKR ${c.rate}/kg</div></div>` : ""}
+    ${c.bags ? `<div><div class="lbl">Bags</div><div class="val">${c.bags}</div></div>` : ""}
+    ${c.weight ? `<div><div class="lbl">Weight</div><div class="val">${c.weight} KG</div></div>` : ""}
+  </div>
+  <table>
+    <thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+    <tbody>
+      ${c.weight ? `<tr><td>Weight</td><td style="text-align:right">${c.weight} KG</td></tr>` : ""}
+      ${c.bags ? `<tr><td>Bags</td><td style="text-align:right">${c.bags} bags</td></tr>` : ""}
+    </tbody>
+    <tfoot>
+      <tr><td><strong>Amount Payable to You</strong></td><td style="text-align:right;color:#1d4ed8" class="amount-big">PKR ${(c.sellerPayable || 0).toLocaleString()}</td></tr>
+    </tfoot>
+  </table>
+  ${c.notes ? `<p style="font-size:11px;color:#555;margin-top:8px"><strong>Notes:</strong> ${c.notes}</p>` : ""}
+  <div class="sig-row">
+    <span>Seller Signature: _______________________</span>
+    <span>Authorized By: _______________________</span>
+  </div>
+</div>
 </body></html>`)
     w.print()
   }
@@ -228,28 +235,47 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
   function printForBuyer(c: any) {
     const seller = c.farmer?.name || c.supplier?.name || c.walkInSeller || "—"
     const buyer = c.customer?.name || c.walkInCustomer || "—"
-    const commodity = [c.commodity, c.bags ? `${c.bags} bags` : null, c.weight ? `${c.weight} kg` : null].filter(Boolean).join(" / ") || "—"
+    const ref = c.id.slice(-6).toUpperCase()
+    const date = new Date(c.createdAt).toLocaleDateString("en-PK")
+    const statusCls = c.status === "PAID" ? "PAID" : c.status === "PARTIAL" ? "PARTIAL" : "PENDING"
     const w = window.open("", "_blank")!
-    w.document.write(`<html><head><title>Buyer Copy — ${c.id.slice(-6).toUpperCase()}</title>
-<style>${printStyles}</style></head><body>
-<h2>Buyer Copy</h2>
-<div class="sub">Ref: #${c.id.slice(-6).toUpperCase()} &nbsp;|&nbsp; ${new Date(c.createdAt).toLocaleDateString("en-PK")}</div>
-<div class="grid">
-  <div><div class="lbl">Buyer</div><div class="val">${buyer}</div></div>
-  <div><div class="lbl">Seller</div><div class="val">${seller}</div></div>
-  <div><div class="lbl">Commodity</div><div class="val">${commodity}</div></div>
-  ${c.rate ? `<div><div class="lbl">Rate</div><div class="val">PKR ${c.rate}/kg</div></div>` : ""}
+    w.document.write(`<html><head><title>Buyer Copy — ${ref}</title>
+<style>${receiptCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Buyer Copy</div>
+    <div class="doc-sub">Ref: #${ref} &nbsp;|&nbsp; ${date}</div>
+  </div>
+  <div class="doc-meta"><div>${date}</div><span class="badge badge-${statusCls}">${c.status}</span></div>
 </div>
-<table>
-  <tr><th>Description</th><th class="r">Amount</th></tr>
-  ${c.weight ? `<tr><td>Weight</td><td class="r">${c.weight} KG</td></tr>` : ""}
-  ${c.bags ? `<tr><td>Bags</td><td class="r">${c.bags}</td></tr>` : ""}
-  <tr><td>Total Amount</td><td class="r">PKR ${(c.totalValue || 0).toLocaleString()}</td></tr>
-  <tr><td>Paid</td><td class="r" style="color:#15803d">PKR ${(c.paidAmount || 0).toLocaleString()}</td></tr>
-  <tr><td><strong>Balance Due</strong></td><td class="r" style="color:${c.balance > 0 ? "#b91c1c" : "#15803d"};font-weight:bold;font-size:14px">PKR ${(c.balance || 0).toLocaleString()}</td></tr>
-</table>
-${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.notes}</p>` : ""}
-<p style="margin-top:32px;font-size:11px;color:#888">Signature: _______________________</p>
+<div class="body-pad">
+  <div class="info-grid">
+    <div><div class="lbl">Buyer</div><div class="val">${buyer}</div></div>
+    <div><div class="lbl">Seller</div><div class="val">${seller}</div></div>
+    ${c.commodity ? `<div><div class="lbl">Commodity</div><div class="val">${c.commodity}</div></div>` : ""}
+    ${c.rate ? `<div><div class="lbl">Rate</div><div class="val">PKR ${c.rate}/kg</div></div>` : ""}
+    ${c.bags ? `<div><div class="lbl">Bags</div><div class="val">${c.bags}</div></div>` : ""}
+    ${c.weight ? `<div><div class="lbl">Weight</div><div class="val">${c.weight} KG</div></div>` : ""}
+  </div>
+  <table>
+    <thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+    <tbody>
+      ${c.weight ? `<tr><td>Weight</td><td style="text-align:right">${c.weight} KG</td></tr>` : ""}
+      ${c.bags ? `<tr><td>Bags</td><td style="text-align:right">${c.bags} bags</td></tr>` : ""}
+      <tr><td>Total Amount</td><td style="text-align:right">PKR ${(c.totalValue || 0).toLocaleString()}</td></tr>
+      <tr><td>Paid</td><td style="text-align:right;color:#15803d">PKR ${(c.paidAmount || 0).toLocaleString()}</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td><strong>Balance Due</strong></td><td style="text-align:right;color:${c.balance > 0 ? "#b91c1c" : "#15803d"}" class="amount-big">PKR ${(c.balance || 0).toLocaleString()}</td></tr>
+    </tfoot>
+  </table>
+  ${c.notes ? `<p style="font-size:11px;color:#555;margin-top:8px"><strong>Notes:</strong> ${c.notes}</p>` : ""}
+  <div class="sig-row">
+    <span>Buyer Signature: _______________________</span>
+    <span>Authorized By: _______________________</span>
+  </div>
+</div>
 </body></html>`)
     w.print()
   }
@@ -259,6 +285,7 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
       const seller = c.farmer?.name || c.supplier?.name || c.walkInSeller || "—"
       const buyer = c.customer?.name || c.walkInCustomer || "—"
       const commodity = [c.commodity, c.bags ? `${c.bags} bags` : null, c.weight ? `${c.weight} kg` : null].filter(Boolean).join(", ")
+      const statusCls = c.status === "PAID" ? "PAID" : c.status === "PARTIAL" ? "PARTIAL" : "PENDING"
       return `<tr>
         <td>${i + 1}</td>
         <td>${seller}</td>
@@ -267,7 +294,7 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
         <td style="text-align:right">PKR ${(c.totalValue || 0).toLocaleString()}</td>
         <td style="text-align:right;color:#15803d">PKR ${(c.paidAmount || 0).toLocaleString()}</td>
         <td style="text-align:right;color:${c.balance > 0 ? "#b91c1c" : "#15803d"}">PKR ${(c.balance || 0).toLocaleString()}</td>
-        <td>${c.status}</td>
+        <td><span class="badge badge-${statusCls}">${c.status}</span></td>
         <td>${new Date(c.createdAt).toLocaleDateString("en-PK")}</td>
       </tr>`
     }).join("")
@@ -276,18 +303,16 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
     const totBal = list.reduce((s, c) => s + (c.balance || 0), 0)
     const w = window.open("", "_blank")!
     w.document.write(`<html><head><title>All Commissions</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 11px; padding: 16px; }
-  h2 { font-size: 15px; margin-bottom: 4px; }
-  .sub { color: #666; font-size: 10px; margin-bottom: 12px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
-  th { background: #f0f0f0; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-  tr:nth-child(even) { background: #fafafa; }
-  tfoot td { font-weight: bold; background: #f0f0f0; }
-</style></head><body>
-<h2>All Commissions</h2>
-<p class="sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; Total: ${list.length} entries</p>
+<style>${reportCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Commission Transactions</div>
+    <div class="doc-sub">Printed on ${new Date().toLocaleDateString("en-PK")} &nbsp;|&nbsp; ${list.length} entries</div>
+  </div>
+  <div class="doc-meta"><div>${new Date().toLocaleString("en-PK")}</div></div>
+</div>
+<div class="body-pad">
 <table>
   <thead><tr>
     <th>#</th><th>Seller</th><th>Buyer</th><th>Commodity</th>
@@ -305,6 +330,7 @@ ${c.notes ? `<p style="color:#555;font-size:11px"><strong>Notes:</strong> ${c.no
     <td colspan="2"></td>
   </tr></tfoot>
 </table>
+</div>
 </body></html>`)
     w.print()
   }
