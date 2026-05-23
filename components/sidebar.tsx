@@ -23,6 +23,7 @@ type NavItem = {
 const reportSubItems = [
   { href: "/reports", label: "Overview" },
   { href: "/reports/sales", label: "Sales Report" },
+  { href: "/reports/pesticide-sales", label: "Pesticide Sales" },
   { href: "/reports/customers", label: "Customer Report" },
   { href: "/reports/products", label: "Product Report" },
   { href: "/reports/profit-loss", label: "Profit & Loss" },
@@ -162,7 +163,7 @@ export function Sidebar() {
                   <div
                     className={cn(
                       "overflow-hidden transition-all duration-300 ease-in-out",
-                      reportsOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
+                      reportsOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
                     )}
                   >
                     <div className="ml-4 mt-1 border-l-2 border-green-600 pl-3 pb-1 space-y-0.5">
