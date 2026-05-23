@@ -17,7 +17,6 @@ export default function CommissionPage() {
   const [customers, setCustomers] = useState<any[]>([])
   const [suppliers, setSuppliers] = useState<any[]>([])
   const [farmers, setFarmers] = useState<any[]>([])
-  const [products, setProducts] = useState<any[]>([])
   const [shop, setShop] = useState<any>(null)
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
@@ -28,7 +27,7 @@ export default function CommissionPage() {
   const [walkInCustomer, setWalkInCustomer] = useState("")
   const [partyId, setPartyId] = useState("")              // "" = none, "walkin" = walk-in, "farmer_X" or supplier id
   const [walkInSeller, setWalkInSeller] = useState("")
-  const [productId, setProductId] = useState("")
+  const [commodity, setCommodity] = useState("")
   const [bags, setBags] = useState("")
   const [weight, setWeight] = useState("")
   const [rate, setRate] = useState("")
@@ -57,19 +56,17 @@ export default function CommissionPage() {
 
   async function loadData() {
     setLoading(true)
-    const [cm, cu, su, fa, pr, sh] = await Promise.all([
+    const [cm, cu, su, fa, sh] = await Promise.all([
       safeFetch("/api/commissions", { commissions: [] }),
       safeFetch("/api/customers", { customers: [] }),
       safeFetch("/api/suppliers", { suppliers: [] }),
       safeFetch("/api/farmers", { farmers: [] }),
-      safeFetch("/api/inventory", { products: [] }),
       safeFetch("/api/settings", { shop: null }),
     ])
     setCommissions(cm.commissions || [])
     setCustomers(cu.customers || [])
     setSuppliers(su.suppliers || [])
     setFarmers(fa.farmers || [])
-    setProducts(pr.products || [])
     setShop(sh.shop || null)
     setLoading(false)
   }
@@ -82,13 +79,6 @@ export default function CommissionPage() {
     if (w > 0 && r > 0) setTotalValue((w * r).toFixed(2))
   }, [weight, rate])
 
-  useEffect(() => {
-    if (productId) {
-      const prod = products.find((p: any) => p.id === productId)
-      if (prod?.salePrice) setRate(String(prod.salePrice))
-    }
-  }, [productId])
-
   const total = parseFloat(totalValue || "0")
   const commRate = parseFloat(commissionRate || "0")
   const commAmount = total > 0 ? parseFloat(((total * commRate) / 100).toFixed(2)) : 0
@@ -98,7 +88,7 @@ export default function CommissionPage() {
   function resetNewForm() {
     setCustomerId(""); setWalkInCustomer("")
     setPartyId(""); setWalkInSeller("")
-    setProductId(""); setBags(""); setWeight("")
+    setCommodity(""); setBags(""); setWeight("")
     setRate(""); setTotalValue(""); setCommissionRate("2.5"); setPaidAmount("0"); setNotes("")
   }
 
@@ -114,9 +104,6 @@ export default function CommissionPage() {
       const isWalkInSeller = partyId === "walkin"
       const farmerId = isFarmer ? partyId.replace("farmer_", "") : null
       const supplierId = (!isFarmer && !isWalkInSeller && partyId) ? partyId : null
-
-      const selectedProduct = products.find((p: any) => p.id === productId)
-      const commodity = selectedProduct?.name || null
 
       const res = await fetch("/api/commissions", {
         method: "POST",
@@ -504,14 +491,13 @@ ${buildPrintHeader(shop)}
               )}
             </div>
 
-            {/* Product */}
+            {/* Commodity */}
             <div>
-              <Label>Product / Commodity</Label>
-              <SearchableSelect
-                value={productId}
-                onValueChange={setProductId}
-                placeholder="Select product..."
-                options={products.map((p: any) => ({ value: p.id, label: p.name, sub: p.unit }))}
+              <Label>Commodity / Product Name</Label>
+              <Input
+                placeholder="e.g. Wheat, Rice, Cotton, Sugar..."
+                value={commodity}
+                onChange={(e) => setCommodity(e.target.value)}
               />
             </div>
 
