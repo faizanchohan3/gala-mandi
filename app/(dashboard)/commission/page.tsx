@@ -30,6 +30,7 @@ export default function CommissionPage() {
   const [commodity, setCommodity] = useState("")
   const [bags, setBags] = useState("")
   const [weight, setWeight] = useState("")
+  const [mound, setMound] = useState("")
   const [rate, setRate] = useState("")
   const [totalValue, setTotalValue] = useState("")
   const [commissionRate, setCommissionRate] = useState("2.5")
@@ -74,10 +75,16 @@ export default function CommissionPage() {
   useEffect(() => { loadData() }, [])
 
   useEffect(() => {
-    const w = parseFloat(weight)
+    const f = parseFloat(weight)
+    if (f > 0) setMound((f / 40).toFixed(2))
+    else setMound("")
+  }, [weight])
+
+  useEffect(() => {
+    const m = parseFloat(mound)
     const r = parseFloat(rate)
-    if (w > 0 && r > 0) setTotalValue((w * r).toFixed(2))
-  }, [weight, rate])
+    if (m > 0 && r > 0) setTotalValue((m * r).toFixed(2))
+  }, [mound, rate])
 
   const total = parseFloat(totalValue || "0")
   const commRate = parseFloat(commissionRate || "0")
@@ -88,7 +95,7 @@ export default function CommissionPage() {
   function resetNewForm() {
     setCustomerId(""); setWalkInCustomer("")
     setPartyId(""); setWalkInSeller("")
-    setCommodity(""); setBags(""); setWeight("")
+    setCommodity(""); setBags(""); setWeight(""); setMound("")
     setRate(""); setTotalValue(""); setCommissionRate("2.5"); setPaidAmount("0"); setNotes("")
   }
 
@@ -501,28 +508,36 @@ ${buildPrintHeader(shop)}
               />
             </div>
 
-            {/* Bags / Weight / Rate */}
-            <div className="grid grid-cols-3 gap-3">
+            {/* Bags + Filling/Bags */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Bags</Label>
                 <Input type="number" placeholder="0" value={bags} onChange={(e) => setBags(e.target.value)} />
               </div>
               <div>
-                <Label>Weight (KG)</Label>
+                <Label>Filling / Bags</Label>
                 <Input type="number" placeholder="0" value={weight} onChange={(e) => setWeight(e.target.value)} />
               </div>
+            </div>
+
+            {/* Mound (auto) + Rate per Bag */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Rate (per KG)</Label>
+                <Label>Mound <span className="text-xs text-gray-400 font-normal">(Filling ÷ 40)</span></Label>
+                <Input type="number" placeholder="0" value={mound} onChange={(e) => setMound(e.target.value)} />
+              </div>
+              <div>
+                <Label>Rate (per Bag)</Label>
                 <Input type="number" placeholder="0" value={rate} onChange={(e) => setRate(e.target.value)} />
               </div>
             </div>
 
-            {/* Total + Commission % */}
+            {/* Total Amount + Commission % */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Total Value <span className="text-red-500">*</span></Label>
+                <Label>Total Amount <span className="text-red-500">*</span></Label>
                 <Input type="number" placeholder="0" value={totalValue} onChange={(e) => setTotalValue(e.target.value)} />
-                <p className="text-xs text-gray-400 mt-1">Auto-filled from weight × rate</p>
+                <p className="text-xs text-gray-400 mt-1">Auto-filled: Mound × Rate</p>
               </div>
               <div>
                 <Label>Commission %</Label>
@@ -533,7 +548,7 @@ ${buildPrintHeader(shop)}
             {/* Summary box */}
             <div className="bg-green-50 rounded-lg p-3 space-y-1.5 text-sm border border-green-100">
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Value (buyer owes):</span>
+                <span className="text-gray-600">Total Amount (buyer owes):</span>
                 <span className="font-medium">{formatCurrency(total)}</span>
               </div>
               <div className="flex justify-between text-green-700">
