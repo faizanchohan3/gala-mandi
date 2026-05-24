@@ -76,9 +76,10 @@ export default function CommissionPage() {
 
   useEffect(() => {
     const f = parseFloat(weight)
-    if (f > 0) setMound((f / 40).toFixed(2))
+    const b = parseFloat(bags)
+    if (f > 0 && b > 0) setMound(((f * b) / 40).toFixed(2))
     else setMound("")
-  }, [weight])
+  }, [weight, bags])
 
   useEffect(() => {
     const m = parseFloat(mound)
@@ -523,7 +524,7 @@ ${buildPrintHeader(shop)}
             {/* Mound (auto) + Rate per Bag */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Mound <span className="text-xs text-gray-400 font-normal">(Filling ÷ 40)</span></Label>
+                <Label>Mound <span className="text-xs text-gray-400 font-normal">(Filling × Bags ÷ 40)</span></Label>
                 <Input type="number" placeholder="0" value={mound} onChange={(e) => setMound(e.target.value)} />
               </div>
               <div>
