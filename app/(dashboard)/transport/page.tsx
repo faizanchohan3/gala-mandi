@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { formatCurrency, formatDateDMY } from "@/lib/utils"
+import { formatCurrency, formatDateDMY, formatDateSlash } from "@/lib/utils"
 import { buildPrintHeader, receiptCSS, reportCSS } from "@/lib/print-utils"
 import { Plus, Truck, Printer, Search, User, BookOpen, ArrowDownCircle, Edit } from "lucide-react"
 
@@ -267,11 +267,11 @@ export default function TransportPage() {
         <td>${s.rate > 0 ? s.rate : "—"}</td>
         <td>${s.vehicle?.vehicleNo || s.walkInVehicle || "—"}</td>
         <td>${s.weighbridge ? s.weighbridge + " KG" : "—"}</td>
-        <td>${s.loadingDate ? formatDateDMY(s.loadingDate) : "—"}</td>
+        <td>${s.loadingDate ? formatDateSlash(s.loadingDate) : "—"}</td>
         <td>${s.bags || "—"}</td>
         <td>${s.mill || "—"}</td>
         <td>${s.netWeight ? s.netWeight + " KG" : "—"}</td>
-        <td>${s.unloadDate ? formatDateDMY(s.unloadDate) : "—"}</td>
+        <td>${s.unloadDate ? formatDateSlash(s.unloadDate) : "—"}</td>
         <td style="text-align:right">${s.deduction > 0 ? s.deduction.toLocaleString() : "—"}</td>
         <td style="text-align:right">${s.netAmount > 0 ? "PKR " + s.netAmount.toLocaleString() : "—"}</td>
         <td style="text-align:right">${s.rent > 0 ? "PKR " + s.rent.toLocaleString() : "—"}</td>
@@ -546,11 +546,11 @@ ${buildPrintHeader(shop)}
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.rate > 0 ? s.rate : "—"}</td>
                         <td className="px-3 py-2.5 text-gray-700">{s.vehicle?.vehicleNo || s.walkInVehicle || "—"}</td>
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.weighbridge ? `${s.weighbridge} KG` : "—"}</td>
-                        <td className="px-3 py-2.5 text-gray-500 text-xs">{s.loadingDate ? formatDateDMY(s.loadingDate) : "—"}</td>
+                        <td className="px-3 py-2.5 text-gray-500 text-xs">{s.loadingDate ? formatDateSlash(s.loadingDate) : "—"}</td>
                         <td className="px-3 py-2.5 text-center text-gray-700">{s.bags || "—"}</td>
                         <td className="px-3 py-2.5 text-gray-700">{s.mill || "—"}</td>
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.netWeight ? `${s.netWeight} KG` : "—"}</td>
-                        <td className="px-3 py-2.5 text-gray-500 text-xs">{s.unloadDate ? formatDateDMY(s.unloadDate) : "—"}</td>
+                        <td className="px-3 py-2.5 text-gray-500 text-xs">{s.unloadDate ? formatDateSlash(s.unloadDate) : "—"}</td>
                         <td className="px-3 py-2.5 text-right text-red-500">{s.deduction > 0 ? formatCurrency(s.deduction) : "—"}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-gray-900">{s.netAmount > 0 ? formatCurrency(s.netAmount) : "—"}</td>
                         <td className="px-3 py-2.5 text-right text-orange-600 font-medium">{s.rent > 0 ? formatCurrency(s.rent) : "—"}</td>
