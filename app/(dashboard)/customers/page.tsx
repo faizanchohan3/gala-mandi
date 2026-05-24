@@ -588,7 +588,12 @@ export default function CustomersPage() {
                           <tr key={i} className={entry.type === "PAYMENT" ? "bg-green-50/50" : ""}>
                             <td className="py-2 px-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(entry.date)}</td>
                             <td className="py-2 px-3">
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${entry.type === "PAYMENT" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                                entry.type === "PAYMENT" ? "bg-green-100 text-green-700"
+                                : entry.type === "COMMISSION" ? "bg-purple-100 text-purple-700"
+                                : entry.type === "PESTICIDE" ? "bg-orange-100 text-orange-700"
+                                : "bg-blue-100 text-blue-700"
+                              }`}>
                                 {entry.type}
                               </span>
                             </td>

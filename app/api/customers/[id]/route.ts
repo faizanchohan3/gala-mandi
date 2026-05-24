@@ -9,7 +9,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const { id } = await params
 
-  const [customer, sales] = await Promise.all([
+  const [customer, sales, commissions, pesticideSales] = await Promise.all([
     db.customer.findUnique({ where: { id } }),
     db.sale.findMany({
       where: { customerId: id },
@@ -20,18 +20,36 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         createdBy: { select: { name: true } },
       },
     }),
+    db.commission.findMany({
+      where: { customerId: id },
+      orderBy: { createdAt: "asc" },
+      include: { payments: { orderBy: { createdAt: "asc" } } },
+    }),
+    db.pesticideSale.findMany({
+      where: { customerId: id },
+      orderBy: { createdAt: "asc" },
+      include: { pesticide: { select: { name: true, unit: true } } },
+    }),
   ])
 
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const totalBusiness = sales.reduce((s, sale) => s + sale.totalAmount, 0)
-  const totalPaid = sales.reduce((s, sale) => s + sale.paidAmount, 0)
-  const totalBalance = sales.reduce((s, sale) => s + sale.balance, 0)
+  const totalBusiness =
+    sales.reduce((s, sale) => s + sale.totalAmount, 0) +
+    commissions.reduce((s, c) => s + c.totalValue, 0) +
+    pesticideSales.reduce((s, ps) => s + ps.totalAmount, 0)
 
-  // Build ledger entries (sale debits + payment credits), sorted by date
+  const totalPaid =
+    sales.reduce((s, sale) => s + sale.paidAmount, 0) +
+    commissions.reduce((s, c) => s + c.paidAmount, 0) +
+    pesticideSales.reduce((s, ps) => s + ps.paidAmount, 0)
+
+  const totalBalance = totalBusiness - totalPaid
+
+  // Build ledger entries from all sources, sorted by date
   const ledgerEvents: {
     date: Date
-    type: "SALE" | "PAYMENT"
+    type: "SALE" | "COMMISSION" | "PESTICIDE" | "PAYMENT"
     description: string
     debit: number
     credit: number
@@ -45,25 +63,71 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       debit: sale.totalAmount,
       credit: 0,
     })
-
     if (sale.payments.length > 0) {
       for (const payment of sale.payments) {
         ledgerEvents.push({
           date: payment.createdAt,
           type: "PAYMENT",
-          description: `Payment received — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
+          description: `Payment — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
           debit: 0,
           credit: payment.amount,
         })
       }
     } else if (sale.paidAmount > 0) {
-      // Fallback for sales created before Payment records were introduced
       ledgerEvents.push({
         date: sale.createdAt,
         type: "PAYMENT",
-        description: `Payment received — CASH (recorded at sale)`,
+        description: `Payment — CASH (at sale)`,
         debit: 0,
         credit: sale.paidAmount,
+      })
+    }
+  }
+
+  for (const c of commissions) {
+    ledgerEvents.push({
+      date: c.createdAt,
+      type: "COMMISSION",
+      description: `Commission — ${c.commodity || "goods"}${c.bags ? ` (${c.bags} bags)` : ""}`,
+      debit: c.totalValue,
+      credit: 0,
+    })
+    if (c.payments.length > 0) {
+      for (const payment of c.payments) {
+        ledgerEvents.push({
+          date: payment.createdAt,
+          type: "PAYMENT",
+          description: `Payment — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
+          debit: 0,
+          credit: payment.amount,
+        })
+      }
+    } else if (c.paidAmount > 0) {
+      ledgerEvents.push({
+        date: c.createdAt,
+        type: "PAYMENT",
+        description: `Payment — CASH (at commission)`,
+        debit: 0,
+        credit: c.paidAmount,
+      })
+    }
+  }
+
+  for (const ps of pesticideSales) {
+    ledgerEvents.push({
+      date: ps.createdAt,
+      type: "PESTICIDE",
+      description: `Pesticide — ${ps.pesticide?.name || "Item"} ×${ps.quantity}`,
+      debit: ps.totalAmount,
+      credit: 0,
+    })
+    if (ps.paidAmount > 0) {
+      ledgerEvents.push({
+        date: ps.createdAt,
+        type: "PAYMENT",
+        description: `Payment — CASH (at sale)`,
+        debit: 0,
+        credit: ps.paidAmount,
       })
     }
   }
@@ -76,7 +140,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return { ...e, balance: running }
   })
 
-  return NextResponse.json({ customer, sales, totalBusiness, totalPaid, totalBalance, ledger })
+  return NextResponse.json({ customer, sales, commissions, pesticideSales, totalBusiness, totalPaid, totalBalance, ledger })
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {

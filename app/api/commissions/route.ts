@@ -49,6 +49,7 @@ export async function POST(req: Request) {
     rate,
     totalValue,
     commissionRate,
+    labourAmount,
     notes,
     paidAmount: initialPaid,
     paymentMethod,
@@ -61,11 +62,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Total value must be greater than 0" }, { status: 400 })
   }
 
-  const commRate = parseFloat(commissionRate) || 2.5
+  const commRate = commissionRate !== undefined && commissionRate !== "" ? parseFloat(commissionRate) : 2.5
   const total = parseFloat(totalValue)
   const commAmount = parseFloat(((total * commRate) / 100).toFixed(2))
-  // Amount owed to seller after deducting our commission
-  const sellerPayable = parseFloat((total - commAmount).toFixed(2))
+  const labourAmt = parseFloat(labourAmount || "0")
+  // Amount owed to seller after deducting commission and labour
+  const sellerPayable = parseFloat((total - commAmount - labourAmt).toFixed(2))
   const paid = parseFloat(initialPaid || "0")
   const balance = total - paid
   const status = balance <= 0 ? "PAID" : paid > 0 ? "PARTIAL" : "PENDING"
@@ -90,6 +92,7 @@ export async function POST(req: Request) {
         totalValue: total,
         commissionRate: commRate,
         commissionAmount: commAmount,
+        labourAmount: labourAmt,
         sellerPayable,
         paidAmount: paid,
         balance,

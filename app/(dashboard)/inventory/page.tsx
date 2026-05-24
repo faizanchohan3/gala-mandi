@@ -317,14 +317,33 @@ export default function InventoryPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Unit</Label>
-                <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {["KG", "Quintal", "Maund", "Bag", "Litre", "Piece"].map((u) => (
-                      <SelectItem key={u} value={u}>{u}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {(() => {
+                  const PRESETS = ["KG", "Quintal", "Maund", "Bag", "Litre", "Piece"]
+                  const isCustom = !PRESETS.includes(form.unit)
+                  return (
+                    <>
+                      <Select
+                        value={isCustom ? "Custom" : form.unit}
+                        onValueChange={(v) => setForm({ ...form, unit: v === "Custom" ? "" : v })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {PRESETS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                          <SelectItem value="Custom">Custom...</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {isCustom && (
+                        <Input
+                          className="mt-2"
+                          placeholder="Enter unit name (e.g. Ton, Dozen)"
+                          value={form.unit}
+                          onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                          autoFocus
+                        />
+                      )}
+                    </>
+                  )
+                })()}
               </div>
               <div>
                 <Label>Min Stock</Label>

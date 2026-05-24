@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
 import {
   Plus, Search, Edit, Phone, MapPin, ArrowUpCircle,
-  Eye, Truck, X, TrendingDown, Printer, Check,
+  Eye, Truck, X, TrendingDown, Printer, Check, BookOpen, ShoppingBag,
 } from "lucide-react"
 
 export default function SuppliersPage() {
@@ -20,6 +20,7 @@ export default function SuppliersPage() {
   const [showModal, setShowModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<"ledger" | "purchases">("ledger")
   const [editing, setEditing] = useState<any>(null)
   const [selected, setSelected] = useState<any>(null)
   const [detail, setDetail] = useState<any>(null)
@@ -64,6 +65,7 @@ export default function SuppliersPage() {
   async function openDetail(s: any) {
     setSelected(s)
     setDetail(null)
+    setActiveTab("ledger")
     setShowDetailModal(true)
     await loadDetail(s.id)
   }
@@ -333,11 +335,79 @@ export default function SuppliersPage() {
                 </Button>
               </div>
 
-              {/* Purchase History */}
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-3">Purchase History ({detail.purchases.length})</h3>
-                {detail.purchases.length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-4">No purchases yet</p>
+              {/* Tabs */}
+              <div className="border-b border-gray-200">
+                <div className="flex gap-0">
+                  {([["ledger", "Account Ledger", <BookOpen key="b" className="w-4 h-4" />], ["purchases", "Purchase History", <ShoppingBag key="s" className="w-4 h-4" />]] as const).map(([key, label, icon]) => (
+                    <button key={key} onClick={() => setActiveTab(key as any)}
+                      className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                        activeTab === key ? "border-green-700 text-green-700" : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}>
+                      {icon}{label}
+                      <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                        {key === "ledger" ? detail.ledger?.length || 0 : detail.purchases?.length || 0}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Ledger Tab */}
+              {activeTab === "ledger" && (
+                detail.ledger?.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-6">No transactions yet</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-gray-100">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Date</th>
+                          <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Type</th>
+                          <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Description</th>
+                          <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Debit (Dr)</th>
+                          <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Credit (Cr)</th>
+                          <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {detail.ledger.map((entry: any, i: number) => (
+                          <tr key={i} className={entry.type === "PAYMENT" ? "bg-green-50/50" : ""}>
+                            <td className="py-2 px-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(entry.date)}</td>
+                            <td className="py-2 px-3">
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${entry.type === "PAYMENT" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                                {entry.type}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3 text-gray-700 text-xs max-w-xs truncate">{entry.description}</td>
+                            <td className="py-2 px-3 text-right font-medium text-gray-900">{entry.debit > 0 ? formatCurrency(entry.debit) : "—"}</td>
+                            <td className="py-2 px-3 text-right text-green-700">{entry.credit > 0 ? formatCurrency(entry.credit) : "—"}</td>
+                            <td className={`py-2 px-3 text-right font-semibold ${entry.balance > 0 ? "text-red-600" : "text-green-700"}`}>
+                              {formatCurrency(Math.abs(entry.balance))}
+                              {entry.balance !== 0 && <span className="text-xs ml-1 font-normal">{entry.balance > 0 ? "Dr" : "Cr"}</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                        <tr>
+                          <td colSpan={3} className="py-2 px-3 font-bold text-gray-700 text-xs">Closing Balance</td>
+                          <td className="py-2 px-3 text-right font-bold text-gray-900">{formatCurrency(detail.totalBusiness)}</td>
+                          <td className="py-2 px-3 text-right font-bold text-green-700">{formatCurrency(detail.totalPaid)}</td>
+                          <td className={`py-2 px-3 text-right font-bold ${detail.totalBalance > 0 ? "text-red-600" : "text-green-700"}`}>
+                            {formatCurrency(detail.totalBalance)}
+                            <span className="text-xs ml-1 font-normal">{detail.totalBalance > 0 ? "Dr" : "Cr"}</span>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )
+              )}
+
+              {/* Purchases Tab */}
+              {activeTab === "purchases" && (
+                detail.purchases?.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-6">No purchases yet</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -368,8 +438,8 @@ export default function SuppliersPage() {
                       </tbody>
                     </table>
                   </div>
-                )}
-              </div>
+                )
+              )}
             </div>
           )}
         </DialogContent>

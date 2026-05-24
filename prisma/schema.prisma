@@ -787,6 +787,7 @@ model Commission {
   totalValue       Float
   commissionRate   Float      @default(2.5)
   commissionAmount Float
+  labourAmount     Float      @default(0)
   sellerPayable    Float      @default(0)
   paidAmount       Float      @default(0)
   balance          Float      @default(0)

@@ -34,6 +34,7 @@ export default function CommissionPage() {
   const [rate, setRate] = useState("")
   const [totalValue, setTotalValue] = useState("")
   const [commissionRate, setCommissionRate] = useState("2.5")
+  const [labourAmount, setLabourAmount] = useState("0")
   const [paidAmount, setPaidAmount] = useState("0")
   const [notes, setNotes] = useState("")
   const [saving, setSaving] = useState(false)
@@ -88,16 +89,17 @@ export default function CommissionPage() {
   }, [mound, rate])
 
   const total = parseFloat(totalValue || "0")
-  const commRate = parseFloat(commissionRate || "0")
+  const commRate = commissionRate !== "" ? parseFloat(commissionRate) : 0
   const commAmount = total > 0 ? parseFloat(((total * commRate) / 100).toFixed(2)) : 0
-  const sellerPayable = total > 0 ? parseFloat((total - commAmount).toFixed(2)) : 0
+  const labourAmt = parseFloat(labourAmount || "0")
+  const sellerPayable = total > 0 ? parseFloat((total - commAmount - labourAmt).toFixed(2)) : 0
   const balance = total - parseFloat(paidAmount || "0")
 
   function resetNewForm() {
     setCustomerId(""); setWalkInCustomer("")
     setPartyId(""); setWalkInSeller("")
     setCommodity(""); setBags(""); setWeight(""); setMound("")
-    setRate(""); setTotalValue(""); setCommissionRate("2.5"); setPaidAmount("0"); setNotes("")
+    setRate(""); setTotalValue(""); setCommissionRate("2.5"); setLabourAmount("0"); setPaidAmount("0"); setNotes("")
   }
 
   async function handleSave() {
@@ -128,6 +130,7 @@ export default function CommissionPage() {
           rate,
           totalValue,
           commissionRate,
+          labourAmount,
           paidAmount,
           notes,
         }),
@@ -533,8 +536,8 @@ ${buildPrintHeader(shop)}
               </div>
             </div>
 
-            {/* Total Amount + Commission % */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Total Amount + Commission % + Labour */}
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label>Total Amount <span className="text-red-500">*</span></Label>
                 <Input type="number" placeholder="0" value={totalValue} onChange={(e) => setTotalValue(e.target.value)} />
@@ -542,7 +545,11 @@ ${buildPrintHeader(shop)}
               </div>
               <div>
                 <Label>Commission %</Label>
-                <Input type="number" placeholder="2.5" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} />
+                <Input type="number" placeholder="0" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} />
+              </div>
+              <div>
+                <Label>Labour Amount</Label>
+                <Input type="number" placeholder="0" value={labourAmount} onChange={(e) => setLabourAmount(e.target.value)} />
               </div>
             </div>
 
@@ -553,9 +560,15 @@ ${buildPrintHeader(shop)}
                 <span className="font-medium">{formatCurrency(total)}</span>
               </div>
               <div className="flex justify-between text-green-700">
-                <span>Your Commission ({commissionRate}%):</span>
+                <span>Your Commission ({commissionRate || 0}%):</span>
                 <span className="font-bold">{formatCurrency(commAmount)}</span>
               </div>
+              {labourAmt > 0 && (
+                <div className="flex justify-between text-orange-700">
+                  <span>Labour Amount:</span>
+                  <span className="font-medium">{formatCurrency(labourAmt)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-blue-700 border-t border-green-200 pt-1.5">
                 <span>Seller Payable (owed to them):</span>
                 <span className="font-semibold">{formatCurrency(sellerPayable)}</span>

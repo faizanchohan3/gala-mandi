@@ -13,8 +13,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     db.supplier.findUnique({ where: { id } }),
     db.purchase.findMany({
       where: { supplierId: id },
-      orderBy: { createdAt: "desc" },
-      include: { items: { include: { product: true } }, createdBy: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+      include: {
+        items: { include: { product: true } },
+        payments: { orderBy: { createdAt: "asc" } },
+        createdBy: { select: { name: true } },
+      },
     }),
   ])
 
@@ -24,7 +28,47 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const totalPaid = purchases.reduce((s, p) => s + p.paidAmount, 0)
   const totalBalance = purchases.reduce((s, p) => s + p.balance, 0)
 
-  return NextResponse.json({ supplier, purchases, totalBusiness, totalPaid, totalBalance })
+  // Build ledger entries
+  const ledgerEvents: { date: Date; type: string; description: string; debit: number; credit: number }[] = []
+
+  for (const p of purchases) {
+    ledgerEvents.push({
+      date: p.createdAt,
+      type: "PURCHASE",
+      description: `Purchase — ${p.items.map((i) => i.product?.name || "Item").join(", ")}`,
+      debit: p.totalAmount,
+      credit: 0,
+    })
+    if (p.payments.length > 0) {
+      for (const payment of p.payments) {
+        ledgerEvents.push({
+          date: payment.createdAt,
+          type: "PAYMENT",
+          description: `Payment — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
+          debit: 0,
+          credit: payment.amount,
+        })
+      }
+    } else if (p.paidAmount > 0) {
+      ledgerEvents.push({
+        date: p.createdAt,
+        type: "PAYMENT",
+        description: `Payment — CASH (at purchase)`,
+        debit: 0,
+        credit: p.paidAmount,
+      })
+    }
+  }
+
+  ledgerEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  let running = 0
+  const ledger = ledgerEvents.map((e) => {
+    running += e.debit - e.credit
+    return { ...e, balance: running }
+  })
+
+  const purchasesDesc = [...purchases].reverse()
+  return NextResponse.json({ supplier, purchases: purchasesDesc, totalBusiness, totalPaid, totalBalance, ledger })
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
