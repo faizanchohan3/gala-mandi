@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency, formatDateDMY } from "@/lib/utils"
 import { buildPrintHeader, receiptCSS, reportCSS } from "@/lib/print-utils"
 import { Plus, Truck, Printer, Search, User, BookOpen, ArrowDownCircle, Edit } from "lucide-react"
 
@@ -19,7 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 const BLANK_FORM = {
-  driverId: "", vehicleId: "", customerId: "",
+  driverId: "", walkInDriverName: "", vehicleId: "", walkInVehicleName: "", customerId: "",
   fromLocation: "", toLocation: "", commodity: "",
   builtyNo: "", rate: "", weighbridge: "", loadingDate: "", bags: "",
   mill: "", netWeight: "", netAmount: "",
@@ -127,10 +127,17 @@ export default function TransportPage() {
   async function handleCreateSlip() {
     if (!form.fromLocation || !form.toLocation) return alert("From & To locations required")
     try {
+      const payload = {
+        ...form,
+        driverId: form.driverId === "walkin" ? null : form.driverId,
+        walkInDriver: form.driverId === "walkin" ? form.walkInDriverName : null,
+        vehicleId: form.vehicleId === "walkin" ? null : form.vehicleId,
+        walkInVehicle: form.vehicleId === "walkin" ? form.walkInVehicleName : null,
+      }
       const res = await fetch("/api/freight", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
@@ -255,16 +262,16 @@ export default function TransportPage() {
     const rows = sorted.map((s, i) => `
       <tr>
         <td>${i + 1}</td>
-        <td>${s.driver?.name || "—"}</td>
+        <td>${s.driver?.name || s.walkInDriver || "—"}</td>
         <td>${s.builtyNo || s.slipNo}</td>
         <td>${s.rate > 0 ? s.rate : "—"}</td>
-        <td>${s.vehicle?.vehicleNo || "—"}</td>
+        <td>${s.vehicle?.vehicleNo || s.walkInVehicle || "—"}</td>
         <td>${s.weighbridge ? s.weighbridge + " KG" : "—"}</td>
-        <td>${s.loadingDate ? new Date(s.loadingDate).toLocaleDateString("en-PK") : "—"}</td>
+        <td>${s.loadingDate ? formatDateDMY(s.loadingDate) : "—"}</td>
         <td>${s.bags || "—"}</td>
         <td>${s.mill || "—"}</td>
         <td>${s.netWeight ? s.netWeight + " KG" : "—"}</td>
-        <td>${s.unloadDate ? new Date(s.unloadDate).toLocaleDateString("en-PK") : "—"}</td>
+        <td>${s.unloadDate ? formatDateDMY(s.unloadDate) : "—"}</td>
         <td style="text-align:right">${s.deduction > 0 ? s.deduction.toLocaleString() : "—"}</td>
         <td style="text-align:right">${s.netAmount > 0 ? "PKR " + s.netAmount.toLocaleString() : "—"}</td>
         <td style="text-align:right">${s.rent > 0 ? "PKR " + s.rent.toLocaleString() : "—"}</td>
@@ -533,17 +540,17 @@ ${buildPrintHeader(shop)}
                       <tr key={s.id} className="hover:bg-gray-50">
                         <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
                         <td className="px-3 py-2.5">
-                          <p className="font-medium text-gray-800">{s.driver?.name || "—"}</p>
+                          <p className="font-medium text-gray-800">{s.driver?.name || s.walkInDriver || "—"}</p>
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs text-gray-600">{s.builtyNo || s.slipNo}</td>
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.rate > 0 ? s.rate : "—"}</td>
-                        <td className="px-3 py-2.5 text-gray-700">{s.vehicle?.vehicleNo || "—"}</td>
+                        <td className="px-3 py-2.5 text-gray-700">{s.vehicle?.vehicleNo || s.walkInVehicle || "—"}</td>
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.weighbridge ? `${s.weighbridge} KG` : "—"}</td>
-                        <td className="px-3 py-2.5 text-gray-500 text-xs">{s.loadingDate ? formatDate(s.loadingDate) : "—"}</td>
+                        <td className="px-3 py-2.5 text-gray-500 text-xs">{s.loadingDate ? formatDateDMY(s.loadingDate) : "—"}</td>
                         <td className="px-3 py-2.5 text-center text-gray-700">{s.bags || "—"}</td>
                         <td className="px-3 py-2.5 text-gray-700">{s.mill || "—"}</td>
                         <td className="px-3 py-2.5 text-right text-gray-700">{s.netWeight ? `${s.netWeight} KG` : "—"}</td>
-                        <td className="px-3 py-2.5 text-gray-500 text-xs">{s.unloadDate ? formatDate(s.unloadDate) : "—"}</td>
+                        <td className="px-3 py-2.5 text-gray-500 text-xs">{s.unloadDate ? formatDateDMY(s.unloadDate) : "—"}</td>
                         <td className="px-3 py-2.5 text-right text-red-500">{s.deduction > 0 ? formatCurrency(s.deduction) : "—"}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-gray-900">{s.netAmount > 0 ? formatCurrency(s.netAmount) : "—"}</td>
                         <td className="px-3 py-2.5 text-right text-orange-600 font-medium">{s.rent > 0 ? formatCurrency(s.rent) : "—"}</td>
@@ -670,13 +677,18 @@ ${buildPrintHeader(shop)}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Driver</Label>
-              <Select value={form.driverId || "none"} onValueChange={(v) => setForm({ ...form, driverId: v === "none" ? "" : v })}>
+              <Select value={form.driverId || "none"} onValueChange={(v) => setForm({ ...form, driverId: v === "none" ? "" : v, walkInDriverName: "" })}>
                 <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No driver</SelectItem>
+                  <SelectItem value="walkin">Walk-in / Manual Entry</SelectItem>
                   {drivers.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}{d.phone ? ` — ${d.phone}` : ""}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {form.driverId === "walkin" && (
+                <Input className="mt-2" placeholder="Enter driver name..." value={form.walkInDriverName}
+                  onChange={(e) => setForm({ ...form, walkInDriverName: e.target.value })} autoFocus />
+              )}
             </div>
             <div>
               <Label>Builty No</Label>
@@ -688,13 +700,18 @@ ${buildPrintHeader(shop)}
             </div>
             <div>
               <Label>Vehicle</Label>
-              <Select value={form.vehicleId || "none"} onValueChange={(v) => setForm({ ...form, vehicleId: v === "none" ? "" : v })}>
+              <Select value={form.vehicleId || "none"} onValueChange={(v) => setForm({ ...form, vehicleId: v === "none" ? "" : v, walkInVehicleName: "" })}>
                 <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No vehicle</SelectItem>
+                  <SelectItem value="walkin">Walk-in / Manual Entry</SelectItem>
                   {vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicleNo} — {v.vehicleType}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {form.vehicleId === "walkin" && (
+                <Input className="mt-2" placeholder="Enter vehicle number..." value={form.walkInVehicleName}
+                  onChange={(e) => setForm({ ...form, walkInVehicleName: e.target.value })} />
+              )}
             </div>
             <div>
               <Label>Weighbridge (KG)</Label>
@@ -907,7 +924,7 @@ ${buildPrintHeader(shop)}
                     {driverDetail.ledger?.map((entry: any, i: number) => (
                       <tr key={i} className={entry.type === "PAYMENT" ? "bg-green-50/40" : ""}>
                         <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
-                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(entry.date)}</td>
+                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDateDMY(entry.date)}</td>
                         <td className="px-4 py-3 text-gray-700 text-xs">{entry.description}</td>
                         <td className="px-4 py-3 text-right text-green-700">
                           {entry.debit > 0 ? formatCurrency(entry.debit) : "—"}

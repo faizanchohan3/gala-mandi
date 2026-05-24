@@ -35,8 +35,8 @@ const reportSubItems = [
 
 const shopNavItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/inventory", label: "Inventory", icon: Package },
-  { href: "/customers", label: "Customers", icon: UserCheck },
+  { href: "/inventory", label: "Store", icon: Package },
+  { href: "/customers", label: "Traders", icon: UserCheck },
   { href: "/farmers", label: "Farmers", icon: Tractor },
 
   { href: "/commission", label: "Commission", icon: UserCog },
@@ -46,7 +46,7 @@ const shopNavItems: NavItem[] = [
   { href: "/sales", label: "Sales", icon: ShoppingCart },
   
   { href: "/pesticides", label: "Pesticides", icon: Sprout },
-  { href: "/finance", label: "Finance", icon: Wallet },
+  { href: "/finance", label: "Roznamcha", icon: Wallet },
   { href: "/banks", label: "Banks", icon: Building2 },
   { href: "/expenses", label: "Expenses", icon: Receipt },
 
@@ -54,7 +54,7 @@ const shopNavItems: NavItem[] = [
   { href: "/warehouse", label: "Godowns", icon: Warehouse },
 
   { href: "/gate", label: "Gate / Weighbridge", icon: Scale },
-  { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/tasks", label: "Notes", icon: CheckSquare },
   { href: "/reports", label: "Reports", icon: BarChart3, hasChildren: true },
   { href: "/audit", label: "Audit Log", icon: ClipboardList },
   { href: "/users", label: "Users", icon: Users },

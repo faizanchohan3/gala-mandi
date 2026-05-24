@@ -54,13 +54,13 @@ export default function FinancePage() {
     }
   }
 
-  const categories = ["Sales", "Purchases", "Salary", "Rent", "Utilities", "Pesticides", "Miscellaneous"]
+  const PRESET_CATEGORIES = ["Sales", "Purchases", "Salary", "Rent", "Utilities", "Pesticides", "Miscellaneous"]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Finance</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Roznamcha</h2>
           <p className="text-gray-500 text-sm">Track income, expenses, and balance</p>
         </div>
         <div className="flex gap-2">
@@ -203,12 +203,37 @@ export default function FinancePage() {
             <div><Label>Description</Label><Input placeholder="e.g. Wheat sales, Rent payment" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div>
               <Label>Category</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {(() => {
+                const isCustom = form.category !== "" && !PRESET_CATEGORIES.includes(form.category)
+                return (
+                  <>
+                    <Select
+                      value={isCustom ? "Custom" : (form.category || "none")}
+                      onValueChange={(v) => {
+                        if (v === "Custom") setForm({ ...form, category: "" })
+                        else if (v === "none") setForm({ ...form, category: "" })
+                        else setForm({ ...form, category: v })
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">— No category —</SelectItem>
+                        {PRESET_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        <SelectItem value="Custom">Custom...</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {isCustom && (
+                      <Input
+                        className="mt-2"
+                        placeholder="Enter custom category..."
+                        value={form.category}
+                        onChange={(e) => setForm({ ...form, category: e.target.value })}
+                        autoFocus
+                      />
+                    )}
+                  </>
+                )
+              })()}
             </div>
             <div>
               <Label>Bank Account (optional)</Label>

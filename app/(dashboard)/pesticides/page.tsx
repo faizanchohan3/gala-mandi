@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency, formatDateDMY } from "@/lib/utils"
 import { Plus, Search, AlertTriangle, ShoppingCart, Edit, Sprout, Trash2 } from "lucide-react"
 
 export default function PesticidesPage() {
@@ -28,7 +28,7 @@ export default function PesticidesPage() {
     purchasePrice: "0", salePrice: "0", minStock: "0",
   })
 
-  const [saleForm, setSaleForm] = useState({ quantity: "1", customerName: "", paidAmount: "0", notes: "" })
+  const [saleForm, setSaleForm] = useState({ quantity: "1", customerName: "", paidAmount: "0", incentive: "0", notes: "" })
 
   async function loadData() {
     try {
@@ -68,7 +68,7 @@ export default function PesticidesPage() {
 
   function openSale(p: any) {
     setSelectedPesticide(p)
-    setSaleForm({ quantity: "1", customerName: "", paidAmount: "0", notes: "" })
+    setSaleForm({ quantity: "1", customerName: "", paidAmount: "0", incentive: "0", notes: "" })
     setShowSaleModal(true)
   }
 
@@ -105,6 +105,7 @@ export default function PesticidesPage() {
         unitPrice: selectedPesticide.salePrice,
         customerName: saleForm.customerName,
         paidAmount: parseFloat(saleForm.paidAmount),
+        incentive: parseFloat(saleForm.incentive) || 0,
         notes: saleForm.notes,
       }),
     })
@@ -132,7 +133,7 @@ export default function PesticidesPage() {
           <div>
             <p className="text-red-800 font-medium text-sm">Expiry Alerts</p>
             <p className="text-red-700 text-sm mt-1">
-              {expiring.map((p) => `${p.name} (expires ${formatDate(p.expiryDate)})`).join(", ")}
+              {expiring.map((p) => `${p.name} (expires ${formatDateDMY(p.expiryDate)})`).join(", ")}
             </p>
           </div>
         </div>
@@ -190,7 +191,7 @@ export default function PesticidesPage() {
                         <td className="py-3 px-3">
                           {p.expiryDate ? (
                             <span className={`text-xs px-2 py-0.5 rounded-full ${isExpired ? "bg-red-100 text-red-700" : isExpiring ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}>
-                              {formatDate(p.expiryDate)}
+                              {formatDateDMY(p.expiryDate)}
                             </span>
                           ) : "-"}
                         </td>
@@ -224,7 +225,7 @@ export default function PesticidesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
-                  {["Pesticide", "Qty", "Unit Price", "Total", "Customer", "Paid", "Date", "By"].map((h) => (
+                  {["Pesticide", "Qty", "Unit Price", "Total", "Customer", "Paid", "Incentive", "Date", "By"].map((h) => (
                     <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
                   ))}
                 </tr>
@@ -238,11 +239,12 @@ export default function PesticidesPage() {
                     <td className="py-3 px-3 font-semibold">{formatCurrency(s.totalAmount)}</td>
                     <td className="py-3 px-3">{s.customerName || "-"}</td>
                     <td className="py-3 px-3 text-green-600">{formatCurrency(s.paidAmount)}</td>
-                    <td className="py-3 px-3 text-gray-500">{formatDate(s.createdAt)}</td>
+                    <td className="py-3 px-3 text-blue-600">{s.incentive > 0 ? formatCurrency(s.incentive) : "—"}</td>
+                    <td className="py-3 px-3 text-gray-500">{formatDateDMY(s.createdAt)}</td>
                     <td className="py-3 px-3 text-gray-500">{s.soldBy?.name}</td>
                   </tr>
                 ))}
-                {sales.length === 0 && <tr><td colSpan={8} className="text-center py-8 text-gray-400">No sales yet</td></tr>}
+                {sales.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-gray-400">No sales yet</td></tr>}
               </tbody>
             </table>
           </CardContent>
@@ -317,6 +319,7 @@ export default function PesticidesPage() {
             </div>
             <div><Label>Customer Name</Label><Input value={saleForm.customerName} onChange={(e) => setSaleForm({ ...saleForm, customerName: e.target.value })} /></div>
             <div><Label>Amount Paid</Label><Input type="number" value={saleForm.paidAmount} onChange={(e) => setSaleForm({ ...saleForm, paidAmount: e.target.value })} /></div>
+            <div><Label>Incentive (PKR)</Label><Input type="number" value={saleForm.incentive} onChange={(e) => setSaleForm({ ...saleForm, incentive: e.target.value })} placeholder="0" /></div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setShowSaleModal(false)} className="flex-1">Cancel</Button>
               <Button onClick={handleSale} className="flex-1">Sell</Button>

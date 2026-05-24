@@ -363,6 +363,7 @@ model PesticideSale {
   customerName String?
   paidAmount   Float    @default(0)
   balance      Float    @default(0)
+  incentive    Float    @default(0)
   soldById     String
   notes        String?
   createdAt    DateTime @default(now())
@@ -664,7 +665,9 @@ model FreightSlip {
   shopId       String?
   slipNo       String    @unique
   driverId     String?
+  walkInDriver String?
   vehicleId    String?
+  walkInVehicle String?
   customerId   String?
   fromLocation String?
   toLocation   String?
