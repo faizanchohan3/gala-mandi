@@ -322,7 +322,7 @@ export default function PesticidesPage() {
               <div>
                 <Label>Unit</Label>
                 {(() => {
-                  const isCustomUnit = form.unit !== "" && !PRESET_UNITS.includes(form.unit)
+                  const isCustomUnit = !PRESET_UNITS.includes(form.unit)
                   return (
                     <>
                       <Select
