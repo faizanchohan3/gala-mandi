@@ -27,6 +27,9 @@ export default function PesticidesPage() {
     expiryDate: "", quantity: "0", unit: "Litre",
     purchasePrice: "0", salePrice: "0", minStock: "0",
   })
+  const [newCategoryName, setNewCategoryName] = useState("")
+
+  const PRESET_UNITS = ["Litre", "ML", "KG", "Gram", "Bottle", "Bag"]
 
   const [saleForm, setSaleForm] = useState({ quantity: "1", customerName: "", paidAmount: "0", incentive: "0", notes: "" })
 
@@ -48,18 +51,31 @@ export default function PesticidesPage() {
 
   useEffect(() => { loadData() }, [])
 
+  function isoToDMY(iso: string) {
+    const [y, m, d] = iso.split("-")
+    return `${d}/${m}/${y}`
+  }
+
+  function dmyToIso(dmy: string) {
+    const [d, m, y] = dmy.split("/")
+    return y && m && d ? `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}` : ""
+  }
+
   function openAdd() {
     setEditing(null)
+    setNewCategoryName("")
     setForm({ name: "", categoryId: "", manufacturer: "", batchNumber: "", expiryDate: "", quantity: "0", unit: "Litre", purchasePrice: "0", salePrice: "0", minStock: "0" })
     setShowModal(true)
   }
 
   function openEdit(p: any) {
     setEditing(p)
+    setNewCategoryName("")
+    const isoExpiry = p.expiryDate ? new Date(p.expiryDate).toISOString().split("T")[0] : ""
     setForm({
-      name: p.name, categoryId: p.categoryId, manufacturer: p.manufacturer || "",
+      name: p.name, categoryId: p.categoryId || "", manufacturer: p.manufacturer || "",
       batchNumber: p.batchNumber || "",
-      expiryDate: p.expiryDate ? new Date(p.expiryDate).toISOString().split("T")[0] : "",
+      expiryDate: isoExpiry ? isoToDMY(isoExpiry) : "",
       quantity: String(p.quantity), unit: p.unit,
       purchasePrice: String(p.purchasePrice), salePrice: String(p.salePrice), minStock: String(p.minStock),
     })
@@ -73,6 +89,21 @@ export default function PesticidesPage() {
   }
 
   async function handleSave() {
+    let categoryId = form.categoryId
+    if (form.categoryId === "new") {
+      if (!newCategoryName.trim()) return alert("Enter a category name")
+      const cr = await fetch("/api/pesticide-categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCategoryName.trim() }),
+      })
+      if (!cr.ok) return alert("Failed to create category")
+      const cd = await cr.json()
+      categoryId = cd.category.id
+    }
+
+    const isoExpiry = form.expiryDate ? dmyToIso(form.expiryDate) : ""
+
     const url = editing ? `/api/pesticides/${editing.id}` : "/api/pesticides"
     const method = editing ? "PUT" : "POST"
     const res = await fetch(url, {
@@ -80,6 +111,8 @@ export default function PesticidesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        categoryId: categoryId || null,
+        expiryDate: isoExpiry || null,
         quantity: parseFloat(form.quantity),
         purchasePrice: parseFloat(form.purchasePrice),
         salePrice: parseFloat(form.salePrice),
@@ -263,27 +296,52 @@ export default function PesticidesPage() {
             <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div>
               <Label>Category</Label>
-              <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
+              <Select value={form.categoryId || "none"} onValueChange={(v) => { setForm({ ...form, categoryId: v === "none" ? "" : v }); setNewCategoryName("") }}>
                 <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">— No category —</SelectItem>
                   {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  <SelectItem value="new">+ Add New Category...</SelectItem>
                 </SelectContent>
               </Select>
+              {form.categoryId === "new" && (
+                <Input className="mt-2" placeholder="Enter new category name..." value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)} autoFocus />
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Manufacturer</Label><Input value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} /></div>
               <div><Label>Batch Number</Label><Input value={form.batchNumber} onChange={(e) => setForm({ ...form, batchNumber: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Expiry Date</Label><Input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} /></div>
+              <div>
+                <Label>Expiry Date</Label>
+                <Input placeholder="DD/MM/YYYY" value={form.expiryDate}
+                  onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+              </div>
               <div>
                 <Label>Unit</Label>
-                <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {["Litre", "ML", "KG", "Gram", "Bottle", "Bag"].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                {(() => {
+                  const isCustomUnit = form.unit !== "" && !PRESET_UNITS.includes(form.unit)
+                  return (
+                    <>
+                      <Select
+                        value={isCustomUnit ? "custom" : (form.unit || "Litre")}
+                        onValueChange={(v) => setForm({ ...form, unit: v === "custom" ? "" : v })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {PRESET_UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                          <SelectItem value="custom">Custom...</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {isCustomUnit && (
+                        <Input className="mt-2" placeholder="Enter unit..." value={form.unit}
+                          onChange={(e) => setForm({ ...form, unit: e.target.value })} autoFocus />
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
