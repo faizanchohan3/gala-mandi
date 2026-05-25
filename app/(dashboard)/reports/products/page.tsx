@@ -14,16 +14,26 @@ export default function ProductReportPage() {
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<"all" | "low">("all")
   const [shop, setShop] = useState<any>(null)
+  const [from, setFrom] = useState("")
+  const [to, setTo] = useState("")
 
-  useEffect(() => {
-    fetch("/api/settings").then((r) => r.json()).then((d) => setShop(d.shop || null)).catch(() => {})
-    fetch("/api/reports/products")
+  function loadReport(fromDate = from, toDate = to) {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (fromDate) params.set("from", fromDate)
+    if (toDate) params.set("to", toDate)
+    fetch(`/api/reports/products?${params}`)
       .then((r) => r.json())
       .then((d) => {
         setProducts(d.products || [])
         setTotals(d.totals || {})
         setLoading(false)
       })
+  }
+
+  useEffect(() => {
+    fetch("/api/settings").then((r) => r.json()).then((d) => setShop(d.shop || null)).catch(() => {})
+    loadReport()
   }, [])
 
   const filtered = products.filter((p) => {
@@ -83,7 +93,7 @@ export default function ProductReportPage() {
       </div>
 
       {/* ── Summary Cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 print:hidden">
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-gray-500 uppercase font-medium tracking-wide">Total Products</p>
@@ -94,12 +104,21 @@ export default function ProductReportPage() {
           <CardContent className="p-4">
             <p className="text-xs text-gray-500 uppercase font-medium tracking-wide">Stock Value</p>
             <p className="text-xl font-bold text-blue-700 mt-1">{formatCurrency(totals.totalStockValue || 0)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Remaining stock at cost</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500 uppercase font-medium tracking-wide">Total Sold</p>
+            <p className="text-xs text-gray-500 uppercase font-medium tracking-wide">Qty Sold</p>
+            <p className="text-2xl font-bold text-purple-700 mt-1">{totals.totalQtySold ?? 0}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{from || to ? "In selected period" : "All time"}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-gray-500 uppercase font-medium tracking-wide">Sale Amount</p>
             <p className="text-xl font-bold text-green-700 mt-1">{formatCurrency(totals.totalSaleAmount || 0)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{from || to ? "In selected period" : "All time"}</p>
           </CardContent>
         </Card>
         <Card className={totals.lowStockCount > 0 ? "border-red-200 bg-red-50" : ""}>
@@ -114,7 +133,40 @@ export default function ProductReportPage() {
         </Card>
       </div>
 
-      {/* ── Filters ── */}
+      {/* ── Date Range Filter ── */}
+      <div className="flex flex-wrap gap-3 items-end print:hidden bg-gray-50 border border-gray-200 rounded-xl p-4">
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">From Date</label>
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">To Date</label>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
+          />
+        </div>
+        <Button size="sm" className="bg-green-700 hover:bg-green-800" onClick={() => loadReport()}>
+          Apply
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => { setFrom(""); setTo(""); loadReport("", "") }}>
+          Clear (All Time)
+        </Button>
+        {(from || to) && (
+          <span className="text-xs text-green-700 font-medium bg-green-50 border border-green-200 px-3 py-2 rounded-lg">
+            Sales filtered: {from || "start"} → {to || "today"}
+          </span>
+        )}
+      </div>
+
+      {/* ── Stock / Search Filters ── */}
       <div className="flex gap-3 items-center print:hidden">
         <div className="relative max-w-xs flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -168,12 +220,13 @@ export default function ProductReportPage() {
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Sale Price</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Margin</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Stock Value</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Total Sold</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Qty Sold</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Sale Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
-                  <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
+                  <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : filtered.map((p, i) => (
                   <tr
                     key={p.id}
@@ -206,11 +259,12 @@ export default function ProductReportPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-blue-700">{formatCurrency(p.stockValue)}</td>
+                    <td className="px-4 py-3 text-right text-gray-700">{p.totalQtySold} {p.unit}</td>
                     <td className="px-4 py-3 text-right text-green-700">{formatCurrency(p.totalSaleAmount)}</td>
                   </tr>
                 ))}
                 {!loading && filtered.length === 0 && (
-                  <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">No products found</td></tr>
+                  <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">No products found</td></tr>
                 )}
               </tbody>
               <tfoot className="bg-gray-50 border-t-2 border-gray-200">
@@ -220,6 +274,9 @@ export default function ProductReportPage() {
                   </td>
                   <td className="px-4 py-3 text-right font-bold text-blue-700">
                     {formatCurrency(filtered.reduce((s, p) => s + p.stockValue, 0))}
+                  </td>
+                  <td className="px-4 py-3 text-right font-bold text-gray-700">
+                    {filtered.reduce((s, p) => s + p.totalQtySold, 0)}
                   </td>
                   <td className="px-4 py-3 text-right font-bold text-green-700">
                     {formatCurrency(filtered.reduce((s, p) => s + p.totalSaleAmount, 0))}

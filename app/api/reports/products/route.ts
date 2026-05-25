@@ -2,15 +2,35 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const { searchParams } = new URL(req.url)
+  const from = searchParams.get("from")
+  const to = searchParams.get("to")
+
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
+
+  const saleItemDateFilter: any = {}
+  if (from || to) {
+    saleItemDateFilter.sale = { createdAt: {} }
+    if (from) saleItemDateFilter.sale.createdAt.gte = new Date(from)
+    if (to) {
+      const toDate = new Date(to)
+      toDate.setHours(23, 59, 59, 999)
+      saleItemDateFilter.sale.createdAt.lte = toDate
+    }
+  }
+
   const products = await db.product.findMany({
-    where: { isActive: true },
+    where: { ...shopFilter, isActive: true },
     include: {
       category: { select: { name: true } },
-      saleItems: { select: { quantity: true, total: true, price: true } },
+      saleItems: {
+        where: Object.keys(saleItemDateFilter).length ? saleItemDateFilter : undefined,
+        select: { quantity: true, total: true, price: true },
+      },
     },
     orderBy: { name: "asc" },
   })
@@ -36,6 +56,7 @@ export async function GET() {
     totalProducts: result.length,
     totalStockValue: result.reduce((s, p) => s + p.stockValue, 0),
     totalSaleAmount: result.reduce((s, p) => s + p.totalSaleAmount, 0),
+    totalQtySold: result.reduce((s, p) => s + p.totalQtySold, 0),
     lowStockCount: result.filter((p) => p.isLowStock).length,
   }
 
