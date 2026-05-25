@@ -23,8 +23,8 @@ const reportCards = [
   },
   {
     href: "/reports/customers",
-    title: "Customer Report",
-    description: "Customer-wise summary with expandable sales details",
+    title: "Trader Report",
+    description: "Trader-wise summary with expandable sales details",
     icon: Users,
     color: "from-blue-600 to-blue-700",
   },
@@ -44,8 +44,8 @@ const reportCards = [
   },
   {
     href: "/reports/customer-ledger",
-    title: "Customer Ledger",
-    description: "Full debit/credit transaction ledger per customer",
+    title: "Trader Ledger",
+    description: "Full debit/credit transaction ledger per trader",
     icon: BookOpen,
     color: "from-orange-500 to-orange-600",
   },
@@ -144,7 +144,7 @@ export default function ReportsPage() {
           >
             <Users className="w-6 h-6 mb-3 opacity-80" />
             <p className="text-2xl font-bold">{loading ? "—" : customerData.count}</p>
-            <p className="text-blue-200 text-sm mt-1">Total Customers</p>
+            <p className="text-blue-200 text-sm mt-1">Total Traders</p>
             <p className="text-blue-300 text-xs mt-2 flex items-center gap-1">
               Udhar: {loading ? "—" : formatCurrency(customerData.outstanding)} <ArrowRight className="w-3 h-3" />
             </p>
@@ -158,7 +158,7 @@ export default function ReportsPage() {
           >
             <Package className="w-6 h-6 mb-3 opacity-80" />
             <p className="text-2xl font-bold">{loading ? "—" : formatCurrency(productData.stockValue)}</p>
-            <p className="text-violet-200 text-sm mt-1">Inventory Value</p>
+            <p className="text-violet-200 text-sm mt-1">Store Value</p>
             <p className="text-violet-300 text-xs mt-2 flex items-center gap-1">
               {loading ? "—" : productData.totalProducts} products · {loading ? "—" : productData.lowStockCount} low stock <ArrowRight className="w-3 h-3" />
             </p>
@@ -196,7 +196,7 @@ export default function ReportsPage() {
         <Card className="border-blue-100">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Customer Udhar</p>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Trader Udhar</p>
               <BookOpen className="w-4 h-4 text-orange-500" />
             </div>
             <p className={`text-xl font-bold ${customerData.outstanding > 0 ? "text-orange-600" : "text-gray-500"}`}>

@@ -75,10 +75,10 @@ export default function CustomersReportPage() {
         </div>
         <div style={{height:"4px",background:"linear-gradient(90deg,#fbbf24 0%,#f59e0b 50%,#d97706 100%)"}}></div>
         <div style={{padding:"10px 22px 8px",background:"#f8fdf8",borderBottom:"1px solid #e5e7eb",marginBottom:"8px"}}>
-          <h2 style={{margin:0,fontSize:"16px",fontWeight:800,color:"#14532d"}}>Customer Report</h2>
-          <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>All active customers — business summary with outstanding balances</div>
+          <h2 style={{margin:0,fontSize:"16px",fontWeight:800,color:"#14532d"}}>Trader Report</h2>
+          <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>All active traders — business summary with outstanding balances</div>
           <div style={{display:"flex",gap:"24px",marginTop:"8px",fontSize:"11px"}}>
-            <span><strong>{customers.length}</strong> Customers</span>
+            <span><strong>{customers.length}</strong> Traders</span>
             <span>Total Business: <strong>{formatCurrency(totals.totalBusiness)}</strong></span>
             <span>Received: <strong style={{color:"#166534"}}>{formatCurrency(totals.totalPaid)}</strong></span>
             <span>Outstanding: <strong style={{color:"#b91c1c"}}>{formatCurrency(totals.totalBalance)}</strong></span>
@@ -89,7 +89,7 @@ export default function CustomersReportPage() {
       {/* ── Screen Header ── */}
       <div className="flex items-center justify-between print:hidden">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Customer Report</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Trader Report</h2>
           <p className="text-gray-500 text-sm">Click any row to expand sales details</p>
         </div>
         <Button onClick={() => window.print()} variant="outline" className="gap-2">
@@ -101,7 +101,7 @@ export default function CustomersReportPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Customers</p>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Traders</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">{customers.length}</p>
           </CardContent>
         </Card>
@@ -143,8 +143,8 @@ export default function CustomersReportPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="w-4 h-4" />
-            Customer-wise Summary
-            <span className="text-gray-400 font-normal text-sm">({filtered.length} customers)</span>
+            Trader-wise Summary
+            <span className="text-gray-400 font-normal text-sm">({filtered.length} traders)</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -154,7 +154,7 @@ export default function CustomersReportPage() {
                 <tr>
                   <th className="px-4 py-3 w-8 print:hidden" />
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">#</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Customer Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Trader Name</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Phone</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Address</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Sales</th>

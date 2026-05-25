@@ -60,7 +60,7 @@ export default function ProductReportPage() {
         </div>
         <div style={{height:"4px",background:"linear-gradient(90deg,#fbbf24 0%,#f59e0b 50%,#d97706 100%)"}}></div>
         <div style={{padding:"10px 22px 8px",background:"#f8fdf8",borderBottom:"1px solid #e5e7eb",marginBottom:"8px"}}>
-          <h2 style={{margin:0,fontSize:"16px",fontWeight:800,color:"#14532d"}}>Product Inventory Report</h2>
+          <h2 style={{margin:0,fontSize:"16px",fontWeight:800,color:"#14532d"}}>Store Product Report</h2>
           <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>All active products — stock levels, valuations and sales performance</div>
           <div style={{display:"flex",gap:"24px",marginTop:"8px",fontSize:"11px"}}>
             <span><strong>{totals.totalProducts}</strong> Products</span>
@@ -149,7 +149,7 @@ export default function ProductReportPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Package className="w-4 h-4" />
-            Product Inventory
+            Store Products
             <span className="text-gray-400 font-normal text-sm">({filtered.length} products)</span>
           </CardTitle>
         </CardHeader>

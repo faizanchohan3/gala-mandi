@@ -75,7 +75,7 @@ export default function CustomerLedgerPage() {
         </div>
         <div style={{height:"4px",background:"linear-gradient(90deg,#fbbf24 0%,#f59e0b 50%,#d97706 100%)"}}></div>
         <div style={{padding:"10px 22px 8px",background:"#f8fdf8",borderBottom:"1px solid #e5e7eb"}}>
-          <h2 style={{margin:0,fontSize:"16px",fontWeight:800,color:"#14532d"}}>Customer Ledger</h2>
+          <h2 style={{margin:0,fontSize:"16px",fontWeight:800,color:"#14532d"}}>Trader Ledger</h2>
           {ledger?.customer && (
             <div style={{marginTop:"6px",fontSize:"13px"}}>
               <span style={{fontWeight:700,color:"#111827"}}>{ledger.customer.name}</span>
@@ -89,8 +89,8 @@ export default function CustomerLedgerPage() {
       {/* Screen header */}
       <div className="flex items-center justify-between print:hidden">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Customer Ledger</h2>
-          <p className="text-gray-500 text-sm">Full transaction history per customer</p>
+          <h2 className="text-2xl font-bold text-gray-900">Trader Ledger</h2>
+          <p className="text-gray-500 text-sm">Full transaction history per trader</p>
         </div>
         {ledger && (
           <Button onClick={() => window.print()} variant="outline" className="gap-2">
@@ -104,10 +104,10 @@ export default function CustomerLedgerPage() {
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500 font-medium">Customer *</label>
+              <label className="text-xs text-gray-500 font-medium">Trader *</label>
               <Select value={customerId} onValueChange={setCustomerId}>
                 <SelectTrigger className="w-56">
-                  <SelectValue placeholder="Select customer..." />
+                  <SelectValue placeholder="Select trader..." />
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
@@ -134,7 +134,7 @@ export default function CustomerLedgerPage() {
       {!ledger && !loading && (
         <div className="text-center py-20 text-gray-400">
           <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p>Select a customer to view their ledger</p>
+          <p>Select a trader to view their ledger</p>
         </div>
       )}
 
@@ -148,7 +148,7 @@ export default function CustomerLedgerPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="md:col-span-2 bg-green-50">
               <CardContent className="p-4">
-                <p className="text-xs text-gray-500 font-medium uppercase">Customer</p>
+                <p className="text-xs text-gray-500 font-medium uppercase">Trader</p>
                 <p className="text-lg font-bold text-gray-900 mt-1">{ledger.customer?.name}</p>
                 {ledger.customer?.phone && <p className="text-sm text-gray-600">{ledger.customer.phone}</p>}
                 {ledger.customer?.address && <p className="text-xs text-gray-500">{ledger.customer.address}</p>}
@@ -187,7 +187,7 @@ export default function CustomerLedgerPage() {
                 {formatCurrency(Math.abs(ledger.closingBalance))}
               </p>
               <p className={`text-sm font-semibold ${ledger.closingBalance > 0 ? "text-red-600" : "text-green-600"}`}>
-                {ledger.closingBalance > 0 ? "Outstanding (Customer Owes)" : ledger.closingBalance < 0 ? "Credit (Overpaid)" : "Settled"}
+                {ledger.closingBalance > 0 ? "Outstanding (Trader Owes)" : ledger.closingBalance < 0 ? "Credit (Overpaid)" : "Settled"}
               </p>
             </div>
           </div>
