@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const customer = await db.customer.findUnique({ where: { id } })
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const [sales, pesticideSales, customerCommissions] = await Promise.all([
+  const [sales, pesticideSales, customerCommissions, customerPayments] = await Promise.all([
     db.sale.findMany({
       where: { customerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
@@ -43,6 +43,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       where: { customerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
       include: { payments: { orderBy: { createdAt: "asc" } } },
+    }),
+    db.customerPayment.findMany({
+      where: { customerId: id, ...dateWhere },
+      orderBy: { createdAt: "asc" },
     }),
   ])
 
@@ -118,6 +122,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         credit: ps.paidAmount,
       })
     }
+  }
+
+  for (const cp of customerPayments) {
+    const isPay = cp.direction === "PAY"
+    events.push({
+      date: cp.createdAt,
+      type: "PAYMENT",
+      description: isPay
+        ? `Paid to Customer — ${cp.method}${cp.notes ? ` (${cp.notes})` : ""}`
+        : `Received from Customer — ${cp.method}${cp.notes ? ` (${cp.notes})` : ""}`,
+      debit: isPay ? cp.amount : 0,
+      credit: isPay ? 0 : cp.amount,
+    })
   }
 
   events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())

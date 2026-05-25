@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const supplier = await db.supplier.findUnique({ where: { id } })
   if (!supplier) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const [purchases, commissions] = await Promise.all([
+  const [purchases, commissions, supplierPayments] = await Promise.all([
     db.purchase.findMany({
       where: { supplierId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
@@ -35,6 +35,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       },
     }),
     db.commission.findMany({
+      where: { supplierId: id, ...dateWhere },
+      orderBy: { createdAt: "asc" },
+    }),
+    db.supplierPayment.findMany({
       where: { supplierId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
     }),
@@ -83,6 +87,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       description: `Commission #${comm.id.slice(-6).toUpperCase()}${parts ? ` — ${parts}` : ""}`,
       debit: comm.sellerPayable,
       credit: 0,
+    })
+  }
+
+  for (const sp of supplierPayments) {
+    const isPay = sp.direction === "PAY"
+    events.push({
+      date: sp.createdAt,
+      type: "PAYMENT",
+      description: isPay
+        ? `Paid to Supplier — ${sp.method}${sp.notes ? ` (${sp.notes})` : ""}`
+        : `Received from Supplier — ${sp.method}${sp.notes ? ` (${sp.notes})` : ""}`,
+      debit: isPay ? 0 : sp.amount,
+      credit: isPay ? sp.amount : 0,
     })
   }
 
