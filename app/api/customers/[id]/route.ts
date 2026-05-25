@@ -48,7 +48,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     sales.reduce((s, sale) => s + sale.paidAmount, 0) +
     commissions.reduce((s, c) => s + c.paidAmount, 0) +
     pesticideSales.reduce((s, ps) => s + ps.paidAmount, 0)
-  const cpTotal = customerPayments.reduce((s, p) => s + p.amount, 0)
+  // Only RECEIVE payments count as "paid" — PAY entries are advances (debits)
+  const cpTotal = customerPayments.reduce((s, p) => p.direction === "RECEIVE" ? s + p.amount : s - p.amount, 0)
   const totalPaid = initialPaid + cpTotal
 
   const totalBalance = totalBusiness - totalPaid
@@ -140,14 +141,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   for (const cp of customerPayments) {
+    const isPay = cp.direction === "PAY"
     ledgerEvents.push({
       date: cp.createdAt,
       type: "PAYMENT",
-      description: cp.direction === "PAY"
+      description: isPay
         ? `Paid to Customer — ${cp.method}${cp.notes ? ` (${cp.notes})` : ""}`
         : `Received from Customer — ${cp.method}${cp.notes ? ` (${cp.notes})` : ""}`,
-      debit: 0,
-      credit: cp.amount,
+      // PAY = Debit (we gave them money, they owe us)
+      // RECEIVE = Credit (they paid us, reduces their balance)
+      debit: isPay ? cp.amount : 0,
+      credit: isPay ? 0 : cp.amount,
     })
   }
 

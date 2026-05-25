@@ -14,8 +14,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
 
   const amt = parseFloat(amount)
-  // RECEIVE = customer pays us (reduces their balance)
-  // PAY     = we pay customer (also reduces their balance / creates credit)
   const dir = direction === "PAY" ? "PAY" : "RECEIVE"
 
   await db.$transaction(async (tx) => {
@@ -29,9 +27,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       },
     })
 
+    // RECEIVE = customer pays us → balance decreases (they owe us less)
+    // PAY     = we pay customer (advance) → balance increases (they owe us more)
     await tx.customer.update({
       where: { id },
-      data: { balance: { decrement: amt } },
+      data: { balance: dir === "PAY" ? { increment: amt } : { decrement: amt } },
     })
   })
 
