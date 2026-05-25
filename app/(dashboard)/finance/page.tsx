@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDateTime } from "@/lib/utils"
 import {
@@ -214,12 +214,12 @@ export default function FinancePage() {
                       const filtered = accounts.filter((a: any) => relevantTypes.includes(a.type))
                       const grouped = relevantTypes.map((t) => ({ type: t, items: filtered.filter((a: any) => a.type === t) })).filter((g) => g.items.length > 0)
                       return grouped.map((g) => (
-                        <div key={g.type}>
-                          <div className="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">{g.type}</div>
+                        <SelectGroup key={g.type}>
+                          <SelectLabel>{g.type}</SelectLabel>
                           {g.items.map((a: any) => (
                             <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
                           ))}
-                        </div>
+                        </SelectGroup>
                       ))
                     })()}
                   </SelectContent>
