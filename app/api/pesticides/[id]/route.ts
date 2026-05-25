@@ -9,14 +9,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   const { id } = await params
   const body = await req.json()
-  const { name, categoryId, manufacturer, batchNumber, expiryDate, quantity, unit, purchasePrice, salePrice, minStock } = body
+  const { name, categoryId, manufacturer, batchNumber, expiryDate, quantity, unit, purchasePrice, salePrice, incentive, minStock } = body
 
   const pesticide = await db.pesticide.update({
     where: { id },
     data: {
       name, categoryId, manufacturer, batchNumber,
       expiryDate: expiryDate ? new Date(expiryDate) : null,
-      quantity, unit, purchasePrice, salePrice, minStock,
+      quantity, unit, purchasePrice, salePrice, incentive: incentive || 0, minStock,
     },
   })
 

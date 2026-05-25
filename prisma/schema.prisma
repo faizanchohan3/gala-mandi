@@ -376,6 +376,7 @@ model Pesticide {
   unit          String    @default("Litre")
   purchasePrice Float     @default(0)
   salePrice     Float     @default(0)
+  incentive     Float     @default(0)
   minStock      Float     @default(0)
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())

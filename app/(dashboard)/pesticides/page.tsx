@@ -25,13 +25,13 @@ export default function PesticidesPage() {
   const [form, setForm] = useState({
     name: "", categoryId: "", manufacturer: "", batchNumber: "",
     expiryDate: "", quantity: "0", unit: "Litre",
-    purchasePrice: "0", salePrice: "0", minStock: "0",
+    purchasePrice: "0", salePrice: "0", incentive: "0", minStock: "0",
   })
   const [newCategoryName, setNewCategoryName] = useState("")
 
   const PRESET_UNITS = ["Litre", "ML", "KG", "Gram", "Bottle", "Bag"]
 
-  const [saleForm, setSaleForm] = useState({ quantity: "1", customerName: "", paidAmount: "0", incentive: "0", notes: "" })
+  const [saleForm, setSaleForm] = useState({ quantity: "1", customerName: "", paidAmount: "0", notes: "" })
 
   async function loadData() {
     try {
@@ -64,7 +64,7 @@ export default function PesticidesPage() {
   function openAdd() {
     setEditing(null)
     setNewCategoryName("")
-    setForm({ name: "", categoryId: "", manufacturer: "", batchNumber: "", expiryDate: "", quantity: "0", unit: "Litre", purchasePrice: "0", salePrice: "0", minStock: "0" })
+    setForm({ name: "", categoryId: "", manufacturer: "", batchNumber: "", expiryDate: "", quantity: "0", unit: "Litre", purchasePrice: "0", salePrice: "0", incentive: "0", minStock: "0" })
     setShowModal(true)
   }
 
@@ -77,14 +77,14 @@ export default function PesticidesPage() {
       batchNumber: p.batchNumber || "",
       expiryDate: isoExpiry ? isoToDMY(isoExpiry) : "",
       quantity: String(p.quantity), unit: p.unit,
-      purchasePrice: String(p.purchasePrice), salePrice: String(p.salePrice), minStock: String(p.minStock),
+      purchasePrice: String(p.purchasePrice), salePrice: String(p.salePrice), incentive: String(p.incentive || 0), minStock: String(p.minStock),
     })
     setShowModal(true)
   }
 
   function openSale(p: any) {
     setSelectedPesticide(p)
-    setSaleForm({ quantity: "1", customerName: "", paidAmount: "0", incentive: "0", notes: "" })
+    setSaleForm({ quantity: "1", customerName: "", paidAmount: "0", notes: "" })
     setShowSaleModal(true)
   }
 
@@ -116,6 +116,7 @@ export default function PesticidesPage() {
         quantity: parseFloat(form.quantity),
         purchasePrice: parseFloat(form.purchasePrice),
         salePrice: parseFloat(form.salePrice),
+        incentive: parseFloat(form.incentive) || 0,
         minStock: parseFloat(form.minStock),
       }),
     })
@@ -138,7 +139,6 @@ export default function PesticidesPage() {
         unitPrice: selectedPesticide.salePrice,
         customerName: saleForm.customerName,
         paidAmount: parseFloat(saleForm.paidAmount),
-        incentive: parseFloat(saleForm.incentive) || 0,
         notes: saleForm.notes,
       }),
     })
@@ -344,11 +344,34 @@ export default function PesticidesPage() {
                 })()}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div><Label>Quantity</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></div>
-              <div><Label>Purchase Price</Label><Input type="number" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} /></div>
-              <div><Label>Sale Price</Label><Input type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} /></div>
+              <div><Label>Purchase Price (per unit)</Label><Input type="number" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} /></div>
             </div>
+            {(() => {
+              const qty = parseFloat(form.quantity || "0")
+              const purchasePrice = parseFloat(form.purchasePrice || "0")
+              const incentiveAmt = parseFloat(form.incentive || "0")
+              const subtotal = qty * purchasePrice
+              const netCost = Math.max(0, subtotal - incentiveAmt)
+              return (
+                <>
+                  <div className="flex justify-between text-sm text-gray-500 px-1">
+                    <span>Subtotal ({qty} × {formatCurrency(purchasePrice)})</span>
+                    <span className="font-medium text-gray-700">{formatCurrency(subtotal)}</span>
+                  </div>
+                  <div>
+                    <Label>Incentive / Discount from Supplier (PKR)</Label>
+                    <Input type="number" placeholder="0" value={form.incentive} onChange={(e) => setForm({ ...form, incentive: e.target.value })} />
+                  </div>
+                  <div className="bg-blue-50 rounded-lg px-4 py-3 flex justify-between items-center border border-blue-200">
+                    <span className="text-sm font-semibold text-blue-800">Net Purchase Cost</span>
+                    <span className="text-xl font-bold text-blue-700">{formatCurrency(netCost)}</span>
+                  </div>
+                  <div><Label>Sale Price (per unit)</Label><Input type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} /></div>
+                </>
+              )
+            })()}
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
               <Button onClick={handleSave} className="flex-1">{editing ? "Update" : "Add"}</Button>
@@ -366,9 +389,7 @@ export default function PesticidesPage() {
           {(() => {
             const qty = parseFloat(saleForm.quantity || "0")
             const unitPrice = selectedPesticide?.salePrice || 0
-            const subtotal = qty * unitPrice
-            const incentive = parseFloat(saleForm.incentive || "0")
-            const totalAmount = Math.max(0, subtotal - incentive)
+            const totalAmount = qty * unitPrice
             return (
               <div className="space-y-4">
                 <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 flex justify-between">
@@ -376,14 +397,6 @@ export default function PesticidesPage() {
                   <span>Unit Price: <strong>{formatCurrency(unitPrice)}</strong></span>
                 </div>
                 <div><Label>Quantity</Label><Input type="number" value={saleForm.quantity} onChange={(e) => setSaleForm({ ...saleForm, quantity: e.target.value })} /></div>
-                <div className="flex justify-between text-sm text-gray-600 px-1">
-                  <span>Subtotal</span>
-                  <span className="font-medium">{formatCurrency(subtotal)}</span>
-                </div>
-                <div>
-                  <Label>Incentive / Discount (PKR)</Label>
-                  <Input type="number" value={saleForm.incentive} onChange={(e) => setSaleForm({ ...saleForm, incentive: e.target.value })} placeholder="0" />
-                </div>
                 <div className="bg-green-50 rounded-lg px-4 py-3 flex justify-between items-center border border-green-200">
                   <span className="text-sm font-semibold text-green-800">Total Amount</span>
                   <span className="text-xl font-bold text-green-700">{formatCurrency(totalAmount)}</span>

@@ -21,13 +21,13 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()
-  const { name, categoryId, manufacturer, batchNumber, expiryDate, quantity, unit, purchasePrice, salePrice, minStock } = body
+  const { name, categoryId, manufacturer, batchNumber, expiryDate, quantity, unit, purchasePrice, salePrice, incentive, minStock } = body
 
   const pesticide = await db.pesticide.create({
     data: {
       name, categoryId, manufacturer, batchNumber,
       expiryDate: expiryDate ? new Date(expiryDate) : null,
-      quantity, unit, purchasePrice, salePrice, minStock: minStock || 0,
+      quantity, unit, purchasePrice, salePrice, incentive: incentive || 0, minStock: minStock || 0,
     },
   })
 
