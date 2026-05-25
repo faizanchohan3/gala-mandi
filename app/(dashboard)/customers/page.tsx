@@ -174,11 +174,11 @@ export default function CustomersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Customers</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Traders</h2>
           <p className="text-gray-500 text-sm">{activeCustomers.length} active · {inactiveCustomers.length} inactive</p>
         </div>
         <Button onClick={openAdd} className="bg-green-700 hover:bg-green-800 gap-2">
-          <Plus className="w-4 h-4" /> Add Customer
+          <Plus className="w-4 h-4" /> Add Traders
         </Button>
       </div>
 
@@ -198,7 +198,7 @@ export default function CustomersPage() {
             <div className="p-2 bg-green-50 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
             <div>
               <p className="text-2xl font-bold text-gray-900">{activeCustomers.length}</p>
-              <p className="text-sm text-gray-500">Active Customers</p>
+              <p className="text-sm text-gray-500">Active Traders</p>
             </div>
           </CardContent>
         </Card>
@@ -246,7 +246,7 @@ export default function CustomersPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
-                    {["#", "Customer", "Phone", "Reference", "Credit Limit", "Balance", "Status", "Actions"].map((h) => (
+                    {["#", "Trader", "Phone", "Reference", "Credit Limit", "Balance", "Status", "Actions"].map((h) => (
                       <th key={h} className="text-left py-3 px-3 text-gray-500 font-semibold text-xs uppercase">{h}</th>
                     ))}
                   </tr>
