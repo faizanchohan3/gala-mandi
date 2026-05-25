@@ -74,9 +74,10 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [reportsOpen, setReportsOpen] = useState(false)
   const [shopLogo, setShopLogo] = useState<string | null>(null)
+  const [liveShopName, setLiveShopName] = useState<string | null>(null)
 
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
-  const shopName = session?.user?.shopName
+  const shopName = liveShopName ?? session?.user?.shopName
   const navItems = isSuperAdmin ? superAdminNavItems : shopNavItems
 
   useEffect(() => {
@@ -87,7 +88,10 @@ export function Sidebar() {
     if (!isSuperAdmin && session?.user?.shopId) {
       fetch("/api/settings")
         .then((r) => r.json())
-        .then((d) => { if (d.shop?.logo) setShopLogo(d.shop.logo) })
+        .then((d) => {
+          if (d.shop?.logo) setShopLogo(d.shop.logo)
+          if (d.shop?.name) setLiveShopName(d.shop.name)
+        })
         .catch(() => {})
     }
   }, [isSuperAdmin, session?.user?.shopId])

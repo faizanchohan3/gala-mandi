@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatDate, getRoleColor } from "@/lib/utils"
 import { Plus, Edit, UserX, Shield, User } from "lucide-react"
 
-const ROLES = ["SUPER_ADMIN", "ADMIN", "MANAGER", "CASHIER", "AUDITOR"]
+const ROLES = ["ADMIN", "MANAGER", "CASHIER", "AUDITOR"]
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([])
@@ -88,8 +88,7 @@ export default function UsersPage() {
       {/* Role Permission Guide */}
       <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
         <p className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-1.5"><Shield className="w-4 h-4" /> Role Permissions</p>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs text-blue-700">
-          <div><span className="font-semibold">SUPER ADMIN</span> — Full access</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-blue-700">
           <div><span className="font-semibold">ADMIN</span> — Manage users & all modules</div>
           <div><span className="font-semibold">MANAGER</span> — Inventory, sales, purchases</div>
           <div><span className="font-semibold">CASHIER</span> — Sales only</div>

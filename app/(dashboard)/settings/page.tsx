@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Plus, Tag, ImageIcon, Trash2, Upload } from "lucide-react"
+import { Plus, Tag, ImageIcon, Trash2, Upload, Store } from "lucide-react"
 
 export default function SettingsPage() {
   const [categories, setCategories] = useState<any[]>([])
@@ -15,6 +15,10 @@ export default function SettingsPage() {
   const [showPestCatModal, setShowPestCatModal] = useState(false)
   const [catName, setCatName] = useState("")
   const [pestCatName, setPestCatName] = useState("")
+
+  // Shop name state
+  const [shopName, setShopName] = useState("")
+  const [savingName, setSavingName] = useState(false)
 
   // Logo states
   const [currentLogo, setCurrentLogo] = useState<string | null>(null)
@@ -30,7 +34,10 @@ export default function SettingsPage() {
     ])
     if (cr.status === "fulfilled") setCategories(cr.value.categories || [])
     if (pcr.status === "fulfilled") setPestCategories(pcr.value.categories || [])
-    if (sr.status === "fulfilled" && sr.value.shop?.logo) setCurrentLogo(sr.value.shop.logo)
+    if (sr.status === "fulfilled" && sr.value.shop) {
+      if (sr.value.shop.logo) setCurrentLogo(sr.value.shop.logo)
+      if (sr.value.shop.name) setShopName(sr.value.shop.name)
+    }
   }
 
   useEffect(() => { loadData() }, [])
@@ -57,6 +64,28 @@ export default function SettingsPage() {
     setPestCatName("")
     setShowPestCatModal(false)
     loadData()
+  }
+
+  async function saveShopName() {
+    const name = shopName.trim()
+    if (!name) return alert("Shop name cannot be empty.")
+    setSavingName(true)
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        return alert(d?.error || "Failed to save name")
+      }
+      alert("Shop name updated! The sidebar will reflect it immediately.")
+    } catch {
+      alert("Network error. Please try again.")
+    } finally {
+      setSavingName(false)
+    }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -130,6 +159,35 @@ export default function SettingsPage() {
         <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
         <p className="text-gray-500 text-sm">Manage shop logo, categories and configuration</p>
       </div>
+
+      {/* Shop Name */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Store className="w-4 h-4" /> Shop Name
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-3 max-w-sm">
+            <div className="flex-1">
+              <Label className="mb-1 block">Name shown in the sidebar</Label>
+              <Input
+                value={shopName}
+                onChange={(e) => setShopName(e.target.value)}
+                placeholder="e.g. Sulman Gala Mandi"
+                onKeyDown={(e) => e.key === "Enter" && saveShopName()}
+              />
+            </div>
+            <Button
+              className="bg-teal-700 hover:bg-teal-800"
+              onClick={saveShopName}
+              disabled={savingName}
+            >
+              {savingName ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Shop Logo */}
       <Card>
