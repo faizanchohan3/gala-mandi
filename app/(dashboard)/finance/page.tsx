@@ -27,18 +27,17 @@ export default function FinancePage() {
   async function loadData() {
     try {
       setLoading(true)
-      const [txData, bankData, accData] = await Promise.all([
+      const [txData, bankData] = await Promise.all([
         fetch("/api/finance").then((r) => r.json()),
         fetch("/api/banks").then((r) => r.json()),
-        fetch("/api/accounts").then((r) => r.json()),
       ])
       setTransactions(txData.transactions || [])
       setSummary({ income: txData.income || 0, expense: txData.expense || 0, balance: txData.balance || 0 })
       setBanks(bankData.banks || [])
-      setAccounts(accData.accounts || [])
     } finally {
       setLoading(false)
     }
+    fetch("/api/accounts").then((r) => r.json()).then((d) => setAccounts(d.accounts || [])).catch(() => {})
   }
 
   useEffect(() => { loadData() }, [])
@@ -202,9 +201,11 @@ export default function FinancePage() {
                 </SelectContent>
               </Select>
             </div>
-            {accounts.length > 0 && (
-              <div>
-                <Label>Account (Chart of Accounts)</Label>
+            <div>
+              <Label>Account (Chart of Accounts)</Label>
+              {accounts.length === 0 ? (
+                <p className="text-xs text-gray-400 mt-1 py-2">No accounts yet — go to <strong>Accounts</strong> page and click "Load Default Accounts"</p>
+              ) : (
                 <Select value={form.accountId || "none"} onValueChange={(v) => setForm({ ...form, accountId: v === "none" ? "" : v })}>
                   <SelectTrigger><SelectValue placeholder="Select account..." /></SelectTrigger>
                   <SelectContent>
@@ -224,8 +225,8 @@ export default function FinancePage() {
                     })()}
                   </SelectContent>
                 </Select>
-              </div>
-            )}
+              )}
+            </div>
             <div><Label>Amount (PKR)</Label><Input type="number" placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
             <div><Label>Description</Label><Input placeholder="e.g. Wheat sales, Rent payment" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div>
