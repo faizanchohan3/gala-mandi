@@ -23,8 +23,9 @@ export default function ExpensesPage() {
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState("")
+  const [accounts, setAccounts] = useState<any[]>([])
   const [form, setForm] = useState({
-    amount: "", description: "", category: "General", reference: "",
+    amount: "", description: "", category: "General", reference: "", accountId: "",
   })
 
   async function loadData() {
@@ -39,7 +40,13 @@ export default function ExpensesPage() {
     }
   }
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    loadData()
+    fetch("/api/accounts")
+      .then((r) => r.json())
+      .then((d) => setAccounts((d.accounts || []).filter((a: any) => a.type === "EXPENSE")))
+      .catch(() => {})
+  }, [])
 
   async function handleAdd() {
     if (!form.amount || parseFloat(form.amount) <= 0) return alert("Enter a valid amount")
@@ -48,12 +55,16 @@ export default function ExpensesPage() {
     const res = await fetch("/api/expenses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
+      body: JSON.stringify({
+        ...form,
+        amount: parseFloat(form.amount),
+        accountId: form.accountId || null,
+      }),
     })
     setSaving(false)
     if (res.ok) {
       setShowModal(false)
-      setForm({ amount: "", description: "", category: "General", reference: "" })
+      setForm({ amount: "", description: "", category: "General", reference: "", accountId: "" })
       loadData()
     }
   }
@@ -169,6 +180,7 @@ export default function ExpensesPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Account</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reference</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">By</th>
@@ -177,7 +189,7 @@ export default function ExpensesPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loading && !expenses.length ? (
-                  <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : filtered.map((e, i) => (
                   <tr key={e.id} className="hover:bg-red-50/30">
                     <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
@@ -187,6 +199,13 @@ export default function ExpensesPage() {
                       <span className="text-xs px-2 py-0.5 bg-red-50 text-red-700 rounded-full font-medium">
                         {e.category || "General"}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {e.account ? (
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">
+                          {e.account.code} — {e.account.name}
+                        </span>
+                      ) : "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{e.reference || "—"}</td>
                     <td className="px-4 py-3 text-right font-semibold text-red-600">
@@ -204,13 +223,13 @@ export default function ExpensesPage() {
                   </tr>
                 ))}
                 {!loading && filtered.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">No expenses found</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">No expenses found</td></tr>
                 )}
               </tbody>
               {!loading && filtered.length > 0 && (
                 <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                   <tr>
-                    <td colSpan={5} className="px-4 py-3 font-bold text-gray-700">
+                    <td colSpan={6} className="px-4 py-3 font-bold text-gray-700">
                       Total — {filtered.length} entries
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-red-600">
@@ -262,6 +281,28 @@ export default function ExpensesPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label>Chart of Account</Label>
+              <Select
+                value={form.accountId || "none"}
+                onValueChange={(v) => setForm({ ...form, accountId: v === "none" ? "" : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— No account —</SelectItem>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.code} — {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {accounts.length === 0 && (
+                <p className="text-xs text-gray-400 mt-1">No expense accounts found — load default accounts first.</p>
+              )}
             </div>
             <div>
               <Label>Reference (optional)</Label>

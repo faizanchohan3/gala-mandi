@@ -11,7 +11,8 @@ export async function GET(req: Request) {
   const from = searchParams.get("from")
   const to = searchParams.get("to")
 
-  const where: any = { type: "DEBIT" }
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
+  const where: any = { type: "DEBIT", ...shopFilter }
   if (from || to) {
     where.createdAt = {}
     if (from) where.createdAt.gte = new Date(from)
@@ -26,7 +27,10 @@ export async function GET(req: Request) {
     db.transaction.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { createdBy: { select: { name: true } } },
+      include: {
+        createdBy: { select: { name: true } },
+        account: { select: { name: true, code: true } },
+      },
     }),
     db.transaction.groupBy({
       by: ["category"],
@@ -45,19 +49,39 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { amount, description, category, reference } = await req.json()
+  const { amount, description, category, reference, accountId } = await req.json()
   if (!amount || amount <= 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
   if (!description?.trim()) return NextResponse.json({ error: "Description required" }, { status: 400 })
 
-  const expense = await db.transaction.create({
-    data: {
-      type: "DEBIT",
-      amount: parseFloat(amount),
-      description,
-      category: category || "General",
-      reference: reference || null,
-      createdById: session.user.id,
-    },
+  const amt = parseFloat(amount)
+
+  const expense = await db.$transaction(async (tx) => {
+    const t = await tx.transaction.create({
+      data: {
+        shopId: session.user.shopId || null,
+        type: "DEBIT",
+        amount: amt,
+        description,
+        category: category || "General",
+        reference: reference || null,
+        accountId: accountId || null,
+        createdById: session.user.id,
+      },
+    })
+
+    if (accountId) {
+      const account = await tx.account.findUnique({ where: { id: accountId }, select: { type: true } })
+      if (account) {
+        const naturalDebit = ["ASSET", "EXPENSE"]
+        const isNatural = naturalDebit.includes(account.type)
+        await tx.account.update({
+          where: { id: accountId },
+          data: { balance: { [isNatural ? "increment" : "decrement"]: amt } },
+        })
+      }
+    }
+
+    return t
   })
 
   await createAuditLog({
