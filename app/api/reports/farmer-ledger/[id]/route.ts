@@ -123,6 +123,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       debit: 0,
       credit: sale.totalAmount,
     })
+    if (sale.paidAmount > 0) {
+      events.push({
+        date: sale.createdAt,
+        type: "PAYMENT",
+        description: `Payment received — Sale #${sale.id.slice(-6).toUpperCase()}`,
+        debit: sale.paidAmount,
+        credit: 0,
+      })
+    }
   }
 
   // Pesticide sales to farmer — farmer owes mandi (credit reduces running balance)
