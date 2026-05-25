@@ -8,9 +8,12 @@ const DEFAULT_ACCOUNTS = [
   { code: "1002", name: "Bank Accounts", type: "ASSET", description: "Money in bank accounts" },
   { code: "1003", name: "Stock / Inventory", type: "ASSET", description: "Value of goods in store" },
   { code: "1004", name: "Accounts Receivable", type: "ASSET", description: "Money owed by customers/traders" },
+  { code: "1005", name: "Pesticide Incentive Receivable", type: "ASSET", description: "Incentive promised by company but not yet received" },
+  { code: "1006", name: "Advance to Farmers", type: "ASSET", description: "Peshgi / advance given to farmers" },
   // LIABILITY
   { code: "2001", name: "Accounts Payable", type: "LIABILITY", description: "Money owed to suppliers" },
   { code: "2002", name: "Loans Payable", type: "LIABILITY", description: "Outstanding loans" },
+  { code: "2003", name: "Advance from Traders", type: "LIABILITY", description: "Advance received from buyers/traders" },
   // EQUITY
   { code: "3001", name: "Owner Capital", type: "EQUITY", description: "Owner investment in business" },
   { code: "3002", name: "Owner Drawings", type: "EQUITY", description: "Owner withdrawals" },
@@ -20,6 +23,7 @@ const DEFAULT_ACCOUNTS = [
   { code: "4003", name: "Pesticide Sales", type: "INCOME", description: "Revenue from pesticide sales" },
   { code: "4004", name: "Freight Income", type: "INCOME", description: "Revenue from transport/freight" },
   { code: "4005", name: "Other Income", type: "INCOME", description: "Miscellaneous income" },
+  { code: "4006", name: "Pesticide Incentive", type: "INCOME", description: "Incentive received from pesticide companies" },
   // EXPENSE
   { code: "5001", name: "Purchases", type: "EXPENSE", description: "Cost of goods purchased" },
   { code: "5002", name: "Transport / Freight", type: "EXPENSE", description: "Transport and freight costs" },
@@ -32,6 +36,10 @@ const DEFAULT_ACCOUNTS = [
   { code: "5009", name: "Bank Charges", type: "EXPENSE", description: "Bank fees and charges" },
   { code: "5010", name: "Office Expenses", type: "EXPENSE", description: "Stationery, printing, misc office" },
   { code: "5011", name: "Miscellaneous", type: "EXPENSE", description: "Other expenses" },
+  { code: "5012", name: "Weighbridge / Gate Charges", type: "EXPENSE", description: "Gate and weighing scale operational costs" },
+  { code: "5013", name: "Repairs & Maintenance", type: "EXPENSE", description: "Equipment, vehicle and building repairs" },
+  { code: "5014", name: "Telephone & Internet", type: "EXPENSE", description: "Mobile, landline and internet bills" },
+  { code: "5015", name: "Taxes & Government Fees", type: "EXPENSE", description: "FBR, local taxes, trade license fees" },
 ] as const
 
 export async function POST() {
