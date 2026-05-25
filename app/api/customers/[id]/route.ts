@@ -9,7 +9,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const { id } = await params
 
-  const [customer, sales, commissions, pesticideSales] = await Promise.all([
+  const [customer, sales, commissions, pesticideSales, customerPayments] = await Promise.all([
     db.customer.findUnique({ where: { id } }),
     db.sale.findMany({
       where: { customerId: id },
@@ -30,6 +30,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       orderBy: { createdAt: "asc" },
       include: { pesticide: { select: { name: true, unit: true } } },
     }),
+    db.customerPayment.findMany({
+      where: { customerId: id },
+      orderBy: { createdAt: "asc" },
+    }),
   ])
 
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -39,10 +43,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     commissions.reduce((s, c) => s + c.totalValue, 0) +
     pesticideSales.reduce((s, ps) => s + ps.totalAmount, 0)
 
-  const totalPaid =
+  // Initial paid at sale/commission creation + standalone CustomerPayment records
+  const initialPaid =
     sales.reduce((s, sale) => s + sale.paidAmount, 0) +
     commissions.reduce((s, c) => s + c.paidAmount, 0) +
     pesticideSales.reduce((s, ps) => s + ps.paidAmount, 0)
+  const cpTotal = customerPayments.reduce((s, p) => s + p.amount, 0)
+  const totalPaid = initialPaid + cpTotal
 
   const totalBalance = totalBusiness - totalPaid
 
@@ -130,6 +137,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         credit: ps.paidAmount,
       })
     }
+  }
+
+  for (const cp of customerPayments) {
+    ledgerEvents.push({
+      date: cp.createdAt,
+      type: "PAYMENT",
+      description: cp.direction === "PAY"
+        ? `Paid to Customer — ${cp.method}${cp.notes ? ` (${cp.notes})` : ""}`
+        : `Received from Customer — ${cp.method}${cp.notes ? ` (${cp.notes})` : ""}`,
+      debit: 0,
+      credit: cp.amount,
+    })
   }
 
   ledgerEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())

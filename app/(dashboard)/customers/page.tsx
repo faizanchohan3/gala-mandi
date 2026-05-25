@@ -36,7 +36,7 @@ export default function CustomersPage() {
   const [detail, setDetail] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<Tab>("ledger")
   const [form, setForm] = useState(DEFAULT_FORM)
-  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "" })
+  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "", direction: "RECEIVE" })
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [statusTab, setStatusTab] = useState<StatusTab>("active")
@@ -93,7 +93,7 @@ export default function CustomersPage() {
 
   function openPayment(c: any) {
     setSelected(c)
-    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "" })
+    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "", direction: "RECEIVE" })
     setLastPayment(null)
     setShowPaymentModal(true)
   }
@@ -132,8 +132,8 @@ export default function CustomersPage() {
     })
     setSaving(false)
     if (res.ok) {
-      const newBalance = Math.max(0, (selected.balance || 0) - amt)
-      setLastPayment({ amount: amt, method: paymentForm.method, notes: paymentForm.notes, name: selected.name, phone: selected.phone, balance: newBalance })
+      const newBalance = (selected.balance || 0) - amt
+      setLastPayment({ amount: amt, method: paymentForm.method, notes: paymentForm.notes, name: selected.name, phone: selected.phone, balance: newBalance, direction: paymentForm.direction })
       loadData()
       if (showDetailModal) loadDetail(selected.id)
     } else {
@@ -539,8 +539,7 @@ export default function CustomersPage() {
               {/* Actions */}
               <div className="flex gap-2 justify-end">
                 <Button size="sm" className="bg-green-700 hover:bg-green-800"
-                  onClick={() => { setShowDetailModal(false); openPayment(selected) }}
-                  disabled={detail.totalBalance <= 0}>
+                  onClick={() => { setShowDetailModal(false); openPayment(selected) }}>
                   <ArrowDownCircle className="w-4 h-4" /> Record Payment
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => { setShowDetailModal(false); openEdit(selected) }}>
@@ -704,7 +703,7 @@ export default function CustomersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {lastPayment ? <Check className="w-5 h-5 text-green-600" /> : <ArrowDownCircle className="w-5 h-5 text-green-600" />}
-              {lastPayment ? "Payment Recorded" : "Receive Payment"}
+              {lastPayment ? "Payment Recorded" : "Record Payment"}
             </DialogTitle>
           </DialogHeader>
 
@@ -719,12 +718,18 @@ export default function CustomersPage() {
                 {lastPayment.phone && <p className="text-xs text-green-600">{lastPayment.phone}</p>}
               </div>
               <div className="border border-gray-100 rounded-lg p-4 space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Amount Received</span><span className="font-bold text-green-700">{formatCurrency(lastPayment.amount)}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">{(lastPayment as any).direction === "PAY" ? "Paid to Customer" : "Amount Received"}</span>
+                  <span className="font-bold text-green-700">{formatCurrency(lastPayment.amount)}</span>
+                </div>
                 <div className="flex justify-between"><span className="text-gray-500">Method</span><span>{lastPayment.method.replace("_", " ")}</span></div>
                 {lastPayment.notes && <div className="flex justify-between"><span className="text-gray-500">Reference</span><span className="text-xs">{lastPayment.notes}</span></div>}
                 <div className="border-t pt-2 flex justify-between font-semibold">
-                  <span className="text-gray-600">Remaining Balance</span>
-                  <span className={lastPayment.balance > 0 ? "text-red-600" : "text-green-700"}>{formatCurrency(lastPayment.balance)}</span>
+                  <span className="text-gray-600">Updated Balance</span>
+                  <span className={lastPayment.balance > 0 ? "text-red-600" : lastPayment.balance < 0 ? "text-blue-600" : "text-green-700"}>
+                    {formatCurrency(Math.abs(lastPayment.balance))}
+                    {lastPayment.balance < 0 && <span className="text-xs ml-1 font-normal">(Credit)</span>}
+                  </span>
                 </div>
               </div>
               <div className="flex gap-3">
@@ -750,9 +755,34 @@ export default function CustomersPage() {
                   {selected?.phone && <p className="text-xs text-green-600">{selected.phone}</p>}
                 </div>
               </div>
+              {/* Direction toggle */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentForm({ ...paymentForm, direction: "RECEIVE" })}
+                  className={`py-2.5 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                    paymentForm.direction === "RECEIVE"
+                      ? "border-green-600 bg-green-50 text-green-700"
+                      : "border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  Receive from Customer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentForm({ ...paymentForm, direction: "PAY" })}
+                  className={`py-2.5 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                    paymentForm.direction === "PAY"
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  Pay to Customer
+                </button>
+              </div>
               <div>
                 <Label>Amount (PKR) *</Label>
-                <Input type="number" placeholder="Enter amount received"
+                <Input type="number" placeholder="Enter amount"
                   value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} autoFocus />
               </div>
               <div>
