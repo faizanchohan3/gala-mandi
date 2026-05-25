@@ -391,7 +391,7 @@ ${buildPrintHeader(shop)}
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["#", "Seller", "Buyer", "Commodity", "Total Value", "Comm %", "Commission", "Seller Payable", "Paid", "Balance", "Status", "Date", "Action", ""].map((h) => (
+                    {["#", "Seller", "Buyer", "Commodity", "Total Value", "Comm %", "Commission", "Labour", "Seller Payable", "Paid", "Balance", "Status", "Date", "Action", ""].map((h) => (
                       <th key={h} className="text-left py-3 px-2 text-gray-500 font-medium whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -416,6 +416,7 @@ ${buildPrintHeader(shop)}
                       <td className="py-3 px-2 text-gray-700">{formatCurrency(c.totalValue)}</td>
                       <td className="py-3 px-2 text-gray-600">{c.commissionRate}%</td>
                       <td className="py-3 px-2 text-green-700 font-medium">{formatCurrency(c.commissionAmount)}</td>
+                      <td className="py-3 px-2 text-orange-600">{c.labourAmount > 0 ? formatCurrency(c.labourAmount) : "—"}</td>
                       <td className="py-3 px-2 text-blue-700">{formatCurrency(c.sellerPayable)}</td>
                       <td className="py-3 px-2 text-green-600">{formatCurrency(c.paidAmount)}</td>
                       <td className="py-3 px-2 text-red-600">{formatCurrency(c.balance)}</td>
@@ -445,7 +446,7 @@ ${buildPrintHeader(shop)}
                     </tr>
                   ))}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={14} className="text-center py-8 text-gray-400">No commissions found</td></tr>
+                    <tr><td colSpan={15} className="text-center py-8 text-gray-400">No commissions found</td></tr>
                   )}
                 </tbody>
               </table>
@@ -536,8 +537,8 @@ ${buildPrintHeader(shop)}
               </div>
             </div>
 
-            {/* Total Amount + Commission % + Labour */}
-            <div className="grid grid-cols-3 gap-3">
+            {/* Total Amount + Commission % */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Total Amount <span className="text-red-500">*</span></Label>
                 <Input type="number" placeholder="0" value={totalValue} onChange={(e) => setTotalValue(e.target.value)} />
@@ -547,10 +548,13 @@ ${buildPrintHeader(shop)}
                 <Label>Commission %</Label>
                 <Input type="number" placeholder="0" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} />
               </div>
-              <div>
-                <Label>Labour Amount</Label>
-                <Input type="number" placeholder="0" value={labourAmount} onChange={(e) => setLabourAmount(e.target.value)} />
-              </div>
+            </div>
+
+            {/* Labour Amount */}
+            <div>
+              <Label>Labour Amount (PKR)</Label>
+              <Input type="number" placeholder="0" value={labourAmount} onChange={(e) => setLabourAmount(e.target.value)} />
+              <p className="text-xs text-gray-400 mt-1">Deducted from seller payable</p>
             </div>
 
             {/* Summary box */}
