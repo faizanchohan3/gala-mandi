@@ -40,7 +40,7 @@ export default function CustomersPage() {
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [statusTab, setStatusTab] = useState<StatusTab>("active")
-  const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; balance: number } | null>(null)
+  const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; balance: number; direction?: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function loadData() {
