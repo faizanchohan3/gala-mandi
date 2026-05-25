@@ -237,9 +237,22 @@ model Supplier {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  shop        Shop?        @relation(fields: [shopId], references: [id])
+  shop        Shop?             @relation(fields: [shopId], references: [id])
   purchases   Purchase[]
   commissions Commission[]
+  payments    SupplierPayment[]
+}
+
+model SupplierPayment {
+  id         String        @id @default(cuid())
+  supplierId String
+  amount     Float
+  direction  String        @default("PAY")
+  method     PaymentMethod @default(CASH)
+  notes      String?
+  createdAt  DateTime      @default(now())
+
+  supplier   Supplier      @relation(fields: [supplierId], references: [id])
 }
 
 // ── SALES ────────────────────────────────────────────────────────────────────

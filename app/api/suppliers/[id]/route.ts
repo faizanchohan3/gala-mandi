@@ -9,7 +9,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const { id } = await params
 
-  const [supplier, purchases] = await Promise.all([
+  const [supplier, purchases, supplierPayments] = await Promise.all([
     db.supplier.findUnique({ where: { id } }),
     db.purchase.findMany({
       where: { supplierId: id },
@@ -20,13 +20,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         createdBy: { select: { name: true } },
       },
     }),
+    db.supplierPayment.findMany({
+      where: { supplierId: id },
+      orderBy: { createdAt: "asc" },
+    }),
   ])
 
   if (!supplier) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const totalBusiness = purchases.reduce((s, p) => s + p.totalAmount, 0)
-  const totalPaid = purchases.reduce((s, p) => s + p.paidAmount, 0)
-  const totalBalance = purchases.reduce((s, p) => s + p.balance, 0)
+  const purchasePaid = purchases.reduce((s, p) => s + p.paidAmount, 0)
+  const spTotal = supplierPayments.reduce((s, p) => p.direction === "PAY" ? s + p.amount : s - p.amount, 0)
+  const totalPaid = purchasePaid + spTotal
+  const totalBalance = totalBusiness - totalPaid
 
   // Build ledger entries
   const ledgerEvents: { date: Date; type: string; description: string; debit: number; credit: number }[] = []
@@ -58,6 +64,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         credit: p.paidAmount,
       })
     }
+  }
+
+  for (const sp of supplierPayments) {
+    const isPay = sp.direction === "PAY"
+    ledgerEvents.push({
+      date: sp.createdAt,
+      type: "PAYMENT",
+      description: isPay
+        ? `Paid to Supplier — ${sp.method}${sp.notes ? ` (${sp.notes})` : ""}`
+        : `Received from Supplier — ${sp.method}${sp.notes ? ` (${sp.notes})` : ""}`,
+      debit: isPay ? 0 : sp.amount,
+      credit: isPay ? sp.amount : 0,
+    })
   }
 
   ledgerEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())

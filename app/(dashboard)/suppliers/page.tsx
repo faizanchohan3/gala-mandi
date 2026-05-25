@@ -25,10 +25,10 @@ export default function SuppliersPage() {
   const [selected, setSelected] = useState<any>(null)
   const [detail, setDetail] = useState<any>(null)
   const [form, setForm] = useState({ name: "", phone: "", address: "" })
-  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "" })
+  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "", direction: "PAY" })
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
-  const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; balance: number } | null>(null)
+  const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; balance: number; direction?: string } | null>(null)
 
   async function loadData() {
     try {
@@ -72,7 +72,7 @@ export default function SuppliersPage() {
 
   function openPayment(s: any) {
     setSelected(s)
-    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "" })
+    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "", direction: "PAY" })
     setLastPayment(null)
     setShowPaymentModal(true)
   }
@@ -102,8 +102,9 @@ export default function SuppliersPage() {
     })
     setSaving(false)
     if (res.ok) {
-      const newBalance = Math.max(0, (selected.balance || 0) - amt)
-      setLastPayment({ amount: amt, method: paymentForm.method, notes: paymentForm.notes, name: selected.name, phone: selected.phone, balance: newBalance })
+      const isPay = paymentForm.direction === "PAY"
+      const newBalance = isPay ? (selected.balance || 0) - amt : (selected.balance || 0) + amt
+      setLastPayment({ amount: amt, method: paymentForm.method, notes: paymentForm.notes, name: selected.name, phone: selected.phone, balance: newBalance, direction: paymentForm.direction })
       loadData()
       if (showDetailModal) loadDetail(selected.id)
     } else {
@@ -326,9 +327,8 @@ export default function SuppliersPage() {
                 <Button
                   size="sm"
                   onClick={() => { setShowDetailModal(false); openPayment(selected) }}
-                  disabled={detail.totalBalance <= 0}
                 >
-                  <ArrowUpCircle className="w-4 h-4" /> Pay Supplier
+                  <ArrowUpCircle className="w-4 h-4" /> Record Payment
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => { setShowDetailModal(false); openEdit(selected) }}>
                   <Edit className="w-4 h-4" /> Edit
@@ -458,13 +458,13 @@ export default function SuppliersPage() {
               <div className="flex justify-between"><span className="text-gray-500">Supplier:</span><span className="font-semibold">{lastPayment.name}</span></div>
               {lastPayment.phone && <div className="flex justify-between"><span className="text-gray-500">Phone:</span><span>{lastPayment.phone}</span></div>}
               <div className="border-t pt-2 mt-2">
-                <div className="flex justify-between"><span className="text-gray-500">Amount Paid:</span><span className="text-lg font-bold text-blue-700">{formatCurrency(lastPayment.amount)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">{lastPayment.direction === "RECEIVE" ? "Received from Supplier:" : "Amount Paid:"}</span><span className="text-lg font-bold text-blue-700">{formatCurrency(lastPayment.amount)}</span></div>
                 <div className="flex justify-between mt-1"><span className="text-gray-500">Method:</span><span>{lastPayment.method.replace("_", " ")}</span></div>
                 {lastPayment.notes && <div className="flex justify-between mt-1"><span className="text-gray-500">Reference:</span><span>{lastPayment.notes}</span></div>}
               </div>
               <div className="border-t-2 border-gray-800 pt-2 flex justify-between font-bold text-base">
-                <span>Remaining Balance:</span>
-                <span className={lastPayment.balance > 0 ? "text-red-700" : "text-green-700"}>{formatCurrency(lastPayment.balance)}</span>
+                <span>Balance:</span>
+                <span className={lastPayment.balance > 0 ? "text-red-700" : "text-green-700"}>{formatCurrency(Math.abs(lastPayment.balance))}</span>
               </div>
             </div>
             <p className="mt-8 text-center text-xs text-gray-400 border-t pt-4">Payment receipt — Gala Mandi</p>
@@ -484,20 +484,23 @@ export default function SuppliersPage() {
 
           {lastPayment ? (
             <div className="space-y-4">
-              <div className="bg-blue-50 rounded-lg p-4 text-center">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Check className="w-5 h-5 text-blue-700" />
+              <div className={`rounded-lg p-4 text-center ${lastPayment.direction === "RECEIVE" ? "bg-orange-50" : "bg-blue-50"}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${lastPayment.direction === "RECEIVE" ? "bg-orange-100" : "bg-blue-100"}`}>
+                  <Check className={`w-5 h-5 ${lastPayment.direction === "RECEIVE" ? "text-orange-700" : "text-blue-700"}`} />
                 </div>
-                <p className="font-semibold text-blue-800">{lastPayment.name}</p>
-                {lastPayment.phone && <p className="text-xs text-blue-600">{lastPayment.phone}</p>}
+                <p className={`font-semibold ${lastPayment.direction === "RECEIVE" ? "text-orange-800" : "text-blue-800"}`}>{lastPayment.name}</p>
+                {lastPayment.phone && <p className={`text-xs ${lastPayment.direction === "RECEIVE" ? "text-orange-600" : "text-blue-600"}`}>{lastPayment.phone}</p>}
               </div>
               <div className="border border-gray-100 rounded-lg p-4 space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Amount Paid</span><span className="font-bold text-blue-700">{formatCurrency(lastPayment.amount)}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">{lastPayment.direction === "RECEIVE" ? "Received from Supplier" : "Paid to Supplier"}</span>
+                  <span className={`font-bold ${lastPayment.direction === "RECEIVE" ? "text-orange-700" : "text-blue-700"}`}>{formatCurrency(lastPayment.amount)}</span>
+                </div>
                 <div className="flex justify-between"><span className="text-gray-500">Method</span><span>{lastPayment.method.replace("_", " ")}</span></div>
                 {lastPayment.notes && <div className="flex justify-between"><span className="text-gray-500">Reference</span><span className="text-xs">{lastPayment.notes}</span></div>}
                 <div className="border-t pt-2 flex justify-between font-semibold">
-                  <span className="text-gray-600">Remaining Balance</span>
-                  <span className={lastPayment.balance > 0 ? "text-red-600" : "text-green-700"}>{formatCurrency(lastPayment.balance)}</span>
+                  <span className="text-gray-600">Balance</span>
+                  <span className={lastPayment.balance > 0 ? "text-red-600" : "text-green-700"}>{formatCurrency(Math.abs(lastPayment.balance))}</span>
                 </div>
               </div>
               <div className="flex gap-3">
@@ -509,14 +512,39 @@ export default function SuppliersPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-800">
+              {/* Direction Toggle */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentForm({ ...paymentForm, direction: "PAY" })}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium border-2 transition-colors ${
+                    paymentForm.direction === "PAY"
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  Pay to Supplier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentForm({ ...paymentForm, direction: "RECEIVE" })}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium border-2 transition-colors ${
+                    paymentForm.direction === "RECEIVE"
+                      ? "border-orange-500 bg-orange-50 text-orange-700"
+                      : "border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  Receive from Supplier
+                </button>
+              </div>
+              <div className={`rounded-lg p-3 text-sm ${paymentForm.direction === "RECEIVE" ? "bg-orange-50 text-orange-800" : "bg-blue-50 text-blue-800"}`}>
                 Supplier: <strong>{selected?.name}</strong>
               </div>
               <div>
                 <Label>Amount (PKR) *</Label>
                 <Input
                   type="number"
-                  placeholder="Enter amount to pay"
+                  placeholder="Enter amount"
                   value={paymentForm.amount}
                   onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
                   autoFocus
