@@ -94,13 +94,13 @@ export default function SalesReportPage() {
               <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500 font-medium">Customer</label>
+              <label className="text-xs text-gray-500 font-medium">Trader</label>
               <Select value={customerId} onValueChange={setCustomerId}>
                 <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All Customers" />
+                  <SelectValue placeholder="All Traders" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Customers</SelectItem>
+                  <SelectItem value="all">All Traders</SelectItem>
                   {customers.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
@@ -150,7 +150,7 @@ export default function SalesReportPage() {
               <thead className="bg-gray-50 border-b border-t">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">Date</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">Customer</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">Trader</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">Items</th>
                   <th className="px-4 py-3 text-right font-semibold text-gray-600 text-xs uppercase">Total</th>
                   <th className="px-4 py-3 text-right font-semibold text-gray-600 text-xs uppercase">Paid</th>
