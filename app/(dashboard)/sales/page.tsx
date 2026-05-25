@@ -50,13 +50,16 @@ export default function SalesPage() {
         fetch("/api/farmers").then((r) => r.json()),
         fetch("/api/settings").then((r) => r.json()),
       ])
-      if (sr.status === "fulfilled") setSales(sr.value.sales || [])
+      const loadedSales = sr.status === "fulfilled" ? (sr.value.sales || []) : []
+      const loadedPesticideSales = psr.status === "fulfilled" ? (psr.value.sales || []) : []
+      if (sr.status === "fulfilled") setSales(loadedSales)
       if (pr.status === "fulfilled") setProducts(pr.value.products || [])
       if (cr.status === "fulfilled") setCustomers(cr.value.customers || [])
-      if (psr.status === "fulfilled") setPesticideSales(psr.value.sales || [])
+      if (psr.status === "fulfilled") setPesticideSales(loadedPesticideSales)
       if (pestr.status === "fulfilled") setPesticides(pestr.value.pesticides || [])
       if (fr.status === "fulfilled") setFarmers(fr.value.farmers || [])
       if (shr.status === "fulfilled") setShop(shr.value.shop || null)
+      return { sales: loadedSales, pesticideSales: loadedPesticideSales }
     } finally {
       setLoading(false)
     }
@@ -103,10 +106,16 @@ export default function SalesPage() {
       }),
     })
     if (res.ok) {
+      const data = await res.json().catch(() => ({}))
+      const newSaleId = data.sale?.id
       setShowModal(false)
       setItems([{ productId: "", quantity: "1", price: "0" }])
       setCustomerId(""); setPaidAmount("0"); setNotes("")
-      loadData()
+      const loaded = await loadData()
+      if (newSaleId && loaded?.sales) {
+        const newSale = loaded.sales.find((s: any) => s.id === newSaleId)
+        if (newSale) { setSelectedSale(newSale); setShowDetailModal(true) }
+      }
     } else {
       const data = await res.json().catch(() => ({}))
       alert(data?.error || "Failed to create sale")
@@ -142,9 +151,15 @@ export default function SalesPage() {
         }),
       })
       if (res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const newSaleId = data.sale?.id
         setShowPesticideSaleModal(false)
         setPesticideSaleForm({ pesticideId: "", quantity: "1", customerId: "", customerName: "", paidAmount: "0" })
-        loadData()
+        const loaded = await loadData()
+        if (newSaleId && loaded?.pesticideSales) {
+          const newSale = loaded.pesticideSales.find((s: any) => s.id === newSaleId)
+          if (newSale) { setSelectedPesticideSaleDetail(newSale); setShowPesticideDetailModal(true) }
+        }
       } else {
         const data = await res.json().catch(() => ({}))
         alert(data?.error || "Failed to create pesticide sale")
@@ -236,183 +251,184 @@ ${buildPrintHeader(shop)}
 
   return (
     <>
-      {/* ── Pesticide Sale Print Template ── */}
+      {/* ── Pesticide Sale Print Invoice (branded format) ── */}
       {selectedPesticideSaleDetail && (
-        <div className="hidden print:block fixed inset-0 bg-white z-50 p-8">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex items-start justify-between border-b-2 border-gray-800 pb-4 mb-5">
+        <div className="hidden print:block fixed inset-0 bg-white z-50">
+          <style>{`@media print { @page { size: A4 portrait; margin: 0; } }`}</style>
+          <div style={{background:"linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%)",color:"#fff",padding:"16px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+              {shop?.logo
+                ? <img src={shop.logo} style={{width:"52px",height:"52px",borderRadius:"8px",background:"#fff",padding:"3px",objectFit:"contain"}} alt="" />
+                : <div style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px",fontWeight:900,border:"2px solid rgba(255,255,255,0.3)"}}>{(shop?.name||"G")[0].toUpperCase()}</div>
+              }
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{shopName}</h1>
-                <p className="text-sm text-gray-500">Pesticide Sale Invoice</p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-gray-800">Invoice #{selectedPesticideSaleDetail.id.slice(-8).toUpperCase()}</p>
-                <p className="text-sm text-gray-600">Date: {formatDate(selectedPesticideSaleDetail.createdAt)}</p>
-                <p className="text-sm text-gray-600">Time: {new Date(selectedPesticideSaleDetail.createdAt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}</p>
+                <div style={{fontSize:"20px",fontWeight:900,letterSpacing:"-0.5px"}}>{shop?.name||"Gala Mandi"}</div>
+                {shop?.ownerName && <div style={{fontSize:"11px",opacity:0.8,marginTop:"2px"}}>{shop.ownerName}</div>}
               </div>
             </div>
-            <div className="mb-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Bill To</p>
-              {(selectedPesticideSaleDetail.customer || selectedPesticideSaleDetail.customerName) ? (
-                <div>
-                  <p className="text-base font-bold text-gray-900">{selectedPesticideSaleDetail.customer?.name || selectedPesticideSaleDetail.customerName}</p>
-                  {selectedPesticideSaleDetail.customer?.phone && <p className="text-sm text-gray-600">Phone: {selectedPesticideSaleDetail.customer.phone}</p>}
-                </div>
-              ) : (
-                <p className="text-base font-medium text-gray-700">Walk-in Customer</p>
-              )}
+            <div style={{textAlign:"right",fontSize:"11px",lineHeight:1.9,opacity:0.9}}>
+              {shop?.phone && <div>&#9990;&nbsp;{shop.phone}</div>}
+              {shop?.address && <div>&#9679;&nbsp;{shop.address}</div>}
+              <div style={{fontSize:"10px",opacity:0.75}}>Printed: {new Date().toLocaleDateString("en-PK")}</div>
             </div>
-            <table className="w-full text-sm border-collapse mb-5">
+          </div>
+          <div style={{height:"4px",background:"linear-gradient(90deg,#fbbf24 0%,#f59e0b 50%,#d97706 100%)"}}></div>
+          <div style={{padding:"10px 22px",background:"#f8fdf8",borderBottom:"1px solid #e5e7eb",display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
+            <div>
+              <div style={{fontSize:"16px",fontWeight:800,color:"#14532d"}}>Pesticide Sale Invoice</div>
+              <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>Invoice #: {selectedPesticideSaleDetail.id.slice(-8).toUpperCase()}</div>
+            </div>
+            <div style={{textAlign:"right",fontSize:"11px",color:"#6b7280",lineHeight:1.8}}>
+              <div>Date: {formatDate(selectedPesticideSaleDetail.createdAt)}</div>
+              <div>By: {selectedPesticideSaleDetail.soldBy?.name}</div>
+            </div>
+          </div>
+          <div style={{padding:"16px 22px"}}>
+            <div style={{marginBottom:"14px"}}>
+              <div style={{fontSize:"10px",fontWeight:700,color:"#6b7280",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"4px"}}>Bill To</div>
+              <div style={{fontWeight:700,fontSize:"14px",color:"#111827"}}>{selectedPesticideSaleDetail.customer?.name || selectedPesticideSaleDetail.farmer?.name || selectedPesticideSaleDetail.customerName || "Walk-in Customer"}</div>
+              {(selectedPesticideSaleDetail.customer?.phone || selectedPesticideSaleDetail.farmer?.phone) && <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>Ph: {selectedPesticideSaleDetail.customer?.phone || selectedPesticideSaleDetail.farmer?.phone}</div>}
+            </div>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:"12px",marginBottom:"14px"}}>
               <thead>
-                <tr className="bg-gray-800 text-white">
-                  <th className="px-3 py-2 text-left font-semibold">#</th>
-                  <th className="px-3 py-2 text-left font-semibold">Pesticide</th>
-                  <th className="px-3 py-2 text-center font-semibold">Qty</th>
-                  <th className="px-3 py-2 text-center font-semibold">Unit</th>
-                  <th className="px-3 py-2 text-right font-semibold">Unit Price</th>
-                  <th className="px-3 py-2 text-right font-semibold">Amount</th>
+                <tr style={{background:"#14532d",color:"#fff"}}>
+                  <th style={{padding:"7px 10px",textAlign:"left",fontWeight:700}}>#</th>
+                  <th style={{padding:"7px 10px",textAlign:"left",fontWeight:700}}>Pesticide</th>
+                  <th style={{padding:"7px 10px",textAlign:"center",fontWeight:700}}>Qty</th>
+                  <th style={{padding:"7px 10px",textAlign:"center",fontWeight:700}}>Unit</th>
+                  <th style={{padding:"7px 10px",textAlign:"right",fontWeight:700}}>Unit Price</th>
+                  <th style={{padding:"7px 10px",textAlign:"right",fontWeight:700}}>Amount</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="bg-gray-50">
-                  <td className="px-3 py-2 border-b border-gray-200 text-gray-500">1</td>
-                  <td className="px-3 py-2 border-b border-gray-200 font-medium text-gray-900">{selectedPesticideSaleDetail.pesticide?.name}</td>
-                  <td className="px-3 py-2 border-b border-gray-200 text-center">{selectedPesticideSaleDetail.quantity}</td>
-                  <td className="px-3 py-2 border-b border-gray-200 text-center text-gray-500">{selectedPesticideSaleDetail.pesticide?.unit}</td>
-                  <td className="px-3 py-2 border-b border-gray-200 text-right">{formatCurrency(selectedPesticideSaleDetail.unitPrice)}</td>
-                  <td className="px-3 py-2 border-b border-gray-200 text-right font-semibold">{formatCurrency(selectedPesticideSaleDetail.totalAmount)}</td>
+                <tr style={{background:"#f9fafb",borderBottom:"1px solid #e5e7eb"}}>
+                  <td style={{padding:"6px 10px",color:"#9ca3af"}}>1</td>
+                  <td style={{padding:"6px 10px",fontWeight:600,color:"#111827"}}>{selectedPesticideSaleDetail.pesticide?.name}</td>
+                  <td style={{padding:"6px 10px",textAlign:"center"}}>{selectedPesticideSaleDetail.quantity}</td>
+                  <td style={{padding:"6px 10px",textAlign:"center",color:"#6b7280"}}>{selectedPesticideSaleDetail.pesticide?.unit}</td>
+                  <td style={{padding:"6px 10px",textAlign:"right"}}>PKR {(selectedPesticideSaleDetail.unitPrice||0).toLocaleString()}</td>
+                  <td style={{padding:"6px 10px",textAlign:"right",fontWeight:700}}>PKR {(selectedPesticideSaleDetail.totalAmount||0).toLocaleString()}</td>
                 </tr>
               </tbody>
             </table>
-            <div className="flex justify-end mb-5">
-              <div className="w-64 space-y-1.5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Sub Total:</span>
-                  <span className="font-semibold">{formatCurrency(selectedPesticideSaleDetail.totalAmount)}</span>
+            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:"16px"}}>
+              <div style={{width:"230px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:"12px",borderBottom:"1px solid #e5e7eb"}}>
+                  <span style={{color:"#6b7280"}}>Sub Total</span>
+                  <span style={{fontWeight:600}}>PKR {(selectedPesticideSaleDetail.totalAmount||0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm text-green-700">
-                  <span>Amount Paid:</span>
-                  <span className="font-semibold">{formatCurrency(selectedPesticideSaleDetail.paidAmount)}</span>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:"12px",color:"#15803d"}}>
+                  <span>Amount Paid</span>
+                  <span style={{fontWeight:600}}>PKR {(selectedPesticideSaleDetail.paidAmount||0).toLocaleString()}</span>
                 </div>
-                <div className="border-t border-gray-300 pt-1.5 flex justify-between font-bold text-base">
-                  <span className={(selectedPesticideSaleDetail.balance ?? 0) > 0 ? "text-red-700" : "text-green-700"}>
-                    {(selectedPesticideSaleDetail.balance ?? 0) > 0 ? "Balance Due:" : "Change:"}
-                  </span>
-                  <span className={(selectedPesticideSaleDetail.balance ?? 0) > 0 ? "text-red-700" : "text-green-700"}>
-                    {formatCurrency(Math.abs(selectedPesticideSaleDetail.balance ?? 0))}
-                  </span>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:"13px",fontWeight:700,borderTop:"2px solid #e5e7eb",marginTop:"4px",color:(selectedPesticideSaleDetail.balance??0)>0?"#b91c1c":"#15803d"}}>
+                  <span>Balance Due</span>
+                  <span>PKR {Math.abs(selectedPesticideSaleDetail.balance??0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
-            <div className="border-t border-gray-200 pt-4 flex items-start justify-between text-sm text-gray-600">
-              <div>
-                {selectedPesticideSaleDetail.notes && (
-                  <p><span className="font-medium">Notes:</span> {selectedPesticideSaleDetail.notes}</p>
-                )}
-              </div>
-              <div className="text-right">
-                <p>Sold by: {selectedPesticideSaleDetail.soldBy?.name}</p>
-                <p className="mt-4 pt-8 border-t border-gray-400 text-xs text-gray-400">Authorized Signature</p>
-              </div>
+            {selectedPesticideSaleDetail.notes && <p style={{fontSize:"11px",color:"#555",marginBottom:"12px"}}><strong>Notes:</strong> {selectedPesticideSaleDetail.notes}</p>}
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:"24px",paddingTop:"14px",borderTop:"1px solid #e5e7eb",fontSize:"11px",color:"#6b7280"}}>
+              <span>Customer Signature: _______________________</span>
+              <span>Authorized By: _______________________</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Product Sale Print Invoice Template (hidden on screen, shown on print) ── */}
+      {/* ── Product Sale Print Invoice (branded format) ── */}
       {selectedSale && (
-        <div className="hidden print:block fixed inset-0 bg-white z-50 p-8">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex items-start justify-between border-b-2 border-gray-800 pb-4 mb-5">
+        <div className="hidden print:block fixed inset-0 bg-white z-50">
+          <style>{`@media print { @page { size: A4 portrait; margin: 0; } }`}</style>
+          {/* Green gradient header */}
+          <div style={{background:"linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%)",color:"#fff",padding:"16px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+              {shop?.logo
+                ? <img src={shop.logo} style={{width:"52px",height:"52px",borderRadius:"8px",background:"#fff",padding:"3px",objectFit:"contain"}} alt="" />
+                : <div style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px",fontWeight:900,border:"2px solid rgba(255,255,255,0.3)"}}>{(shop?.name||"G")[0].toUpperCase()}</div>
+              }
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{shopName}</h1>
-                <p className="text-sm text-gray-500">Sales Invoice</p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-gray-800">Invoice #{selectedSale.id.slice(-8).toUpperCase()}</p>
-                <p className="text-sm text-gray-600">Date: {formatDate(selectedSale.createdAt)}</p>
-                <p className="text-sm text-gray-600">Time: {new Date(selectedSale.createdAt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}</p>
+                <div style={{fontSize:"20px",fontWeight:900,letterSpacing:"-0.5px"}}>{shop?.name||"Gala Mandi"}</div>
+                {shop?.ownerName && <div style={{fontSize:"11px",opacity:0.8,marginTop:"2px"}}>{shop.ownerName}</div>}
               </div>
             </div>
-            <div className="mb-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Bill To</p>
-              {selectedSale.customer ? (
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-base font-bold text-gray-900">{selectedSale.customer.name}</p>
-                    <span className="text-xs border border-blue-300 text-blue-600 px-1.5 py-0.5 rounded font-medium">Customer</span>
-                  </div>
-                  {selectedSale.customer.phone && <p className="text-sm text-gray-600">Phone: {selectedSale.customer.phone}</p>}
-                  {selectedSale.customer.address && <p className="text-sm text-gray-600">Address: {selectedSale.customer.address}</p>}
-                </div>
-              ) : selectedSale.farmer ? (
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-base font-bold text-gray-900">{selectedSale.farmer.name}</p>
-                    <span className="text-xs border border-green-400 text-green-700 px-1.5 py-0.5 rounded font-medium">Farmer</span>
-                  </div>
-                  {selectedSale.farmer.phone && <p className="text-sm text-gray-600">Phone: {selectedSale.farmer.phone}</p>}
-                </div>
-              ) : (
-                <p className="text-base font-medium text-gray-700">Walk-in Customer</p>
-              )}
+            <div style={{textAlign:"right",fontSize:"11px",lineHeight:1.9,opacity:0.9}}>
+              {shop?.phone && <div>&#9990;&nbsp;{shop.phone}</div>}
+              {shop?.address && <div>&#9679;&nbsp;{shop.address}</div>}
+              <div style={{fontSize:"10px",opacity:0.75}}>Printed: {new Date().toLocaleDateString("en-PK")}</div>
             </div>
-            <table className="w-full text-sm border-collapse mb-5">
+          </div>
+          {/* Gold stripe */}
+          <div style={{height:"4px",background:"linear-gradient(90deg,#fbbf24 0%,#f59e0b 50%,#d97706 100%)"}}></div>
+          {/* Document sub-header */}
+          <div style={{padding:"10px 22px",background:"#f8fdf8",borderBottom:"1px solid #e5e7eb",display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
+            <div>
+              <div style={{fontSize:"16px",fontWeight:800,color:"#14532d"}}>Sales Invoice</div>
+              <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>Invoice #: {selectedSale.id.slice(-8).toUpperCase()}</div>
+            </div>
+            <div style={{textAlign:"right",fontSize:"11px",color:"#6b7280",lineHeight:1.8}}>
+              <div>Date: {formatDate(selectedSale.createdAt)}</div>
+              <div>Time: {new Date(selectedSale.createdAt).toLocaleTimeString("en-PK",{hour:"2-digit",minute:"2-digit"})}</div>
+              <div>By: {selectedSale.createdBy?.name}</div>
+              <span style={{background: selectedSale.status==="PAID"?"#dcfce7":selectedSale.status==="PARTIAL"?"#fed7aa":"#fef9c3",color:selectedSale.status==="PAID"?"#166534":selectedSale.status==="PARTIAL"?"#c2410c":"#854d0e",padding:"1px 8px",borderRadius:"12px",fontSize:"10px",fontWeight:700}}>{selectedSale.status}</span>
+            </div>
+          </div>
+          {/* Body */}
+          <div style={{padding:"16px 22px"}}>
+            {/* Bill To */}
+            <div style={{marginBottom:"14px"}}>
+              <div style={{fontSize:"10px",fontWeight:700,color:"#6b7280",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"4px"}}>Bill To</div>
+              <div style={{fontWeight:700,fontSize:"14px",color:"#111827"}}>{selectedSale.customer?.name || selectedSale.farmer?.name || "Walk-in Customer"}</div>
+              {(selectedSale.customer?.phone || selectedSale.farmer?.phone) && <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>Ph: {selectedSale.customer?.phone || selectedSale.farmer?.phone}</div>}
+              {selectedSale.customer?.address && <div style={{fontSize:"11px",color:"#6b7280"}}>{selectedSale.customer.address}</div>}
+              <div style={{fontSize:"10px",color:"#9ca3af",marginTop:"2px"}}>{selectedSale.farmer ? "Farmer" : selectedSale.customer ? "Trader" : "Walk-in"}</div>
+            </div>
+            {/* Items table */}
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:"12px",marginBottom:"14px"}}>
               <thead>
-                <tr className="bg-gray-800 text-white">
-                  <th className="px-3 py-2 text-left font-semibold">#</th>
-                  <th className="px-3 py-2 text-left font-semibold">Product</th>
-                  <th className="px-3 py-2 text-center font-semibold">Qty</th>
-                  <th className="px-3 py-2 text-center font-semibold">Unit</th>
-                  <th className="px-3 py-2 text-right font-semibold">Unit Price</th>
-                  <th className="px-3 py-2 text-right font-semibold">Amount</th>
+                <tr style={{background:"#14532d",color:"#fff"}}>
+                  <th style={{padding:"7px 10px",textAlign:"left",fontWeight:700}}>#</th>
+                  <th style={{padding:"7px 10px",textAlign:"left",fontWeight:700}}>Product</th>
+                  <th style={{padding:"7px 10px",textAlign:"center",fontWeight:700}}>Qty</th>
+                  <th style={{padding:"7px 10px",textAlign:"center",fontWeight:700}}>Unit</th>
+                  <th style={{padding:"7px 10px",textAlign:"right",fontWeight:700}}>Unit Price</th>
+                  <th style={{padding:"7px 10px",textAlign:"right",fontWeight:700}}>Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {selectedSale.items?.map((item: any, i: number) => (
-                  <tr key={item.id} className={i % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                    <td className="px-3 py-2 border-b border-gray-200 text-gray-500">{i + 1}</td>
-                    <td className="px-3 py-2 border-b border-gray-200 font-medium text-gray-900">{item.product?.name}</td>
-                    <td className="px-3 py-2 border-b border-gray-200 text-center">{item.quantity}</td>
-                    <td className="px-3 py-2 border-b border-gray-200 text-center text-gray-500">{item.product?.unit || "KG"}</td>
-                    <td className="px-3 py-2 border-b border-gray-200 text-right">{formatCurrency(item.price)}</td>
-                    <td className="px-3 py-2 border-b border-gray-200 text-right font-semibold">{formatCurrency(item.total)}</td>
+                  <tr key={item.id} style={{background: i%2===0?"#f9fafb":"#fff",borderBottom:"1px solid #e5e7eb"}}>
+                    <td style={{padding:"6px 10px",color:"#9ca3af"}}>{i+1}</td>
+                    <td style={{padding:"6px 10px",fontWeight:600,color:"#111827"}}>{item.product?.name}</td>
+                    <td style={{padding:"6px 10px",textAlign:"center"}}>{item.quantity}</td>
+                    <td style={{padding:"6px 10px",textAlign:"center",color:"#6b7280"}}>{item.product?.unit||"KG"}</td>
+                    <td style={{padding:"6px 10px",textAlign:"right"}}>PKR {(item.price||0).toLocaleString()}</td>
+                    <td style={{padding:"6px 10px",textAlign:"right",fontWeight:700}}>PKR {(item.total||0).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="flex justify-end mb-5">
-              <div className="w-64 space-y-1.5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Sub Total:</span>
-                  <span className="font-semibold">{formatCurrency(selectedSale.totalAmount)}</span>
+            {/* Totals */}
+            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:"16px"}}>
+              <div style={{width:"230px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:"12px",borderBottom:"1px solid #e5e7eb"}}>
+                  <span style={{color:"#6b7280"}}>Sub Total</span>
+                  <span style={{fontWeight:600}}>PKR {(selectedSale.totalAmount||0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm text-green-700">
-                  <span>Amount Paid:</span>
-                  <span className="font-semibold">{formatCurrency(selectedSale.paidAmount)}</span>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:"12px",color:"#15803d"}}>
+                  <span>Amount Paid</span>
+                  <span style={{fontWeight:600}}>PKR {(selectedSale.paidAmount||0).toLocaleString()}</span>
                 </div>
-                <div className="border-t border-gray-300 pt-1.5 flex justify-between font-bold text-base">
-                  <span className={selectedSale.balance > 0 ? "text-red-700" : "text-green-700"}>
-                    {selectedSale.balance > 0 ? "Balance Due:" : "Change:"}
-                  </span>
-                  <span className={selectedSale.balance > 0 ? "text-red-700" : "text-green-700"}>
-                    {formatCurrency(Math.abs(selectedSale.balance))}
-                  </span>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:"13px",fontWeight:700,borderTop:"2px solid #e5e7eb",marginTop:"4px",color:selectedSale.balance>0?"#b91c1c":"#15803d"}}>
+                  <span>Balance Due</span>
+                  <span>PKR {Math.abs(selectedSale.balance||0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
-            <div className="border-t border-gray-200 pt-4 flex items-start justify-between text-sm text-gray-600">
-              <div>
-                <span className="font-medium">Status: </span>
-                <span className="font-bold uppercase">{selectedSale.status}</span>
-                {selectedSale.notes && (
-                  <p className="mt-1"><span className="font-medium">Notes:</span> {selectedSale.notes}</p>
-                )}
-              </div>
-              <div className="text-right">
-                <p>Prepared by: {selectedSale.createdBy?.name}</p>
-                <p className="mt-4 pt-8 border-t border-gray-400 text-xs text-gray-400">Authorized Signature</p>
-              </div>
+            {selectedSale.notes && <p style={{fontSize:"11px",color:"#555",marginBottom:"12px"}}><strong>Notes:</strong> {selectedSale.notes}</p>}
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:"24px",paddingTop:"14px",borderTop:"1px solid #e5e7eb",fontSize:"11px",color:"#6b7280"}}>
+              <span>Customer Signature: _______________________</span>
+              <span>Authorized By: _______________________</span>
             </div>
           </div>
         </div>
