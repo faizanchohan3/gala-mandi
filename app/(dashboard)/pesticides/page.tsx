@@ -363,26 +363,40 @@ export default function PesticidesPage() {
           <DialogHeader>
             <DialogTitle>Sell: {selectedPesticide?.name}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-500">Available: <strong>{selectedPesticide?.quantity} {selectedPesticide?.unit}</strong></p>
-              <p className="text-sm text-gray-500">Sale Price: <strong>{formatCurrency(selectedPesticide?.salePrice || 0)}</strong></p>
-            </div>
-            <div><Label>Quantity</Label><Input type="number" value={saleForm.quantity} onChange={(e) => setSaleForm({ ...saleForm, quantity: e.target.value })} /></div>
-            <div>
-              <Label>Total Amount</Label>
-              <p className="text-lg font-bold text-green-700 mt-1">
-                {formatCurrency(parseFloat(saleForm.quantity || "0") * (selectedPesticide?.salePrice || 0))}
-              </p>
-            </div>
-            <div><Label>Customer Name</Label><Input value={saleForm.customerName} onChange={(e) => setSaleForm({ ...saleForm, customerName: e.target.value })} /></div>
-            <div><Label>Amount Paid</Label><Input type="number" value={saleForm.paidAmount} onChange={(e) => setSaleForm({ ...saleForm, paidAmount: e.target.value })} /></div>
-            <div><Label>Incentive (PKR)</Label><Input type="number" value={saleForm.incentive} onChange={(e) => setSaleForm({ ...saleForm, incentive: e.target.value })} placeholder="0" /></div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowSaleModal(false)} className="flex-1">Cancel</Button>
-              <Button onClick={handleSale} className="flex-1">Sell</Button>
-            </div>
-          </div>
+          {(() => {
+            const qty = parseFloat(saleForm.quantity || "0")
+            const unitPrice = selectedPesticide?.salePrice || 0
+            const subtotal = qty * unitPrice
+            const incentive = parseFloat(saleForm.incentive || "0")
+            const totalAmount = Math.max(0, subtotal - incentive)
+            return (
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 flex justify-between">
+                  <span>Available: <strong>{selectedPesticide?.quantity} {selectedPesticide?.unit}</strong></span>
+                  <span>Unit Price: <strong>{formatCurrency(unitPrice)}</strong></span>
+                </div>
+                <div><Label>Quantity</Label><Input type="number" value={saleForm.quantity} onChange={(e) => setSaleForm({ ...saleForm, quantity: e.target.value })} /></div>
+                <div className="flex justify-between text-sm text-gray-600 px-1">
+                  <span>Subtotal</span>
+                  <span className="font-medium">{formatCurrency(subtotal)}</span>
+                </div>
+                <div>
+                  <Label>Incentive / Discount (PKR)</Label>
+                  <Input type="number" value={saleForm.incentive} onChange={(e) => setSaleForm({ ...saleForm, incentive: e.target.value })} placeholder="0" />
+                </div>
+                <div className="bg-green-50 rounded-lg px-4 py-3 flex justify-between items-center border border-green-200">
+                  <span className="text-sm font-semibold text-green-800">Total Amount</span>
+                  <span className="text-xl font-bold text-green-700">{formatCurrency(totalAmount)}</span>
+                </div>
+                <div><Label>Customer Name</Label><Input value={saleForm.customerName} onChange={(e) => setSaleForm({ ...saleForm, customerName: e.target.value })} /></div>
+                <div><Label>Amount Paid</Label><Input type="number" value={saleForm.paidAmount} onChange={(e) => setSaleForm({ ...saleForm, paidAmount: e.target.value })} /></div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setShowSaleModal(false)} className="flex-1">Cancel</Button>
+                  <Button onClick={handleSale} className="flex-1">Sell</Button>
+                </div>
+              </div>
+            )
+          })()}
         </DialogContent>
       </Dialog>
     </div>

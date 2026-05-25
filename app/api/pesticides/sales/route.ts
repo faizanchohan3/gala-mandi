@@ -31,7 +31,8 @@ export async function POST(req: Request) {
     if (!quantity || quantity <= 0) return NextResponse.json({ error: "Invalid quantity" }, { status: 400 })
     if (!unitPrice || unitPrice <= 0) return NextResponse.json({ error: "Invalid unit price" }, { status: 400 })
 
-    const totalAmount = quantity * unitPrice
+    const incentiveAmt = parseFloat(incentive) || 0
+    const totalAmount = Math.max(0, quantity * unitPrice - incentiveAmt)
     const paid = parseFloat(paidAmount) || 0
     const balance = totalAmount - paid
 
