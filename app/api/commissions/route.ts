@@ -127,6 +127,10 @@ export async function POST(req: Request) {
     }
 
     // Record commission as income in finance/transactions
+    const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
+    const commissionAccount = await tx.account.findFirst({
+      where: { ...shopFilter, type: "INCOME", name: "Commission Income", isActive: true },
+    })
     await tx.transaction.create({
       data: {
         shopId: session.user.shopId || null,
@@ -135,9 +139,35 @@ export async function POST(req: Request) {
         description: `Commission — ${commodity || "goods"}${sellerName ? ` from ${sellerName}` : ""} to ${buyerName}`,
         reference: c.id,
         category: "Commission Income",
+        accountId: commissionAccount?.id || null,
         createdById: session.user.id,
       },
     })
+    if (commissionAccount) {
+      await tx.account.update({ where: { id: commissionAccount.id }, data: { balance: { increment: commAmount } } })
+    }
+
+    // Post labour as expense to Labour account
+    if (labourAmt > 0) {
+      const labourAccount = await tx.account.findFirst({
+        where: { ...shopFilter, type: "EXPENSE", name: "Labour", isActive: true },
+      })
+      await tx.transaction.create({
+        data: {
+          shopId: session.user.shopId || null,
+          type: "DEBIT",
+          amount: labourAmt,
+          description: `Labour — ${commodity || "goods"} (${buyerName})`,
+          reference: c.id,
+          category: "Labour",
+          accountId: labourAccount?.id || null,
+          createdById: session.user.id,
+        },
+      })
+      if (labourAccount) {
+        await tx.account.update({ where: { id: labourAccount.id }, data: { balance: { increment: labourAmt } } })
+      }
+    }
 
     // Record initial payment if any
     if (paid > 0) {

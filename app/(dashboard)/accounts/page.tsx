@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency, formatDate } from "@/lib/utils"
 import {
   Plus, Edit, X, BookOpen, TrendingUp, TrendingDown, Landmark,
-  ArrowUpCircle, ArrowDownCircle, Loader2,
+  Loader2, Printer,
 } from "lucide-react"
 
 const ACCOUNT_TYPES = ["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"] as const
@@ -37,11 +37,18 @@ export default function AccountsPage() {
   const [detail, setDetail] = useState<any>(null)
   const [form, setForm] = useState(BLANK_FORM)
   const [saving, setSaving] = useState(false)
+  const [typeFilter, setTypeFilter] = useState<"ALL" | AccountType>("ALL")
+  const [search, setSearch] = useState("")
+  const [shop, setShop] = useState<any>(null)
 
   async function loadAccounts() {
     setLoading(true)
-    const data = await fetch("/api/accounts").then((r) => r.json())
-    setAccounts(data.accounts || [])
+    const [accData, settingsData] = await Promise.all([
+      fetch("/api/accounts").then((r) => r.json()),
+      fetch("/api/settings").then((r) => r.json()).catch(() => ({ shop: null })),
+    ])
+    setAccounts(accData.accounts || [])
+    setShop(settingsData.shop || null)
     setLoading(false)
   }
 
@@ -98,18 +105,69 @@ export default function AccountsPage() {
     loadAccounts()
   }
 
+  const filteredAccounts = accounts.filter((a) => {
+    const matchType = typeFilter === "ALL" || a.type === typeFilter
+    const matchSearch = search === "" ||
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      a.code.includes(search)
+    return matchType && matchSearch
+  })
+
   const grouped = ACCOUNT_TYPES.reduce((acc, type) => {
+    acc[type] = filteredAccounts.filter((a) => a.type === type)
+    return acc
+  }, {} as Record<AccountType, any[]>)
+
+  const allGrouped = ACCOUNT_TYPES.reduce((acc, type) => {
     acc[type] = accounts.filter((a) => a.type === type)
     return acc
   }, {} as Record<AccountType, any[]>)
 
-  const totalIncome  = grouped.INCOME.reduce((s, a) => s + a.balance, 0)
-  const totalExpense = grouped.EXPENSE.reduce((s, a) => s + a.balance, 0)
-  const totalAsset   = grouped.ASSET.reduce((s, a) => s + a.balance, 0)
+  const totalIncome  = allGrouped.INCOME.reduce((s, a) => s + a.balance, 0)
+  const totalExpense = allGrouped.EXPENSE.reduce((s, a) => s + a.balance, 0)
+  const totalAsset   = allGrouped.ASSET.reduce((s, a) => s + a.balance, 0)
+  const today = new Date().toLocaleDateString("en-PK")
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+
+      {/* ── Print Header ── */}
+      <div className="hidden print:block">
+        <style>{`@media print { @page { size: A4 portrait; } }`}</style>
+        <div style={{background:"linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%)",color:"#fff",padding:"16px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+            {shop?.logo
+              ? <img src={shop.logo} style={{width:"52px",height:"52px",borderRadius:"8px",background:"#fff",padding:"3px",objectFit:"contain"}} alt="" />
+              : <div style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px",fontWeight:900,border:"2px solid rgba(255,255,255,0.3)"}}>{(shop?.name||"G")[0].toUpperCase()}</div>
+            }
+            <div>
+              <div style={{fontSize:"20px",fontWeight:900,letterSpacing:"-0.5px"}}>{shop?.name||"Gala Mandi"}</div>
+              {shop?.ownerName && <div style={{fontSize:"11px",opacity:0.8,marginTop:"2px"}}>{shop.ownerName}</div>}
+            </div>
+          </div>
+          <div style={{textAlign:"right",fontSize:"11px",lineHeight:1.9,opacity:0.9}}>
+            {shop?.phone && <div>&#9990;&nbsp;{shop.phone}</div>}
+            {shop?.address && <div>&#9679;&nbsp;{shop.address}</div>}
+            <div style={{fontSize:"10px",opacity:0.75}}>Printed: {today}</div>
+          </div>
+        </div>
+        <div style={{height:"4px",background:"linear-gradient(90deg,#fbbf24 0%,#f59e0b 50%,#d97706 100%)"}}></div>
+        <div style={{padding:"10px 22px 8px",background:"#f8fdf8",borderBottom:"1px solid #e5e7eb",marginBottom:"8px"}}>
+          <h2 style={{margin:0,fontSize:"16px",fontWeight:800,color:"#14532d"}}>Chart of Accounts</h2>
+          <div style={{fontSize:"11px",color:"#6b7280",marginTop:"2px"}}>
+            {typeFilter === "ALL" ? "All account types" : `Filtered: ${TYPE_META[typeFilter as AccountType]?.label}`}
+          </div>
+          <div style={{display:"flex",gap:"24px",marginTop:"8px",fontSize:"11px"}}>
+            <span>Income: <strong style={{color:"#166534"}}>{formatCurrency(totalIncome)}</strong></span>
+            <span>Expenses: <strong style={{color:"#c2410c"}}>{formatCurrency(totalExpense)}</strong></span>
+            <span>Assets: <strong style={{color:"#1d4ed8"}}>{formatCurrency(totalAsset)}</strong></span>
+            <span>Net: <strong style={{color: totalIncome - totalExpense >= 0 ? "#166534" : "#b91c1c"}}>{formatCurrency(totalIncome - totalExpense)}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Screen Header ── */}
+      <div className="flex items-center justify-between print:hidden">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Chart of Accounts</h2>
           <p className="text-gray-500 text-sm">{accounts.length} accounts</p>
@@ -121,12 +179,15 @@ export default function AccountsPage() {
               Load Default Accounts
             </Button>
           )}
+          <Button variant="outline" onClick={() => window.print()} className="gap-2">
+            <Printer className="w-4 h-4" /> Print
+          </Button>
           <Button onClick={openAdd}><Plus className="w-4 h-4" /> Add Account</Button>
         </div>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:hidden">
         <Card className="border-l-4 border-l-green-500">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
@@ -155,6 +216,41 @@ export default function AccountsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Filters ── */}
+      {accounts.length > 0 && (
+        <div className="flex flex-wrap gap-3 items-center print:hidden">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search account name or code..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {(["ALL", ...ACCOUNT_TYPES] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t as any)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                  typeFilter === t
+                    ? t === "ALL"
+                      ? "bg-gray-800 text-white border-gray-800"
+                      : `${TYPE_META[t as AccountType].bg} ${TYPE_META[t as AccountType].color} ${TYPE_META[t as AccountType].border}`
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {t === "ALL" ? "All Types" : TYPE_META[t as AccountType].label}
+                <span className="ml-1 opacity-70">
+                  ({t === "ALL" ? accounts.length : allGrouped[t as AccountType].length})
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-gray-400">Loading accounts...</div>
@@ -195,8 +291,8 @@ export default function AccountsPage() {
                         <th className="text-left py-2 px-4 text-gray-400 font-medium text-xs">Account Name</th>
                         <th className="text-left py-2 px-4 text-gray-400 font-medium text-xs hidden md:table-cell">Description</th>
                         <th className="text-right py-2 px-4 text-gray-400 font-medium text-xs">Balance</th>
-                        <th className="text-right py-2 px-4 text-gray-400 font-medium text-xs w-24">Txns</th>
-                        <th className="py-2 px-4 w-20"></th>
+                        <th className="text-right py-2 px-4 text-gray-400 font-medium text-xs w-24 print:hidden">Txns</th>
+                        <th className="py-2 px-4 w-20 print:hidden"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -206,7 +302,7 @@ export default function AccountsPage() {
                           <td className="py-2.5 px-4">
                             <button
                               onClick={() => openDetail(a)}
-                              className={`font-semibold hover:underline ${meta.color}`}
+                              className={`font-semibold hover:underline ${meta.color} print:pointer-events-none`}
                             >
                               {a.name}
                             </button>
@@ -215,12 +311,12 @@ export default function AccountsPage() {
                           <td className={`py-2.5 px-4 text-right font-semibold ${a.balance > 0 ? meta.color : "text-gray-400"}`}>
                             {formatCurrency(a.balance)}
                           </td>
-                          <td className="py-2.5 px-4 text-right">
+                          <td className="py-2.5 px-4 text-right print:hidden">
                             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                               {a._count?.transactions || 0}
                             </span>
                           </td>
-                          <td className="py-2.5 px-4">
+                          <td className="py-2.5 px-4 print:hidden">
                             <div className="flex items-center gap-1 justify-end">
                               <button onClick={() => openEdit(a)} className="p-1 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded" title="Edit">
                                 <Edit className="w-3.5 h-3.5" />
@@ -233,11 +329,47 @@ export default function AccountsPage() {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot className="bg-gray-50 border-t border-gray-100">
+                      <tr>
+                        <td colSpan={3} className="py-2 px-4 font-bold text-gray-600 text-xs">
+                          {group.length} account{group.length !== 1 ? "s" : ""}
+                        </td>
+                        <td className={`py-2 px-4 text-right font-bold text-sm ${meta.color}`}>
+                          {formatCurrency(groupTotal)}
+                        </td>
+                        <td colSpan={2} className="print:hidden" />
+                      </tr>
+                    </tfoot>
                   </table>
                 </CardContent>
               </Card>
             )
           })}
+
+          {/* Print summary footer */}
+          <div className="hidden print:block mt-6 border-t-2 border-gray-300 pt-4">
+            <table className="w-full text-sm">
+              <tbody>
+                <tr className="font-bold text-green-800">
+                  <td className="py-1">Total Income</td>
+                  <td className="text-right">{formatCurrency(totalIncome)}</td>
+                </tr>
+                <tr className="font-bold text-orange-700">
+                  <td className="py-1">Total Expenses</td>
+                  <td className="text-right">{formatCurrency(totalExpense)}</td>
+                </tr>
+                <tr className="font-bold text-lg border-t border-gray-300">
+                  <td className="py-2">Net Profit / Loss</td>
+                  <td className={`text-right ${totalIncome - totalExpense >= 0 ? "text-green-700" : "text-red-700"}`}>
+                    {formatCurrency(Math.abs(totalIncome - totalExpense))}
+                    <span className="text-sm ml-1 font-normal">
+                      {totalIncome - totalExpense >= 0 ? "Profit" : "Loss"}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

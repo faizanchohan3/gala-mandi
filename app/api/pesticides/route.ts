@@ -23,13 +23,39 @@ export async function POST(req: Request) {
   const body = await req.json()
   const { name, categoryId, manufacturer, batchNumber, expiryDate, quantity, unit, purchasePrice, salePrice, incentive, minStock } = body
 
+  const incentiveAmt = parseFloat(incentive || "0")
+
   const pesticide = await db.pesticide.create({
     data: {
       name, categoryId, manufacturer, batchNumber,
       expiryDate: expiryDate ? new Date(expiryDate) : null,
-      quantity, unit, purchasePrice, salePrice, incentive: incentive || 0, minStock: minStock || 0,
+      quantity, unit, purchasePrice, salePrice, incentive: incentiveAmt, minStock: minStock || 0,
     },
   })
+
+  // Post incentive as income to chart of accounts
+  if (incentiveAmt > 0) {
+    const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
+    const incomeAccount = await db.account.findFirst({
+      where: { ...shopFilter, type: "INCOME", isActive: true, name: { in: ["Pesticide Incentive", "Other Income", "Pesticide Sales"] } },
+      orderBy: { code: "asc" },
+    })
+    await db.transaction.create({
+      data: {
+        shopId: session.user.shopId || null,
+        type: "CREDIT",
+        amount: incentiveAmt,
+        description: `Pesticide incentive — ${name}`,
+        reference: pesticide.id,
+        category: "Pesticide Incentive",
+        accountId: incomeAccount?.id || null,
+        createdById: session.user.id,
+      },
+    })
+    if (incomeAccount) {
+      await db.account.update({ where: { id: incomeAccount.id }, data: { balance: { increment: incentiveAmt } } })
+    }
+  }
 
   await createAuditLog({ userId: session.user.id, action: "CREATE", module: "PESTICIDES", details: `Added pesticide: ${name}` })
 
