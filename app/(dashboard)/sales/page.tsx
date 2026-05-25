@@ -178,6 +178,64 @@ export default function SalesPage() {
     window.print()
   }
 
+  function printProductSale(s: any) {
+    const buyer = s.customer?.name || s.farmer?.name || "Walk-in"
+    const phone = s.customer?.phone || s.farmer?.phone || ""
+    const ref = s.id.slice(-8).toUpperCase()
+    const date = new Date(s.createdAt).toLocaleDateString("en-PK")
+    const bal = s.balance ?? (s.totalAmount - s.paidAmount)
+    const statusCls = bal <= 0 ? "PAID" : s.paidAmount > 0 ? "PARTIAL" : "PENDING"
+    const rows = (s.items || []).map((item: any, i: number) =>
+      `<tr style="background:${i%2===0?"#f9fafb":"#fff"}">
+        <td>${i+1}</td>
+        <td>${item.product?.name || "—"}</td>
+        <td style="text-align:center">${item.quantity}</td>
+        <td style="text-align:center">${item.product?.unit || ""}</td>
+        <td style="text-align:right">PKR ${(item.price || 0).toLocaleString()}</td>
+        <td style="text-align:right">PKR ${(item.total || 0).toLocaleString()}</td>
+      </tr>`
+    ).join("")
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Sale Invoice — ${ref}</title>
+<style>${receiptCSS}</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div>
+    <div class="doc-title">Sales Invoice</div>
+    <div class="doc-sub">Invoice #: ${ref} &nbsp;|&nbsp; By: ${s.createdBy?.name || "—"}</div>
+  </div>
+  <div class="doc-meta"><div>${date}</div><span class="badge badge-${statusCls}">${statusCls}</span></div>
+</div>
+<div class="body-pad">
+  <div class="info-grid">
+    <div><div class="lbl">Bill To</div><div class="val">${buyer}</div>${phone ? `<div style="color:#6b7280;font-size:10px;margin-top:2px">${phone}</div>` : ""}</div>
+    <div><div class="lbl">Type</div><div class="val">${s.farmer ? "Farmer" : s.customer ? "Trader" : "Walk-in"}</div></div>
+    <div><div class="lbl">Date</div><div class="val">${date}</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Product</th><th style="text-align:center">Qty</th><th style="text-align:center">Unit</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="totals-box">
+    <table>
+      <tbody>
+        <tr><td>Sub Total</td><td style="text-align:right">PKR ${(s.totalAmount || 0).toLocaleString()}</td></tr>
+        <tr><td>Paid</td><td style="text-align:right;color:#15803d">PKR ${(s.paidAmount || 0).toLocaleString()}</td></tr>
+      </tbody>
+      <tfoot><tr class="grand"><td>Balance Due</td><td style="text-align:right;color:${bal > 0 ? "#b91c1c" : "#15803d"}">PKR ${bal.toLocaleString()}</td></tr></tfoot>
+    </table>
+  </div>
+  ${s.notes ? `<p style="font-size:11px;color:#555;margin-top:12px"><strong>Notes:</strong> ${s.notes}</p>` : ""}
+  <div class="sig-row">
+    <span>Customer Signature: _______________________</span>
+    <span>Authorized By: _______________________</span>
+  </div>
+</div>
+</body></html>`)
+    w.document.close()
+    w.print()
+  }
+
   function printPesticideSale(s: any) {
     const buyer = s.customer?.name || s.farmer?.name || s.customerName || "Walk-in"
     const phone = s.customer?.phone || s.farmer?.phone || ""
@@ -520,13 +578,22 @@ ${buildPrintHeader(shop)}
                           <td className="py-3 px-3 text-gray-500">{formatDate(s.createdAt)}</td>
                           <td className="py-3 px-3 text-gray-500">{s.createdBy?.name}</td>
                           <td className="py-3 px-3">
-                            <button
-                              onClick={() => openDetail(s)}
-                              className="p-1.5 text-gray-400 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
-                              title="View & Print"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => openDetail(s)}
+                                className="p-1.5 text-gray-400 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => printProductSale(s)}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Print Invoice"
+                              >
+                                <Printer className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
