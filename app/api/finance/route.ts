@@ -39,10 +39,37 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { type, amount, description, reference, category, bankId } = await req.json()
+  const { type, amount, description, reference, category, bankId, accountId } = await req.json()
 
-  const transaction = await db.transaction.create({
-    data: { shopId: session.user.shopId || null, type, amount, description, reference, category, bankId: bankId || null, createdById: session.user.id },
+  const transaction = await db.$transaction(async (tx) => {
+    const t = await tx.transaction.create({
+      data: {
+        shopId: session.user.shopId || null,
+        type,
+        amount,
+        description,
+        reference,
+        category,
+        bankId: bankId || null,
+        accountId: accountId || null,
+        createdById: session.user.id,
+      },
+    })
+
+    if (accountId) {
+      const account = await tx.account.findUnique({ where: { id: accountId }, select: { type: true } })
+      if (account) {
+        // Natural direction: EXPENSE/LIABILITY → DEBIT increases balance, INCOME/ASSET → CREDIT increases balance
+        const naturalDebit = ["ASSET", "EXPENSE"]
+        const isNatural = naturalDebit.includes(account.type) ? type === "DEBIT" : type === "CREDIT"
+        await tx.account.update({
+          where: { id: accountId },
+          data: { balance: { [isNatural ? "increment" : "decrement"]: amount } },
+        })
+      }
+    }
+
+    return t
   })
 
   await createAuditLog({ userId: session.user.id, action: "CREATE", module: "FINANCE", details: `${type}: PKR ${amount} - ${description}` })

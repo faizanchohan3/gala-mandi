@@ -9,7 +9,7 @@ import {
   Wallet, BarChart3, ClipboardList, Users, Settings,
   ChevronLeft, ChevronRight, Store, CheckSquare, UserCheck,
   Truck, ChevronDown, Receipt, Tractor, UserCog, Warehouse,
-  Scale, UserCircle, Building2,
+  Scale, UserCircle, Building2, BookOpen,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -47,6 +47,7 @@ const shopNavItems: NavItem[] = [
   
   { href: "/pesticides", label: "Pesticides", icon: Sprout },
   { href: "/finance", label: "Roznamcha", icon: Wallet },
+  { href: "/accounts", label: "Accounts", icon: BookOpen },
   { href: "/banks", label: "Banks", icon: Building2 },
   { href: "/expenses", label: "Expenses", icon: Receipt },
 

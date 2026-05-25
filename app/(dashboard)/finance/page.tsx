@@ -19,20 +19,23 @@ export default function FinancePage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 })
   const [banks, setBanks] = useState<any[]>([])
+  const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "" })
+  const [form, setForm] = useState({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "" })
 
   async function loadData() {
     try {
       setLoading(true)
-      const [txData, bankData] = await Promise.all([
+      const [txData, bankData, accData] = await Promise.all([
         fetch("/api/finance").then((r) => r.json()),
         fetch("/api/banks").then((r) => r.json()),
+        fetch("/api/accounts").then((r) => r.json()),
       ])
       setTransactions(txData.transactions || [])
       setSummary({ income: txData.income || 0, expense: txData.expense || 0, balance: txData.balance || 0 })
       setBanks(bankData.banks || [])
+      setAccounts(accData.accounts || [])
     } finally {
       setLoading(false)
     }
@@ -45,11 +48,11 @@ export default function FinancePage() {
     const res = await fetch("/api/finance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, amount: parseFloat(form.amount), bankId: form.bankId || null }),
+      body: JSON.stringify({ ...form, amount: parseFloat(form.amount), bankId: form.bankId || null, accountId: form.accountId || null }),
     })
     if (res.ok) {
       setShowModal(false)
-      setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "" })
+      setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "" })
       loadData()
     }
   }
@@ -191,7 +194,7 @@ export default function FinancePage() {
           <div className="space-y-4">
             <div>
               <Label>Type</Label>
-              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v, accountId: "" })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="CREDIT">Income (Credit)</SelectItem>
@@ -199,6 +202,30 @@ export default function FinancePage() {
                 </SelectContent>
               </Select>
             </div>
+            {accounts.length > 0 && (
+              <div>
+                <Label>Account (Chart of Accounts)</Label>
+                <Select value={form.accountId || "none"} onValueChange={(v) => setForm({ ...form, accountId: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="Select account..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— No account —</SelectItem>
+                    {(() => {
+                      const relevantTypes = form.type === "CREDIT" ? ["INCOME", "ASSET"] : ["EXPENSE", "LIABILITY"]
+                      const filtered = accounts.filter((a: any) => relevantTypes.includes(a.type))
+                      const grouped = relevantTypes.map((t) => ({ type: t, items: filtered.filter((a: any) => a.type === t) })).filter((g) => g.items.length > 0)
+                      return grouped.map((g) => (
+                        <div key={g.type}>
+                          <div className="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">{g.type}</div>
+                          {g.items.map((a: any) => (
+                            <SelectItem key={a.id} value={a.id}>{a.code} — {a.name}</SelectItem>
+                          ))}
+                        </div>
+                      ))
+                    })()}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div><Label>Amount (PKR)</Label><Input type="number" placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
             <div><Label>Description</Label><Input placeholder="e.g. Wheat sales, Rent payment" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div>

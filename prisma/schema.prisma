@@ -40,6 +40,14 @@ enum TransactionType {
   DEBIT
 }
 
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
 enum PaymentMethod {
   CASH
   BANK_TRANSFER
@@ -91,6 +99,7 @@ model Shop {
   auditLogs           AuditLog[]
   banks               Bank[]
   commissions         Commission[]
+  accounts            Account[]
 }
 
 // ── BANKS ─────────────────────────────────────────────────────────────────────
@@ -407,6 +416,7 @@ model Transaction {
   id          String          @id @default(cuid())
   shopId      String?
   bankId      String?
+  accountId   String?
   type        TransactionType
   amount      Float
   description String
@@ -415,9 +425,27 @@ model Transaction {
   createdById String
   createdAt   DateTime        @default(now())
 
-  shop      Shop? @relation(fields: [shopId], references: [id])
-  bank      Bank? @relation(fields: [bankId], references: [id])
-  createdBy User  @relation(fields: [createdById], references: [id])
+  shop      Shop?    @relation(fields: [shopId], references: [id])
+  bank      Bank?    @relation(fields: [bankId], references: [id])
+  account   Account? @relation(fields: [accountId], references: [id])
+  createdBy User     @relation(fields: [createdById], references: [id])
+}
+
+// ── CHART OF ACCOUNTS ─────────────────────────────────────────────────────────
+
+model Account {
+  id          String      @id @default(cuid())
+  shopId      String?
+  code        String
+  name        String
+  type        AccountType
+  description String?
+  balance     Float       @default(0)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+
+  shop         Shop?         @relation(fields: [shopId], references: [id])
+  transactions Transaction[]
 }
 
 // ── TASKS ────────────────────────────────────────────────────────────────────
