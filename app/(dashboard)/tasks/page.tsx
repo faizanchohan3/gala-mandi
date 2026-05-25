@@ -107,7 +107,7 @@ export default function TasksPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Tasks</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Notes</h2>
           <p className="text-gray-500 text-sm">Assign and track work</p>
         </div>
         <Button onClick={openAdd}><Plus className="w-4 h-4" /> New Task</Button>
