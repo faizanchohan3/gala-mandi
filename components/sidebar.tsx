@@ -75,10 +75,23 @@ export function Sidebar() {
   const [reportsOpen, setReportsOpen] = useState(false)
   const [shopLogo, setShopLogo] = useState<string | null>(null)
   const [liveShopName, setLiveShopName] = useState<string | null>(null)
+  const [shopModules, setShopModules] = useState({
+    moduleGodown: false, moduleGate: false, moduleTransport: false,
+    moduleFarmers: true, moduleCommission: true, modulePesticides: false,
+  })
 
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
   const shopName = liveShopName ?? session?.user?.shopName
-  const navItems = isSuperAdmin ? superAdminNavItems : shopNavItems
+
+  const navItems = isSuperAdmin ? superAdminNavItems : shopNavItems.filter((item) => {
+    if (item.href === "/warehouse")  return shopModules.moduleGodown
+    if (item.href === "/gate")       return shopModules.moduleGate
+    if (item.href === "/transport")  return shopModules.moduleTransport
+    if (item.href === "/farmers")    return shopModules.moduleFarmers
+    if (item.href === "/commission") return shopModules.moduleCommission
+    if (item.href === "/pesticides") return shopModules.modulePesticides
+    return true
+  })
 
   useEffect(() => {
     if (pathname.startsWith("/reports")) setReportsOpen(true)
@@ -91,6 +104,16 @@ export function Sidebar() {
         .then((d) => {
           if (d.shop?.logo) setShopLogo(d.shop.logo)
           if (d.shop?.name) setLiveShopName(d.shop.name)
+          if (d.shop) {
+            setShopModules({
+              moduleGodown:     !!d.shop.moduleGodown,
+              moduleGate:       !!d.shop.moduleGate,
+              moduleTransport:  !!d.shop.moduleTransport,
+              moduleFarmers:    d.shop.moduleFarmers !== false,
+              moduleCommission: d.shop.moduleCommission !== false,
+              modulePesticides: !!d.shop.modulePesticides,
+            })
+          }
         })
         .catch(() => {})
     }

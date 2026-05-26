@@ -77,8 +77,8 @@ export default async function DashboardPage() {
     { title: "Today's Sales", value: formatCurrency(data.todaySales), icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50", href: "/sales" },
     { title: "Month Sales", value: formatCurrency(data.monthSales), icon: TrendingUp, color: "text-green-600", bg: "bg-green-50", href: "/sales" },
     { title: "Total Products", value: data.totalProducts.toString(), icon: Package, color: "text-purple-600", bg: "bg-purple-50", href: "/inventory" },
-    { title: "Total Customers", value: data.totalCustomers.toString(), icon: Users, color: "text-orange-600", bg: "bg-orange-50", href: "/customers" },
-    { title: "Pending Tasks", value: data.pendingTasks.toString(), icon: CheckSquare, color: "text-yellow-600", bg: "bg-yellow-50", href: "/tasks" },
+    { title: "Total Traders", value: data.totalCustomers.toString(), icon: Users, color: "text-orange-600", bg: "bg-orange-50", href: "/customers" },
+    { title: "Pending Notes", value: data.pendingTasks.toString(), icon: CheckSquare, color: "text-yellow-600", bg: "bg-yellow-50", href: "/tasks" },
     {
       title: "Pesticide Alerts",
       value: data.expiredPesticides.toString(),

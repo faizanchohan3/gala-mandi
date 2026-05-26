@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Plus, Tag, ImageIcon, Trash2, Upload, Store } from "lucide-react"
+import { Plus, Tag, ImageIcon, Trash2, Upload, Store, ToggleLeft, ToggleRight } from "lucide-react"
 
 export default function SettingsPage() {
   const [categories, setCategories] = useState<any[]>([])
@@ -19,6 +19,18 @@ export default function SettingsPage() {
   // Shop name state
   const [shopName, setShopName] = useState("")
   const [savingName, setSavingName] = useState(false)
+
+  // Module toggles
+  const [modules, setModules] = useState({
+    moduleGodown: false,
+    moduleGate: false,
+    moduleTransport: false,
+    moduleFarmers: true,
+    moduleCommission: true,
+    modulePesticides: false,
+  })
+  const [savingModules, setSavingModules] = useState(false)
+  const [moduleSavedKey, setModuleSavedKey] = useState<string | null>(null)
 
   // Logo states
   const [currentLogo, setCurrentLogo] = useState<string | null>(null)
@@ -35,8 +47,17 @@ export default function SettingsPage() {
     if (cr.status === "fulfilled") setCategories(cr.value.categories || [])
     if (pcr.status === "fulfilled") setPestCategories(pcr.value.categories || [])
     if (sr.status === "fulfilled" && sr.value.shop) {
-      if (sr.value.shop.logo) setCurrentLogo(sr.value.shop.logo)
-      if (sr.value.shop.name) setShopName(sr.value.shop.name)
+      const s = sr.value.shop
+      if (s.logo) setCurrentLogo(s.logo)
+      if (s.name) setShopName(s.name)
+      setModules({
+        moduleGodown:     !!s.moduleGodown,
+        moduleGate:       !!s.moduleGate,
+        moduleTransport:  !!s.moduleTransport,
+        moduleFarmers:    s.moduleFarmers !== false,
+        moduleCommission: s.moduleCommission !== false,
+        modulePesticides: !!s.modulePesticides,
+      })
     }
   }
 
@@ -85,6 +106,47 @@ export default function SettingsPage() {
       alert("Network error. Please try again.")
     } finally {
       setSavingName(false)
+    }
+  }
+
+  async function saveModules(updated: typeof modules) {
+    setSavingModules(true)
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      })
+    } catch {
+      alert("Network error. Please try again.")
+    } finally {
+      setSavingModules(false)
+    }
+  }
+
+  function toggleModule(key: keyof typeof modules) {
+    setModules((prev) => ({ ...prev, [key]: !prev[key] }))
+    setModuleSavedKey(null)
+  }
+
+  async function handleSaveModules() {
+    setSavingModules(true)
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(modules),
+      })
+      if (res.ok) {
+        setModuleSavedKey("saved")
+        setTimeout(() => setModuleSavedKey(null), 3000)
+      } else {
+        alert("Failed to save modules.")
+      }
+    } catch {
+      alert("Network error. Please try again.")
+    } finally {
+      setSavingModules(false)
     }
   }
 
@@ -185,6 +247,59 @@ export default function SettingsPage() {
             >
               {savingName ? "Saving..." : "Save"}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modules */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ToggleRight className="w-4 h-4" /> Sidebar Modules
+          </CardTitle>
+          <p className="text-xs text-gray-500">Enable only the modules your shop uses. Changes apply immediately in the sidebar.</p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {([
+              { key: "moduleCommission", label: "Commission (Aadat)", desc: "Commission entries and payments" },
+              { key: "moduleFarmers",    label: "Farmers",            desc: "Farmer accounts, peshgi, ledger" },
+              { key: "modulePesticides", label: "Pesticides",         desc: "Pesticide stock and sales" },
+              { key: "moduleGodown",     label: "Godowns",            desc: "Warehouse and storage management" },
+              { key: "moduleGate",       label: "Gate / Weighbridge", desc: "Entry/exit and weight recording" },
+              { key: "moduleTransport",  label: "FeedMills",          desc: "Transport and freight slips" },
+            ] as { key: keyof typeof modules; label: string; desc: string }[]).map(({ key, label, desc }) => (
+              <div
+                key={key}
+                onClick={() => !savingModules && toggleModule(key)}
+                className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all select-none
+                  ${modules[key]
+                    ? "border-green-600 bg-green-50"
+                    : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                  }`}
+              >
+                <div>
+                  <p className={`text-sm font-semibold ${modules[key] ? "text-green-800" : "text-gray-700"}`}>{label}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                </div>
+                {modules[key]
+                  ? <ToggleRight className="w-7 h-7 text-green-600 flex-shrink-0" />
+                  : <ToggleLeft className="w-7 h-7 text-gray-400 flex-shrink-0" />
+                }
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-3 mt-4">
+            <Button
+              className="bg-teal-700 hover:bg-teal-800"
+              onClick={handleSaveModules}
+              disabled={savingModules}
+            >
+              {savingModules ? "Saving..." : "Save Modules"}
+            </Button>
+            {moduleSavedKey === "saved" && (
+              <span className="text-sm text-green-600 font-medium">✓ Modules saved successfully</span>
+            )}
           </div>
         </CardContent>
       </Card>

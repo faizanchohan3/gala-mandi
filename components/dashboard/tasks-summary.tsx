@@ -19,7 +19,7 @@ export function TasksSummary() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">My Tasks</CardTitle>
+        <CardTitle className="text-base">My Notes</CardTitle>
         <Link href="/tasks" className="text-xs text-green-700 hover:underline">
           View all
         </Link>
@@ -28,7 +28,7 @@ export function TasksSummary() {
         {tasks.length === 0 ? (
           <div className="text-center py-6 text-gray-400">
             <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">No pending tasks</p>
+            <p className="text-sm">No pending notes</p>
           </div>
         ) : (
           <div className="space-y-3">
