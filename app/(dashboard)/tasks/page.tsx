@@ -83,7 +83,7 @@ export default function TasksPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this task?")) return
+    if (!confirm("Delete this note?")) return
     await fetch(`/api/tasks/${id}`, { method: "DELETE" })
     loadData()
   }
@@ -110,7 +110,7 @@ export default function TasksPage() {
           <h2 className="text-2xl font-bold text-gray-900">Notes</h2>
           <p className="text-gray-500 text-sm">Assign and track work</p>
         </div>
-        <Button onClick={openAdd}><Plus className="w-4 h-4" /> New Task</Button>
+        <Button onClick={openAdd}><Plus className="w-4 h-4" /> New Note</Button>
       </div>
 
       {/* Filter Tabs */}
@@ -193,7 +193,7 @@ export default function TasksPage() {
           {filtered.length === 0 && (
             <div className="col-span-3 text-center py-12 text-gray-400">
               <CheckCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p>No tasks found</p>
+              <p>No notes found</p>
             </div>
           )}
         </div>
@@ -202,10 +202,10 @@ export default function TasksPage() {
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Task" : "New Task"}</DialogTitle>
+            <DialogTitle>{editing ? "Edit Note" : "New Note"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Task title" /></div>
+            <div><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Note title" /></div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Optional details..." /></div>
             <div>
               <Label>Assign To</Label>
@@ -247,7 +247,7 @@ export default function TasksPage() {
             )}
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
-              <Button onClick={handleSave} className="flex-1">{editing ? "Update" : "Create Task"}</Button>
+              <Button onClick={handleSave} className="flex-1">{editing ? "Update" : "Create Note"}</Button>
             </div>
           </div>
         </DialogContent>
