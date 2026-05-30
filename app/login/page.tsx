@@ -131,7 +131,7 @@ export default function LoginPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="admin@galamandi.com"
+                      placeholder="your@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -171,13 +171,7 @@ export default function LoginPage() {
                   </Button>
                 </form>
 
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg text-xs text-gray-500">
-                  <p className="font-medium text-gray-700 mb-1">Platform Admin Login:</p>
-                  <p>Email: admin@galamandi.com</p>
-                  <p>Password: admin123</p>
-                </div>
-
-                <p className="mt-4 text-center text-sm text-gray-500">
+                <p className="mt-6 text-center text-sm text-gray-500">
                   Want to register your shop?{" "}
                   <button onClick={() => setTab("register")} className="text-green-700 font-medium hover:underline">
                     Register here
