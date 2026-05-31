@@ -222,12 +222,13 @@ model Customer {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  shop           Shop?           @relation(fields: [shopId], references: [id])
-  sales          Sale[]
-  pesticideSales PesticideSale[]
-  freightSlips   FreightSlip[]
-  commissions    Commission[]
-  payments       CustomerPayment[]
+  shop              Shop?           @relation(fields: [shopId], references: [id])
+  sales             Sale[]
+  pesticideSales    PesticideSale[]
+  freightSlips      FreightSlip[]
+  commissions       Commission[]
+  payments          CustomerPayment[]
+  purchasesAsSeller Purchase[]      @relation("PurchaseSeller")
 }
 
 model CustomerPayment {
@@ -311,25 +312,28 @@ model SaleItem {
 // ── PURCHASES ────────────────────────────────────────────────────────────────
 
 model Purchase {
-  id          String     @id @default(cuid())
-  shopId      String?
-  supplierId  String?
-  farmerId    String?
-  totalAmount Float
-  paidAmount  Float      @default(0)
-  balance     Float      @default(0)
-  status      SaleStatus @default(PENDING)
-  notes       String?
-  createdById String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id               String     @id @default(cuid())
+  shopId           String?
+  supplierId       String?
+  farmerId         String?
+  sellerCustomerId String?
+  walkinSeller     String?
+  totalAmount      Float
+  paidAmount       Float      @default(0)
+  balance          Float      @default(0)
+  status           SaleStatus @default(PENDING)
+  notes            String?
+  createdById      String
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
-  shop      Shop?          @relation(fields: [shopId], references: [id])
-  supplier  Supplier?      @relation(fields: [supplierId], references: [id])
-  farmer    Farmer?        @relation(fields: [farmerId], references: [id])
-  createdBy User           @relation(fields: [createdById], references: [id])
-  items     PurchaseItem[]
-  payments  Payment[]
+  shop           Shop?          @relation(fields: [shopId], references: [id])
+  supplier       Supplier?      @relation(fields: [supplierId], references: [id])
+  farmer         Farmer?        @relation(fields: [farmerId], references: [id])
+  sellerCustomer Customer?      @relation("PurchaseSeller", fields: [sellerCustomerId], references: [id])
+  createdBy      User           @relation(fields: [createdById], references: [id])
+  items          PurchaseItem[]
+  payments       Payment[]
 }
 
 model PurchaseItem {
