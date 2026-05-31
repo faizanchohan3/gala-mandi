@@ -30,7 +30,7 @@ export default function PurchasesPage() {
   const [partyId, setPartyId] = useState("")
   const [paidAmount, setPaidAmount] = useState("0")
   const [notes, setNotes] = useState("")
-  const [items, setItems] = useState([{ productId: "", quantity: "1", price: "0" }])
+  const [items, setItems] = useState([{ productId: "", quantity: "1", price: "0", customName: "" }])
 
   // Commission path state
   const [cPartyId, setCPartyId] = useState("")
@@ -91,14 +91,19 @@ export default function PurchasesPage() {
     }
   }, [cProductId])
 
-  function addItem() { setItems([...items, { productId: "", quantity: "1", price: "0" }]) }
+  function addItem() { setItems([...items, { productId: "", quantity: "1", price: "0", customName: "" }]) }
   function removeItem(i: number) { setItems(items.filter((_, idx) => idx !== i)) }
   function updateItem(i: number, field: string, val: string) {
     const updated = [...items]
     updated[i] = { ...updated[i], [field]: val }
     if (field === "productId") {
-      const prod = products.find((p) => p.id === val)
-      if (prod) updated[i].price = String(prod.purchasePrice)
+      if (val === "manual") {
+        updated[i].customName = ""
+      } else {
+        const prod = products.find((p) => p.id === val)
+        if (prod) updated[i].price = String(prod.purchasePrice)
+        updated[i].customName = ""
+      }
     }
     setItems(updated)
   }
@@ -114,7 +119,7 @@ export default function PurchasesPage() {
   function resetModal() {
     setPurchaseType("stock")
     setPartyId(""); setPaidAmount("0"); setNotes("")
-    setItems([{ productId: "", quantity: "1", price: "0" }])
+    setItems([{ productId: "", quantity: "1", price: "0", customName: "" }])
     setCPartyId(""); setCWalkInSeller(""); setCCustomerId(""); setCWalkInCustomer("")
     setCProductId(""); setCBags(""); setCWeight(""); setCRate(""); setCTotalValue("")
     setCCommissionRate("2.5"); setCPaidAmount("0"); setCNotes("")
@@ -122,6 +127,9 @@ export default function PurchasesPage() {
 
   async function handleSaveStock() {
     if (!items[0].productId) return alert("Add at least one item")
+    for (const item of items) {
+      if (item.productId === "manual" && !item.customName.trim()) return alert("Enter a product name for manual entries")
+    }
     const isFarmer = partyId.startsWith("farmer_")
     const supplierId = (!isFarmer && partyId && partyId !== "direct") ? partyId : null
     const farmerId = isFarmer ? partyId.replace("farmer_", "") : null
@@ -132,7 +140,8 @@ export default function PurchasesPage() {
       body: JSON.stringify({
         supplierId, farmerId,
         items: items.filter((i) => i.productId).map((i) => ({
-          productId: i.productId,
+          productId: i.productId === "manual" ? null : i.productId,
+          customName: i.productId === "manual" ? i.customName.trim() : undefined,
           quantity: parseFloat(i.quantity),
           price: parseFloat(i.price),
         })),
@@ -401,16 +410,7 @@ ${buildPrintHeader(shop)}
             >
               <Package className="w-4 h-4" /> Add to Stock
             </button>
-            <button
-              onClick={() => setPurchaseType("commission")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${
-                purchaseType === "commission"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <Percent className="w-4 h-4" /> Commission
-            </button>
+        
           </div>
 
           {/* ── ADD TO STOCK path ── */}
@@ -442,8 +442,19 @@ ${buildPrintHeader(shop)}
                           value={item.productId}
                           onValueChange={(v) => updateItem(i, "productId", v)}
                           placeholder="Select product"
-                          options={products.map((p: any) => ({ value: p.id, label: p.name }))}
+                          options={[
+                            { value: "manual", label: "✏ Manual / Custom Entry" },
+                            ...products.map((p: any) => ({ value: p.id, label: p.name }))
+                          ]}
                         />
+                        {item.productId === "manual" && (
+                          <Input
+                            className="mt-1"
+                            placeholder="Type product name..."
+                            value={item.customName}
+                            onChange={(e) => updateItem(i, "customName", e.target.value)}
+                          />
+                        )}
                       </div>
                       <div className="col-span-2">
                         <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(i, "quantity", e.target.value)} />

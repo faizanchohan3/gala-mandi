@@ -44,6 +44,28 @@ export async function POST(req: Request) {
   const status = balance <= 0 ? "PAID" : paidAmount > 0 ? "PARTIAL" : "PENDING"
 
   const purchase = await db.$transaction(async (tx) => {
+    // Resolve custom product names to real productIds
+    const resolvedItems = await Promise.all(items.map(async (i: any) => {
+      if (i.productId) return i
+      if (!i.customName) throw new Error("Product name is required")
+      const shopId = session.user.shopId || null
+
+      // Find or create a "General" category
+      let category = await tx.category.findFirst({ where: { shopId, name: "General" } })
+      if (!category) {
+        category = await tx.category.create({ data: { shopId, name: "General" } })
+      }
+
+      // Find or create the product by name
+      let product = await tx.product.findFirst({ where: { shopId, name: i.customName } })
+      if (!product) {
+        product = await tx.product.create({
+          data: { shopId, name: i.customName, categoryId: category.id, purchasePrice: i.price, salePrice: i.price },
+        })
+      }
+      return { ...i, productId: product.id }
+    }))
+
     const p = await tx.purchase.create({
       data: {
         shopId: session.user.shopId || null,
@@ -56,7 +78,7 @@ export async function POST(req: Request) {
         notes,
         createdById: session.user.id,
         items: {
-          create: items.map((i: any) => ({
+          create: resolvedItems.map((i: any) => ({
             productId: i.productId,
             quantity: i.quantity,
             price: i.price,
@@ -74,7 +96,7 @@ export async function POST(req: Request) {
     }
 
     // Add stock
-    for (const item of items) {
+    for (const item of resolvedItems) {
       await tx.product.update({
         where: { id: item.productId },
         data: { currentStock: { increment: item.quantity } },
