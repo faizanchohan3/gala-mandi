@@ -6,8 +6,10 @@ export async function GET(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
+
   const customers = await db.customer.findMany({
-    where: { isActive: true },
+    where: { isActive: true, ...shopFilter },
     include: {
       sales: { select: { totalAmount: true, paidAmount: true, balance: true } },
     },

@@ -24,6 +24,7 @@ export async function GET(req: Request) {
   }
 
   if (pesticideId) where.pesticideId = pesticideId
+  if (session.user.shopId) where.shopId = session.user.shopId
 
   const sales = await db.pesticideSale.findMany({
     where,

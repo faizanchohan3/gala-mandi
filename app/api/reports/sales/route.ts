@@ -24,6 +24,7 @@ export async function GET(req: Request) {
   }
 
   if (customerId && customerId !== "all") where.customerId = customerId
+  if (session.user.shopId) where.shopId = session.user.shopId
 
   const sales = await db.sale.findMany({
     where,

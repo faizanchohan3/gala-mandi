@@ -21,19 +21,21 @@ export async function GET(req: Request) {
     }
   }
 
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
+
   const [sales, purchases, transactions] = await Promise.all([
     db.sale.aggregate({
-      where: dateWhere,
+      where: { ...dateWhere, ...shopFilter },
       _sum: { totalAmount: true, paidAmount: true, balance: true },
       _count: true,
     }),
     db.purchase.aggregate({
-      where: dateWhere,
+      where: { ...dateWhere, ...shopFilter },
       _sum: { totalAmount: true, paidAmount: true, balance: true },
       _count: true,
     }),
     db.transaction.findMany({
-      where: dateWhere,
+      where: { ...dateWhere, ...shopFilter },
       orderBy: { createdAt: "desc" },
       include: { createdBy: { select: { name: true } } },
     }),
