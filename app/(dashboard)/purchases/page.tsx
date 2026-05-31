@@ -200,7 +200,7 @@ export default function PurchasesPage() {
   }
 
   function printPurchase(p: any) {
-    const from = p.farmer?.name || p.supplier?.name || "Direct"
+    const from = p.farmer?.name || p.supplier?.name || p.sellerCustomer?.name || p.walkinSeller || "Direct"
     const ref = p.id.slice(-6).toUpperCase()
     const date = new Date(p.createdAt).toLocaleDateString("en-PK")
     const statusCls = p.status === "PAID" ? "PAID" : p.status === "PARTIAL" ? "PARTIAL" : "PENDING"
@@ -253,7 +253,7 @@ ${buildPrintHeader(shop)}
 
   function printAllPurchases(list: any[]) {
     const rows = list.map((p, i) => {
-      const from = p.farmer?.name || p.supplier?.name || "Direct"
+      const from = p.farmer?.name || p.supplier?.name || p.sellerCustomer?.name || p.walkinSeller || "Direct"
       const type = p.farmer ? "Farmer" : p.supplier ? "Supplier" : "Direct"
       const its = (p.items || []).map((it: any) => `${it.quantity} ${it.product?.unit || ""} ${it.product?.name || ""}`).join(", ")
       const statusCls = p.status === "PAID" ? "PAID" : p.status === "PARTIAL" ? "PARTIAL" : "PENDING"

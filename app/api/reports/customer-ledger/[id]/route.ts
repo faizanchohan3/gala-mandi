@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const customer = await db.customer.findUnique({ where: { id } })
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const [sales, pesticideSales, customerCommissions, customerPayments] = await Promise.all([
+  const [sales, pesticideSales, customerCommissions, customerPayments, traderPurchases] = await Promise.all([
     db.sale.findMany({
       where: { customerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
@@ -47,6 +47,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     db.customerPayment.findMany({
       where: { customerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
+    }),
+    db.purchase.findMany({
+      where: { sellerCustomerId: id, ...dateWhere },
+      orderBy: { createdAt: "asc" },
+      include: { items: { include: { product: { select: { name: true, unit: true } } } } },
     }),
   ])
 
@@ -120,6 +125,27 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         description: `Payment received — Pesticide sale`,
         debit: 0,
         credit: ps.paidAmount,
+      })
+    }
+  }
+
+  // Purchases FROM this customer/trader (we bought goods from them)
+  for (const purchase of traderPurchases) {
+    const itemDesc = purchase.items.map((i: any) => `${i.quantity} ${i.product?.unit || ""} ${i.product?.name || ""}`).join(", ")
+    events.push({
+      date: purchase.createdAt,
+      type: "TRADER_PURCHASE",
+      description: `Goods purchased from trader #${purchase.id.slice(-6).toUpperCase()}${itemDesc ? ` — ${itemDesc}` : ""}`,
+      debit: 0,
+      credit: purchase.totalAmount,
+    })
+    if (purchase.paidAmount > 0) {
+      events.push({
+        date: purchase.createdAt,
+        type: "PAYMENT",
+        description: `Payment made to trader at purchase — CASH`,
+        debit: purchase.paidAmount,
+        credit: 0,
       })
     }
   }
