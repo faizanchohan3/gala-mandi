@@ -9,7 +9,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const { id } = await params
 
-  const [customer, sales, commissions, pesticideSales, customerPayments] = await Promise.all([
+  const [customer, sales, commissions, pesticideSales, customerPayments, traderPurchases] = await Promise.all([
     db.customer.findUnique({ where: { id } }),
     db.sale.findMany({
       where: { customerId: id },
@@ -34,6 +34,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       where: { customerId: id },
       orderBy: { createdAt: "asc" },
     }),
+    db.purchase.findMany({
+      where: { sellerCustomerId: id },
+      orderBy: { createdAt: "asc" },
+      include: { items: { include: { product: { select: { name: true, unit: true } } } } },
+    }),
   ])
 
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -57,7 +62,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // Build ledger entries from all sources, sorted by date
   const ledgerEvents: {
     date: Date
-    type: "SALE" | "COMMISSION" | "PESTICIDE" | "PAYMENT"
+    type: "SALE" | "COMMISSION" | "PESTICIDE" | "PAYMENT" | "TRADER_PURCHASE"
     description: string
     debit: number
     credit: number
@@ -136,6 +141,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         description: `Payment — CASH (at sale)`,
         debit: 0,
         credit: ps.paidAmount,
+      })
+    }
+  }
+
+  for (const purchase of traderPurchases) {
+    const itemDesc = purchase.items.map((i: any) => `${i.quantity} ${i.product?.unit || ""} ${i.product?.name || ""}`).join(", ")
+    ledgerEvents.push({
+      date: purchase.createdAt,
+      type: "TRADER_PURCHASE",
+      description: `Goods sold to us #${purchase.id.slice(-6).toUpperCase()}${itemDesc ? ` — ${itemDesc}` : ""}`,
+      debit: 0,
+      credit: purchase.totalAmount,
+    })
+    if (purchase.paidAmount > 0) {
+      ledgerEvents.push({
+        date: purchase.createdAt,
+        type: "PAYMENT",
+        description: `Paid to trader at purchase — CASH`,
+        debit: purchase.paidAmount,
+        credit: 0,
       })
     }
   }

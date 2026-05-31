@@ -225,7 +225,7 @@ ${buildPrintHeader(shop)}
 <div class="body-pad">
   <div class="info-grid">
     <div><div class="lbl">From</div><div class="val">${from}</div>${p.farmer?.phone || p.supplier?.phone ? `<div style="color:#6b7280;font-size:10px;margin-top:2px">${p.farmer?.phone || p.supplier?.phone}</div>` : ""}</div>
-    <div><div class="lbl">Type</div><div class="val">${p.farmer ? "Farmer" : p.supplier ? "Supplier" : "Direct"}</div></div>
+    <div><div class="lbl">Type</div><div class="val">${p.farmer ? "Farmer" : p.supplier ? "Supplier" : p.sellerCustomer ? "Trader" : p.walkinSeller ? "Walk-in" : "Direct"}</div></div>
     <div><div class="lbl">Date</div><div class="val">${date}</div></div>
   </div>
   <table>
@@ -254,7 +254,7 @@ ${buildPrintHeader(shop)}
   function printAllPurchases(list: any[]) {
     const rows = list.map((p, i) => {
       const from = p.farmer?.name || p.supplier?.name || p.sellerCustomer?.name || p.walkinSeller || "Direct"
-      const type = p.farmer ? "Farmer" : p.supplier ? "Supplier" : "Direct"
+      const type = p.farmer ? "Farmer" : p.supplier ? "Supplier" : p.sellerCustomer ? "Trader" : p.walkinSeller ? "Walk-in" : "Direct"
       const its = (p.items || []).map((it: any) => `${it.quantity} ${it.product?.unit || ""} ${it.product?.name || ""}`).join(", ")
       const statusCls = p.status === "PAID" ? "PAID" : p.status === "PARTIAL" ? "PARTIAL" : "PENDING"
       return `<tr>
