@@ -22,6 +22,7 @@ export async function GET(req: Request) {
       include: {
         supplier: true,
         farmer: { select: { id: true, name: true, phone: true } },
+        sellerCustomer: { select: { id: true, name: true, phone: true } },
         createdBy: { select: { name: true } },
         items: { include: { product: true } },
       },
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()
-  const { supplierId, farmerId, items, paidAmount, notes } = body
+  const { supplierId, farmerId, sellerCustomerId, walkinSeller, items, paidAmount, notes } = body
 
   const totalAmount = items.reduce((s: number, i: any) => s + i.quantity * i.price, 0)
   const balance = totalAmount - (paidAmount || 0)
@@ -71,6 +72,8 @@ export async function POST(req: Request) {
         shopId: session.user.shopId || null,
         supplierId: supplierId || null,
         farmerId: farmerId || null,
+        sellerCustomerId: sellerCustomerId || null,
+        walkinSeller: walkinSeller || null,
         totalAmount,
         paidAmount: paidAmount || 0,
         balance,
@@ -92,6 +95,14 @@ export async function POST(req: Request) {
     if (paidAmount && paidAmount > 0) {
       await tx.payment.create({
         data: { purchaseId: p.id, amount: paidAmount, method: body.paymentMethod || "CASH", notes: "Initial payment at purchase" },
+      })
+    }
+
+    // Update trader/customer ledger — we owe them the unpaid balance
+    if (sellerCustomerId && balance > 0) {
+      await tx.customer.update({
+        where: { id: sellerCustomerId },
+        data: { balance: { decrement: balance } },
       })
     }
 

@@ -28,6 +28,7 @@ export default function PurchasesPage() {
 
   // Stock path state
   const [partyId, setPartyId] = useState("")
+  const [walkinSellerName, setWalkinSellerName] = useState("")
   const [paidAmount, setPaidAmount] = useState("0")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState([{ productId: "", quantity: "1", price: "0", customName: "" }])
@@ -118,7 +119,7 @@ export default function PurchasesPage() {
 
   function resetModal() {
     setPurchaseType("stock")
-    setPartyId(""); setPaidAmount("0"); setNotes("")
+    setPartyId(""); setWalkinSellerName(""); setPaidAmount("0"); setNotes("")
     setItems([{ productId: "", quantity: "1", price: "0", customName: "" }])
     setCPartyId(""); setCWalkInSeller(""); setCCustomerId(""); setCWalkInCustomer("")
     setCProductId(""); setCBags(""); setCWeight(""); setCRate(""); setCTotalValue("")
@@ -131,14 +132,18 @@ export default function PurchasesPage() {
       if (item.productId === "manual" && !item.customName.trim()) return alert("Enter a product name for manual entries")
     }
     const isFarmer = partyId.startsWith("farmer_")
-    const supplierId = (!isFarmer && partyId && partyId !== "direct") ? partyId : null
+    const isCustomer = partyId.startsWith("customer_")
+    const isWalkin = partyId === "walkin"
+    const supplierId = (!isFarmer && !isCustomer && !isWalkin && partyId) ? partyId : null
     const farmerId = isFarmer ? partyId.replace("farmer_", "") : null
+    const sellerCustomerId = isCustomer ? partyId.replace("customer_", "") : null
+    const walkinSeller = isWalkin ? walkinSellerName.trim() || null : null
 
     const res = await fetch("/api/purchases", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        supplierId, farmerId,
+        supplierId, farmerId, sellerCustomerId, walkinSeller,
         items: items.filter((i) => i.productId).map((i) => ({
           productId: i.productId === "manual" ? null : i.productId,
           customName: i.productId === "manual" ? i.customName.trim() : undefined,
@@ -299,7 +304,7 @@ ${buildPrintHeader(shop)}
   }
 
   const filtered = purchases.filter((p) =>
-    (p.supplier?.name || p.farmer?.name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (p.supplier?.name || p.farmer?.name || p.sellerCustomer?.name || p.walkinSeller || "").toLowerCase().includes(search.toLowerCase()) ||
     p.status.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -355,12 +360,16 @@ ${buildPrintHeader(shop)}
                   {filtered.map((p, i) => (
                     <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-3 px-3 text-gray-400 text-xs">{i + 1}</td>
-                      <td className="py-3 px-3 font-medium text-gray-800">{p.farmer?.name || p.supplier?.name || "Direct"}</td>
+                      <td className="py-3 px-3 font-medium text-gray-800">{p.farmer?.name || p.supplier?.name || p.sellerCustomer?.name || p.walkinSeller || "Direct"}</td>
                       <td className="py-3 px-3">
                         {p.farmer ? (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Farmer</span>
                         ) : p.supplier ? (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Supplier</span>
+                        ) : p.sellerCustomer ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Trader</span>
+                        ) : p.walkinSeller ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">Walk-in</span>
                         ) : (
                           <span className="text-xs text-gray-400">Direct</span>
                         )}
@@ -417,17 +426,26 @@ ${buildPrintHeader(shop)}
           {purchaseType === "stock" && (
             <div className="space-y-4">
               <div>
-                <Label>From (Supplier / Farmer)</Label>
+                <Label>From (Supplier / Farmer / Trader)</Label>
                 <SearchableSelect
                   value={partyId}
-                  onValueChange={setPartyId}
-                  placeholder="Direct purchase"
-                  options={[{ value: "direct", label: "Direct Purchase" }]}
+                  onValueChange={(v) => { setPartyId(v); setWalkinSellerName("") }}
+                  placeholder="Select source..."
+                  options={[{ value: "walkin", label: "Walk-in / Direct (enter name)" }]}
                   groups={[
                     { label: "Suppliers", options: suppliers.map((s: any) => ({ value: s.id, label: s.name, sub: s.phone || undefined })) },
                     { label: "Farmers", options: farmers.map((f: any) => ({ value: `farmer_${f.id}`, label: f.name, sub: f.village || f.phone || undefined })) },
+                    { label: "Traders / Customers", options: customers.map((c: any) => ({ value: `customer_${c.id}`, label: c.name, sub: c.phone || undefined })) },
                   ]}
                 />
+                {partyId === "walkin" && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Enter seller name..."
+                    value={walkinSellerName}
+                    onChange={(e) => setWalkinSellerName(e.target.value)}
+                  />
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
