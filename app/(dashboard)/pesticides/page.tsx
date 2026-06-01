@@ -79,7 +79,7 @@ export default function PesticidesPage() {
       batchNumber: p.batchNumber || "",
       expiryDate: isoExpiry ? isoToDMY(isoExpiry) : "",
       quantity: String(p.quantity), unit: p.unit,
-      purchasePrice: String(p.purchasePrice), salePrice: String(p.salePrice), incentive: String(p.incentive || 0), minStock: String(p.minStock),
+      purchasePrice: String(p.purchasePrice), salePrice: String(p.salePrice), incentive: "0", minStock: String(p.minStock),
     })
     setShowModal(true)
   }
@@ -105,6 +105,11 @@ export default function PesticidesPage() {
     }
 
     const isoExpiry = form.expiryDate ? dmyToIso(form.expiryDate) : ""
+    const qty = parseFloat(form.quantity) || 0
+    const purchasePrice = parseFloat(form.purchasePrice) || 0
+    const incentivePct = parseFloat(form.incentive) || 0
+    const subtotal = qty * purchasePrice
+    const incentiveAmt = Math.round((subtotal * incentivePct) / 100 * 100) / 100
 
     const url = editing ? `/api/pesticides/${editing.id}` : "/api/pesticides"
     const method = editing ? "PUT" : "POST"
@@ -115,10 +120,10 @@ export default function PesticidesPage() {
         ...form,
         categoryId: categoryId || null,
         expiryDate: isoExpiry || null,
-        quantity: parseFloat(form.quantity),
-        purchasePrice: parseFloat(form.purchasePrice),
+        quantity: qty,
+        purchasePrice,
         salePrice: parseFloat(form.salePrice),
-        incentive: parseFloat(form.incentive) || 0,
+        incentive: incentiveAmt,
         minStock: parseFloat(form.minStock),
       }),
     })
@@ -372,8 +377,9 @@ export default function PesticidesPage() {
             {(() => {
               const qty = parseFloat(form.quantity || "0")
               const purchasePrice = parseFloat(form.purchasePrice || "0")
-              const incentiveAmt = parseFloat(form.incentive || "0")
+              const incentivePct = parseFloat(form.incentive || "0")
               const subtotal = qty * purchasePrice
+              const incentiveAmt = Math.round((subtotal * incentivePct) / 100 * 100) / 100
               const netCost = Math.max(0, subtotal - incentiveAmt)
               return (
                 <>
@@ -382,8 +388,16 @@ export default function PesticidesPage() {
                     <span className="font-medium text-gray-700">{formatCurrency(subtotal)}</span>
                   </div>
                   <div>
-                    <Label>Incentive / Discount from Supplier (PKR)</Label>
-                    <Input type="number" placeholder="0" value={form.incentive} onChange={(e) => setForm({ ...form, incentive: e.target.value })} />
+                    <Label>Incentive / Discount from Supplier (%)</Label>
+                    <div className="relative">
+                      <Input type="number" min="0" max="100" placeholder="0" value={form.incentive}
+                        onChange={(e) => setForm({ ...form, incentive: e.target.value })}
+                        className="pr-10" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">%</span>
+                    </div>
+                    {incentiveAmt > 0 && (
+                      <p className="text-xs text-blue-600 mt-1 px-1">= {formatCurrency(incentiveAmt)} discount on this purchase</p>
+                    )}
                   </div>
                   <div className="bg-blue-50 rounded-lg px-4 py-3 flex justify-between items-center border border-blue-200">
                     <span className="text-sm font-semibold text-blue-800">Net Purchase Cost</span>
