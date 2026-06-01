@@ -149,6 +149,7 @@ export default function PesticidesPage() {
         <td>${p.batchNumber || "—"}</td>
         <td>${expLabel}</td>
         <td style="text-align:right">PKR ${(p.purchasePrice || 0).toLocaleString()}</td>
+        <td style="text-align:right">${p.incentive > 0 ? `PKR ${(p.incentive || 0).toLocaleString()}` : "—"}</td>
         <td style="text-align:right">PKR ${(p.salePrice || 0).toLocaleString()}</td>
       </tr>`
     }).join("")
@@ -167,7 +168,7 @@ ${buildPrintHeader(shop)}
   <table>
     <thead><tr>
       <th>#</th><th>Name</th><th>Category</th><th>Stock</th><th>Batch</th><th>Expiry</th>
-      <th style="text-align:right">Purchase Price</th><th style="text-align:right">Sale Price</th>
+      <th style="text-align:right">Purchase Price</th><th style="text-align:right">Incentive</th><th style="text-align:right">Sale Price</th>
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
@@ -322,7 +323,7 @@ ${buildPrintHeader(shop)}
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["Name", "Category", "Stock", "Batch", "Expiry", "Purchase", "Sale", "Actions"].map((h) => (
+                    {["Name", "Category", "Stock", "Batch", "Expiry", "Purchase", "Incentive", "Sale", "Actions"].map((h) => (
                       <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
                     ))}
                   </tr>
@@ -349,6 +350,11 @@ ${buildPrintHeader(shop)}
                           ) : "-"}
                         </td>
                         <td className="py-3 px-3">{formatCurrency(p.purchasePrice)}</td>
+                        <td className="py-3 px-3">
+                          {p.incentive > 0 ? (
+                            <span className="text-blue-600 font-medium">{formatCurrency(p.incentive)}</span>
+                          ) : <span className="text-gray-400">—</span>}
+                        </td>
                         <td className="py-3 px-3">{formatCurrency(p.salePrice)}</td>
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-2">
