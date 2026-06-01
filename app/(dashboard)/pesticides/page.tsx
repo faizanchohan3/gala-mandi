@@ -74,12 +74,14 @@ export default function PesticidesPage() {
     setEditing(p)
     setNewCategoryName("")
     const isoExpiry = p.expiryDate ? new Date(p.expiryDate).toISOString().split("T")[0] : ""
+    const subtotal = p.quantity * p.purchasePrice
+    const savedPct = subtotal > 0 ? Math.round((p.incentive / subtotal) * 10000) / 100 : 0
     setForm({
       name: p.name, categoryId: p.categoryId || "", manufacturer: p.manufacturer || "",
       batchNumber: p.batchNumber || "",
       expiryDate: isoExpiry ? isoToDMY(isoExpiry) : "",
       quantity: String(p.quantity), unit: p.unit,
-      purchasePrice: String(p.purchasePrice), salePrice: String(p.salePrice), incentive: "0", minStock: String(p.minStock),
+      purchasePrice: String(p.purchasePrice), salePrice: String(p.salePrice), incentive: String(savedPct), minStock: String(p.minStock),
     })
     setShowModal(true)
   }
