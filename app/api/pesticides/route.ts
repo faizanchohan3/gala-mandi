@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   if (incentiveAmt > 0) {
     const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
     const incomeAccount = await db.account.findFirst({
-      where: { ...shopFilter, type: "INCOME", isActive: true, name: { in: ["Pesticide Incentive", "Other Income", "Pesticide Sales"] } },
+      where: { ...shopFilter, type: "INCOME", isActive: true, name: { in: ["Pesticide Incentive Income", "Pesticide Incentive", "Other Income"] } },
       orderBy: { code: "asc" },
     })
     await db.transaction.create({
