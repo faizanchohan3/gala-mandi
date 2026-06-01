@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency, formatDateDMY } from "@/lib/utils"
-import { Plus, Search, AlertTriangle, ShoppingCart, Edit, Sprout, Trash2, Tag } from "lucide-react"
+import { buildPrintHeader, reportCSS } from "@/lib/print-utils"
+import { Plus, Search, AlertTriangle, ShoppingCart, Edit, Sprout, Trash2, Tag, Printer } from "lucide-react"
 
 export default function PesticidesPage() {
   const [pesticides, setPesticides] = useState<any[]>([])
@@ -34,18 +35,21 @@ export default function PesticidesPage() {
   const [saleForm, setSaleForm] = useState({ quantity: "1", customerName: "", paidAmount: "0", notes: "" })
   const [showCatModal, setShowCatModal] = useState(false)
   const [newCatInput, setNewCatInput] = useState("")
+  const [shop, setShop] = useState<any>(null)
 
   async function loadData() {
     try {
       setLoading(true)
-      const [pr, cr, sr] = await Promise.all([
+      const [pr, cr, sr, shr] = await Promise.all([
         fetch("/api/pesticides").then((r) => r.json()),
         fetch("/api/pesticide-categories").then((r) => r.json()),
         fetch("/api/pesticides/sales").then((r) => r.json()),
+        fetch("/api/settings").then((r) => r.json()),
       ])
       setPesticides(pr.pesticides || [])
       setCategories(cr.categories || [])
       setSales(sr.sales || [])
+      setShop(shr.shop || null)
     } finally {
       setLoading(false)
     }
@@ -132,6 +136,92 @@ export default function PesticidesPage() {
     if (res.ok) { setShowModal(false); loadData() }
   }
 
+  function printAllPesticides() {
+    const date = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
+    const rows = filtered.map((p, i) => {
+      const isExpired = p.expiryDate && new Date(p.expiryDate) < new Date()
+      const expLabel = p.expiryDate ? formatDateDMY(p.expiryDate) : "—"
+      return `<tr style="${isExpired ? "background:#fee2e2;" : i % 2 === 0 ? "background:#f9fdf9;" : ""}">
+        <td>${i + 1}</td>
+        <td><strong>${p.name}</strong></td>
+        <td>${p.category?.name || "—"}</td>
+        <td>${p.quantity} ${p.unit}</td>
+        <td>${p.batchNumber || "—"}</td>
+        <td>${expLabel}</td>
+        <td style="text-align:right">PKR ${(p.purchasePrice || 0).toLocaleString()}</td>
+        <td style="text-align:right">PKR ${(p.salePrice || 0).toLocaleString()}</td>
+      </tr>`
+    }).join("")
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Pesticide Stock List</title>
+<style>${reportCSS}
+  body { max-width: 900px; margin: 0 auto; }
+  .section-title { font-size:13px; font-weight:800; color:#14532d; margin-bottom:10px; padding-bottom:6px; border-bottom:2px solid #166534; }
+</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div><div class="doc-title">Pesticide Stock List</div><div class="doc-sub">Total: ${filtered.length} products</div></div>
+  <div class="doc-meta"><div>Printed: ${date}</div></div>
+</div>
+<div class="body-pad">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Name</th><th>Category</th><th>Stock</th><th>Batch</th><th>Expiry</th>
+      <th style="text-align:right">Purchase Price</th><th style="text-align:right">Sale Price</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="3"><strong>Total Products: ${filtered.length}</strong></td>
+      <td colspan="5"></td>
+    </tr></tfoot>
+  </table>
+  <div class="sig-row"><span>Generated on ${date}</span><span>${shop?.name || ""}</span></div>
+</div>
+<script>window.onload=()=>{window.print()}<\/script>
+</body></html>`)
+    w.document.close()
+  }
+
+  function printAllCategories() {
+    const date = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
+    const catRows = categories.map((c, i) => {
+      const count = pesticides.filter((p) => p.categoryId === c.id).length
+      return `<tr style="${i % 2 === 0 ? "background:#f9fdf9;" : ""}">
+        <td>${i + 1}</td>
+        <td><strong>${c.name}</strong></td>
+        <td style="text-align:center">${count}</td>
+        <td>${pesticides.filter((p) => p.categoryId === c.id).map((p) => p.name).join(", ") || "—"}</td>
+      </tr>`
+    }).join("")
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Pesticide Categories</title>
+<style>${reportCSS}
+  body { max-width: 700px; margin: 0 auto; }
+</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div><div class="doc-title">Pesticide Categories</div><div class="doc-sub">Total: ${categories.length} categories</div></div>
+  <div class="doc-meta"><div>Printed: ${date}</div></div>
+</div>
+<div class="body-pad">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Category Name</th><th style="text-align:center">Products</th><th>Products List</th>
+    </tr></thead>
+    <tbody>${catRows}</tbody>
+    <tfoot><tr>
+      <td colspan="2"><strong>Total Categories: ${categories.length}</strong></td>
+      <td style="text-align:center"><strong>${pesticides.length}</strong></td>
+      <td></td>
+    </tr></tfoot>
+  </table>
+  <div class="sig-row"><span>Generated on ${date}</span><span>${shop?.name || ""}</span></div>
+</div>
+<script>window.onload=()=>{window.print()}<\/script>
+</body></html>`)
+    w.document.close()
+  }
+
   async function handleAddCategory() {
     if (!newCatInput.trim()) return
     const res = await fetch("/api/pesticide-categories", {
@@ -182,7 +272,9 @@ export default function PesticidesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Pesticides</h2>
           <p className="text-gray-500 text-sm">{pesticides.length} products</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={printAllCategories}><Printer className="w-4 h-4" /> Print Categories</Button>
+          <Button variant="outline" onClick={printAllPesticides}><Printer className="w-4 h-4" /> Print Pesticides</Button>
           <Button variant="outline" onClick={() => setShowCatModal(true)}><Tag className="w-4 h-4" /> Categories</Button>
           <Button onClick={openAdd}><Plus className="w-4 h-4" /> Add Pesticide</Button>
         </div>
@@ -446,7 +538,10 @@ export default function PesticidesPage() {
                 </div>
               ))}
             </div>
-            <Button variant="outline" className="w-full" onClick={() => setShowCatModal(false)}>Close</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowCatModal(false)}>Close</Button>
+              <Button variant="outline" className="flex-1" onClick={printAllCategories}><Printer className="w-4 h-4 mr-1" /> Print</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
