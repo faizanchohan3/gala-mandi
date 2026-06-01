@@ -3,11 +3,14 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { createAuditLog } from "@/lib/audit"
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
+
   const sales = await db.pesticideSale.findMany({
+    where: shopFilter,
     orderBy: { createdAt: "desc" },
     include: {
       pesticide: true,

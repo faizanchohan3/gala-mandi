@@ -3,12 +3,14 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { createAuditLog } from "@/lib/audit"
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
+
   const pesticides = await db.pesticide.findMany({
-    where: { isActive: true },
+    where: { isActive: true, ...shopFilter },
     include: { category: true },
     orderBy: { name: "asc" },
   })
@@ -27,6 +29,7 @@ export async function POST(req: Request) {
 
   const pesticide = await db.pesticide.create({
     data: {
+      shopId: session.user.shopId || null,
       name, categoryId, manufacturer, batchNumber,
       expiryDate: expiryDate ? new Date(expiryDate) : null,
       quantity, unit, purchasePrice, salePrice, incentive: incentiveAmt, minStock: minStock || 0,
