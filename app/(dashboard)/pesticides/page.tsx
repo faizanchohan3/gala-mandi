@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency, formatDateDMY } from "@/lib/utils"
-import { Plus, Search, AlertTriangle, ShoppingCart, Edit, Sprout, Trash2 } from "lucide-react"
+import { Plus, Search, AlertTriangle, ShoppingCart, Edit, Sprout, Trash2, Tag } from "lucide-react"
 
 export default function PesticidesPage() {
   const [pesticides, setPesticides] = useState<any[]>([])
@@ -32,6 +32,8 @@ export default function PesticidesPage() {
   const PRESET_UNITS = ["Litre", "ML", "KG", "Gram", "Bottle", "Bag"]
 
   const [saleForm, setSaleForm] = useState({ quantity: "1", customerName: "", paidAmount: "0", notes: "" })
+  const [showCatModal, setShowCatModal] = useState(false)
+  const [newCatInput, setNewCatInput] = useState("")
 
   async function loadData() {
     try {
@@ -123,6 +125,22 @@ export default function PesticidesPage() {
     if (res.ok) { setShowModal(false); loadData() }
   }
 
+  async function handleAddCategory() {
+    if (!newCatInput.trim()) return
+    const res = await fetch("/api/pesticide-categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newCatInput.trim() }),
+    })
+    if (res.ok) { setNewCatInput(""); loadData() }
+  }
+
+  async function handleDeleteCategory(id: string, name: string) {
+    if (!confirm(`Delete category "${name}"? Pesticides in this category will have no category.`)) return
+    await fetch(`/api/pesticide-categories/${id}`, { method: "DELETE" })
+    loadData()
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Delete this pesticide? This cannot be undone.")) return
     const res = await fetch(`/api/pesticides/${id}`, { method: "DELETE" })
@@ -157,7 +175,10 @@ export default function PesticidesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Pesticides</h2>
           <p className="text-gray-500 text-sm">{pesticides.length} products</p>
         </div>
-        <Button onClick={openAdd}><Plus className="w-4 h-4" /> Add Pesticide</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowCatModal(true)}><Tag className="w-4 h-4" /> Categories</Button>
+          <Button onClick={openAdd}><Plus className="w-4 h-4" /> Add Pesticide</Button>
+        </div>
       </div>
 
       {expiring.length > 0 && (
@@ -376,6 +397,40 @@ export default function PesticidesPage() {
               <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
               <Button onClick={handleSave} className="flex-1">{editing ? "Update" : "Add"}</Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Categories Modal */}
+      <Dialog open={showCatModal} onOpenChange={setShowCatModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Tag className="w-4 h-4" /> Pesticide Categories</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="New category name..."
+                value={newCatInput}
+                onChange={(e) => setNewCatInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+              />
+              <Button onClick={handleAddCategory} disabled={!newCatInput.trim()}><Plus className="w-4 h-4" /></Button>
+            </div>
+            <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto rounded-lg border border-gray-200">
+              {categories.length === 0 && (
+                <p className="text-center py-6 text-gray-400 text-sm">No categories yet</p>
+              )}
+              {categories.map((c: any) => (
+                <div key={c.id} className="flex items-center justify-between px-3 py-2">
+                  <span className="text-sm text-gray-800">{c.name}</span>
+                  <button onClick={() => handleDeleteCategory(c.id, c.name)} className="p-1 text-gray-400 hover:text-red-600">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <Button variant="outline" className="w-full" onClick={() => setShowCatModal(false)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
