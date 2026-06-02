@@ -29,6 +29,7 @@ function CustomerLedgerContent() {
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [loading, setLoading] = useState(false)
+  const [printingAll, setPrintingAll] = useState(false)
   const [shop, setShop] = useState<any>(null)
 
   useEffect(() => {
@@ -81,32 +82,60 @@ function CustomerLedgerContent() {
   const totalOutstanding = customers.filter((c) => c.balance > 0).reduce((s, c) => s + c.balance, 0)
   const totalCredit = customers.filter((c) => c.balance < 0).reduce((s, c) => s + Math.abs(c.balance), 0)
 
-  function printSummary() {
+  async function printAll() {
+    setPrintingAll(true)
     const date = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
-    const rows = filtered.map((c, i) => {
-      const bal = c.balance || 0
-      const statusColor = bal > 0 ? "#b91c1c" : bal < 0 ? "#15803d" : "#6b7280"
-      const status = bal > 0 ? "Outstanding" : bal < 0 ? "Overpaid" : "Settled"
-      return `<tr style="${i % 2 === 0 ? "background:#f9fdf9" : ""}">
-        <td>${i+1}</td><td><strong>${c.name}</strong></td><td>${c.phone||"—"}</td><td>${c.address||"—"}</td>
-        <td style="text-align:right">PKR ${(c.totalDebit||0).toLocaleString()}</td>
-        <td style="text-align:right">PKR ${(c.totalCredit||0).toLocaleString()}</td>
-        <td style="text-align:right;font-weight:700;color:${statusColor}">PKR ${Math.abs(bal).toLocaleString()}</td>
-        <td style="text-align:center"><span style="font-size:9px;padding:2px 7px;border-radius:99px;background:${bal>0?"#fee2e2":bal<0?"#dcfce7":"#f3f4f6"};color:${statusColor};font-weight:700">${status}</span></td>
-      </tr>`
-    }).join("")
+    const ledgers = await Promise.all(
+      filtered.map((c) => fetch(`/api/reports/customer-ledger/${c.id}`).then((r) => r.json()))
+    )
+    setPrintingAll(false)
+    const sections = ledgers.map((data, idx) => {
+      const c = filtered[idx]
+      const bal = data.closingBalance || 0
+      const balColor = bal > 0 ? "#b91c1c" : "#15803d"
+      const balLabel = bal > 0 ? "Outstanding (Owes)" : bal < 0 ? "Overpaid (Credit)" : "Settled"
+      const txRows = (data.entries || []).map((e: any, i: number) => `
+        <tr style="${i%2===0?"background:#f9fdf9":""}">
+          <td>${i+1}</td>
+          <td style="white-space:nowrap">${new Date(e.date).toLocaleDateString("en-PK")}</td>
+          <td><span style="font-size:8px;padding:1px 6px;border-radius:99px;background:${e.type==="PAYMENT"?"#dcfce7":"#fef3c7"};color:${e.type==="PAYMENT"?"#166534":"#92400e"};font-weight:700">${e.type==="PESTICIDE_SALE"?"PESTICIDE":e.type}</span></td>
+          <td style="font-size:9px">${e.description}</td>
+          <td style="text-align:right">${e.debit>0?"PKR "+e.debit.toLocaleString():"—"}</td>
+          <td style="text-align:right;color:#15803d">${e.credit>0?"PKR "+e.credit.toLocaleString():"—"}</td>
+          <td style="text-align:right;font-weight:600;color:${e.balance>0?"#b91c1c":"#15803d"}">PKR ${Math.abs(e.balance).toLocaleString()} ${e.balance>0?"Dr":e.balance<0?"Cr":""}</td>
+        </tr>`).join("")
+      return `<div style="margin-bottom:28px">
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:800;color:#7c2d12">${c.name}</div>
+            <div style="font-size:10px;color:#6b7280;margin-top:2px">${[c.phone,c.address].filter(Boolean).join(" · ")||"No contact info"}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:15px;font-weight:900;color:${balColor}">PKR ${Math.abs(bal).toLocaleString()}</div>
+            <div style="font-size:9px;color:${balColor};font-weight:700">${balLabel}</div>
+          </div>
+        </div>
+        ${(data.entries||[]).length>0?`<table>
+          <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Description</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead>
+          <tbody>${txRows}</tbody>
+          <tfoot><tr><td colspan="4"><strong>Closing — ${(data.entries||[]).length} entries</strong></td>
+            <td style="text-align:right"><strong>PKR ${(data.totalDebit||0).toLocaleString()}</strong></td>
+            <td style="text-align:right;color:#15803d"><strong>PKR ${(data.totalCredit||0).toLocaleString()}</strong></td>
+            <td style="text-align:right;color:${balColor}"><strong>PKR ${Math.abs(bal).toLocaleString()} ${bal>0?"Dr":bal<0?"Cr":""}</strong></td>
+          </tr></tfoot>
+        </table>`:`<p style="text-align:center;color:#9ca3af;font-size:10px;padding:8px 0">No transactions</p>`}
+      </div>`
+    }).join('<div style="border-top:2px dashed #fed7aa;margin:20px 0"></div>')
     const w = window.open("", "_blank")!
-    w.document.write(`<html><head><title>All Traders Report</title><style>${reportCSS} body{max-width:900px;margin:0 auto}</style></head><body>
+    w.document.write(`<html><head><title>All Traders — Full Ledger</title>
+<style>${reportCSS} body{max-width:960px;margin:0 auto}</style></head><body>
 ${buildPrintHeader(shop)}
-<div class="doc-header"><div><div class="doc-title">All Traders Report</div><div class="doc-sub">${filtered.length} traders</div></div><div class="doc-meta"><div>Printed: ${date}</div></div></div>
-<div class="body-pad"><table>
-<thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Address</th><th style="text-align:right">Total Dr</th><th style="text-align:right">Total Cr</th><th style="text-align:right">Balance</th><th style="text-align:center">Status</th></tr></thead>
-<tbody>${rows}</tbody>
-<tfoot><tr><td colspan="4"><strong>${filtered.length} traders</strong></td>
-<td style="text-align:right"><strong>PKR ${filtered.reduce((s,c)=>s+(c.totalDebit||0),0).toLocaleString()}</strong></td>
-<td style="text-align:right"><strong>PKR ${filtered.reduce((s,c)=>s+(c.totalCredit||0),0).toLocaleString()}</strong></td>
-<td style="text-align:right;color:#b91c1c"><strong>PKR ${totalOutstanding.toLocaleString()}</strong></td><td></td></tr></tfoot>
-</table><div class="sig-row"><span>${date}</span><span>${shop?.name||""}</span></div></div>
+<div class="doc-header">
+  <div><div class="doc-title">All Traders — Full Ledger</div><div class="doc-sub">${filtered.length} traders · ${date}</div></div>
+  <div class="doc-meta"><div>Outstanding: PKR ${totalOutstanding.toLocaleString()}</div><div>Credit: PKR ${totalCredit.toLocaleString()}</div></div>
+</div>
+<div class="body-pad">${sections}</div>
+<div class="sig-row" style="margin:0 20px 20px"><span>Generated: ${date}</span><span>${shop?.name||""}</span></div>
 <script>window.onload=()=>{window.print()}<\/script></body></html>`)
     w.document.close()
   }
@@ -142,7 +171,7 @@ ${buildPrintHeader(shop)}
         </div>
         <div className="flex gap-2">
           {ledger && <Button onClick={() => window.print()} variant="outline" className="gap-2"><Printer className="w-4 h-4" /> Print Ledger</Button>}
-          <Button onClick={printSummary} variant="outline" className="gap-2"><Printer className="w-4 h-4" /> Print All</Button>
+          <Button onClick={printAll} disabled={printingAll} variant="outline" className="gap-2"><Printer className="w-4 h-4" />{printingAll ? "Preparing..." : "Print All Ledgers"}</Button>
         </div>
       </div>
 
