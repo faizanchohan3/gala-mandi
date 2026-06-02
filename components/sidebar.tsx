@@ -27,7 +27,6 @@ const reportSubItems = [
   { href: "/reports/customers", label: "Trader Report" },
   { href: "/reports/products", label: "Product Report" },
   { href: "/reports/profit-loss", label: "Profit & Loss" },
-  { href: "/reports/all-traders", label: "All Traders" },
   { href: "/reports/customer-ledger", label: "Trader Ledger" },
   { href: "/reports/all-farmers", label: "All Farmers" },
   { href: "/reports/farmer-ledger", label: "Farmer Ledger" },

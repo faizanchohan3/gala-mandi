@@ -64,13 +64,6 @@ const reportCards = [
     color: "from-blue-600 to-blue-700",
   },
   {
-    href: "/reports/all-traders",
-    title: "All Traders Report",
-    description: "Balance summary for all traders — outstanding, overpaid, and settled",
-    icon: Users,
-    color: "from-orange-500 to-orange-600",
-  },
-  {
     href: "/reports/all-farmers",
     title: "All Farmers Report",
     description: "Balance summary for all farmers — payable, advance, and settled",
