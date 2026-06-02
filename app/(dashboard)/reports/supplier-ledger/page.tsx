@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Printer, BookOpen } from "lucide-react"
+import { Printer, BookOpen, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 export default function SupplierLedgerPage() {
   return (
@@ -98,11 +99,16 @@ function SupplierLedgerContent() {
           <h2 className="text-2xl font-bold text-gray-900">Supplier Ledger</h2>
           <p className="text-gray-500 text-sm">Full purchase & payment history per supplier</p>
         </div>
-        {ledger && (
-          <Button onClick={() => window.print()} variant="outline" className="gap-2">
-            <Printer className="w-4 h-4" /> Print Ledger
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <Link href="/reports/all-suppliers">
+            <Button variant="outline" className="gap-2"><ArrowLeft className="w-4 h-4" /> All Suppliers</Button>
+          </Link>
+          {ledger && (
+            <Button onClick={() => window.print()} variant="outline" className="gap-2">
+              <Printer className="w-4 h-4" /> Print Ledger
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
