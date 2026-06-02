@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -9,6 +10,15 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 import { Printer, BookOpen } from "lucide-react"
 
 export default function SupplierLedgerPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-20 text-gray-400">Loading...</div>}>
+      <SupplierLedgerContent />
+    </Suspense>
+  )
+}
+
+function SupplierLedgerContent() {
+  const searchParams = useSearchParams()
   const [suppliers, setSuppliers] = useState<any[]>([])
   const [supplierId, setSupplierId] = useState("")
   const [ledger, setLedger] = useState<any>(null)
@@ -24,8 +34,14 @@ export default function SupplierLedgerPage() {
     ]).then(([suppliersData, settingsData]) => {
       setSuppliers(suppliersData.suppliers || [])
       setShop(settingsData.shop || null)
+      const preselect = searchParams.get("id")
+      if (preselect) setSupplierId(preselect)
     })
   }, [])
+
+  useEffect(() => {
+    if (supplierId) loadLedger()
+  }, [supplierId])
 
   async function loadLedger() {
     if (!supplierId) return
