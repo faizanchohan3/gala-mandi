@@ -44,7 +44,13 @@ export default function ExpensesPage() {
     loadData()
     fetch("/api/accounts")
       .then((r) => r.json())
-      .then((d) => setAccounts((d.accounts || []).filter((a: any) => a.type === "EXPENSE")))
+      .then((d) => {
+        const expAccounts = (d.accounts || []).filter((a: any) => a.type === "EXPENSE")
+        setAccounts(expAccounts)
+        if (expAccounts.length > 0) {
+          setForm((f) => ({ ...f, accountId: expAccounts[0].id }))
+        }
+      })
       .catch(() => {})
   }, [])
 
