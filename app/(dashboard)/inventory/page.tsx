@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Plus, Search, Package, AlertTriangle, Edit, Trash2, Tag, ChevronDown, ChevronUp, X } from "lucide-react"
+import { buildPrintHeader, reportCSS } from "@/lib/print-utils"
+import { Plus, Search, Package, AlertTriangle, Edit, Trash2, Tag, ChevronDown, ChevronUp, X, Printer } from "lucide-react"
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<any[]>([])
@@ -25,16 +26,19 @@ export default function InventoryPage() {
   const [showCategories, setShowCategories] = useState(false)
   const [newCatName, setNewCatName] = useState("")
   const [catSaving, setCatSaving] = useState(false)
+  const [shop, setShop] = useState<any>(null)
 
   async function loadData() {
     try {
       setLoading(true)
-      const [pr, cr] = await Promise.all([
+      const [pr, cr, shr] = await Promise.all([
         fetch("/api/inventory").then((r) => r.json()),
         fetch("/api/categories").then((r) => r.json()),
+        fetch("/api/settings").then((r) => r.json()),
       ])
       setProducts(pr.products || [])
       setCategories(cr.categories || [])
+      setShop(shr.shop || null)
     } finally {
       setLoading(false)
     }
@@ -100,6 +104,61 @@ export default function InventoryPage() {
     loadData()
   }
 
+  function printAllStock() {
+    const date = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
+    const totalValue = products.reduce((s, p) => s + p.currentStock * p.purchasePrice, 0)
+    const rows = filtered.map((p, i) => {
+      const isLow = p.currentStock <= p.minStock
+      return `<tr style="${isLow ? "background:#fef2f2;" : i % 2 === 0 ? "background:#f9fdf9;" : ""}">
+        <td>${i + 1}</td>
+        <td><strong>${p.name}</strong></td>
+        <td>${p.category?.name || "—"}</td>
+        <td style="text-align:right;${isLow ? "color:#b91c1c;font-weight:700;" : ""}">${p.currentStock}</td>
+        <td>${p.unit}</td>
+        <td style="text-align:right">${p.minStock}</td>
+        <td style="text-align:right">PKR ${(p.purchasePrice || 0).toLocaleString()}</td>
+        <td style="text-align:right">PKR ${(p.salePrice || 0).toLocaleString()}</td>
+        <td style="text-align:right">PKR ${(p.currentStock * p.purchasePrice).toLocaleString()}</td>
+        <td style="text-align:center"><span style="font-size:10px;padding:2px 8px;border-radius:99px;background:${isLow ? "#fee2e2" : "#dcfce7"};color:${isLow ? "#b91c1c" : "#15803d"};font-weight:600">${isLow ? "Low Stock" : "In Stock"}</span></td>
+      </tr>`
+    }).join("")
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Store Stock Report</title>
+<style>${reportCSS}
+  body { max-width: 960px; margin: 0 auto; }
+  .section-title { font-size:13px; font-weight:800; color:#1e3a5f; margin-bottom:10px; padding-bottom:6px; border-bottom:2px solid #1e3a5f; }
+</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div><div class="doc-title">Store Stock Report</div><div class="doc-sub">Total: ${filtered.length} products</div></div>
+  <div class="doc-meta"><div>Printed: ${date}</div></div>
+</div>
+<div class="body-pad">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Product</th><th>Category</th>
+      <th style="text-align:right">Stock</th><th>Unit</th>
+      <th style="text-align:right">Min Stock</th>
+      <th style="text-align:right">Purchase Price</th>
+      <th style="text-align:right">Sale Price</th>
+      <th style="text-align:right">Stock Value</th>
+      <th style="text-align:center">Status</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="3"><strong>Total: ${filtered.length} products</strong></td>
+      <td colspan="5"></td>
+      <td style="text-align:right"><strong>PKR ${totalValue.toLocaleString()}</strong></td>
+      <td></td>
+    </tr></tfoot>
+  </table>
+  <div class="sig-row"><span>Generated on ${date}</span><span>${shop?.name || ""}</span></div>
+</div>
+<script>window.onload=()=>{window.print()}<\/script>
+</body></html>`)
+    w.document.close()
+  }
+
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.category?.name.toLowerCase().includes(search.toLowerCase())
@@ -115,7 +174,10 @@ export default function InventoryPage() {
           <h2 className="text-2xl font-bold text-gray-900">Store</h2>
           <p className="text-gray-500 text-sm">{products.length} products total</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={printAllStock} className="gap-2">
+            <Printer className="w-4 h-4" /> Print Stock
+          </Button>
           <Button variant="outline" onClick={() => setShowCategories((v) => !v)} className="gap-2">
             <Tag className="w-4 h-4" />
             Categories ({categories.length})
@@ -241,7 +303,7 @@ export default function InventoryPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["Product", "Category", "Stock", "Min Stock", "Purchase Price", "Sale Price", "Status", "Actions"].map((h) => (
+                    {["Product", "Category", "Stock", "Unit", "Min Stock", "Purchase Price", "Sale Price", "Status", "Actions"].map((h) => (
                       <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
                     ))}
                   </tr>
@@ -253,10 +315,11 @@ export default function InventoryPage() {
                       <td className="py-3 px-3 text-gray-600">{p.category?.name}</td>
                       <td className="py-3 px-3">
                         <span className={p.currentStock <= p.minStock ? "text-red-600 font-semibold" : "text-gray-700"}>
-                          {p.currentStock} {p.unit}
+                          {p.currentStock}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-gray-600">{p.minStock} {p.unit}</td>
+                      <td className="py-3 px-3 text-gray-500">{p.unit}</td>
+                      <td className="py-3 px-3 text-gray-600">{p.minStock}</td>
                       <td className="py-3 px-3 text-gray-700">{formatCurrency(p.purchasePrice)}</td>
                       <td className="py-3 px-3 text-gray-700">{formatCurrency(p.salePrice)}</td>
                       <td className="py-3 px-3">
@@ -277,7 +340,7 @@ export default function InventoryPage() {
                     </tr>
                   ))}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={8} className="text-center py-8 text-gray-400">No products found</td></tr>
+                    <tr><td colSpan={9} className="text-center py-8 text-gray-400">No products found</td></tr>
                   )}
                 </tbody>
               </table>
