@@ -8,25 +8,29 @@ export async function GET() {
 
   const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
 
-  const [suppliers, purchaseTotals, commissionTotals, paymentTotals] = await Promise.all([
-    db.supplier.findMany({
-      where: { ...shopFilter, isActive: true },
-      orderBy: { name: "asc" },
-    }),
+  const suppliers = await db.supplier.findMany({
+    where: { ...shopFilter, isActive: true },
+    orderBy: { name: "asc" },
+  })
+
+  const supplierIds = suppliers.map((s) => s.id)
+  if (supplierIds.length === 0) return NextResponse.json({ suppliers: [] })
+
+  const [purchaseTotals, commissionTotals, paymentTotals] = await Promise.all([
     db.purchase.groupBy({
       by: ["supplierId"],
       _sum: { totalAmount: true },
-      where: { supplierId: { not: null }, ...shopFilter },
+      where: { supplierId: { in: supplierIds } },
     }),
     db.commission.groupBy({
       by: ["supplierId"],
       _sum: { sellerPayable: true },
-      where: { supplierId: { not: null }, ...shopFilter },
+      where: { supplierId: { in: supplierIds } },
     }),
     db.supplierPayment.groupBy({
       by: ["supplierId"],
       _sum: { amount: true },
-      where: { direction: "PAY", ...shopFilter },
+      where: { supplierId: { in: supplierIds }, direction: "PAY" },
     }),
   ])
 
@@ -34,11 +38,11 @@ export async function GET() {
   const cmMap = Object.fromEntries(commissionTotals.map((r) => [r.supplierId!, r._sum.sellerPayable || 0]))
   const pymtMap = Object.fromEntries(paymentTotals.map((r) => [r.supplierId, r._sum.amount || 0]))
 
-  const result = suppliers.map((s) => {
-    const totalDebit = (ptMap[s.id] || 0) + (cmMap[s.id] || 0)
-    const totalCredit = pymtMap[s.id] || 0
-    return { ...s, totalDebit, totalCredit }
-  })
+  const result = suppliers.map((s) => ({
+    ...s,
+    totalDebit: (ptMap[s.id] || 0) + (cmMap[s.id] || 0),
+    totalCredit: pymtMap[s.id] || 0,
+  }))
 
   return NextResponse.json({ suppliers: result })
 }

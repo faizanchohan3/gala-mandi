@@ -8,30 +8,34 @@ export async function GET() {
 
   const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
 
-  const [farmers, farmerPurchaseTotals, productPurchaseTotals, commissionTotals, paymentTotals] = await Promise.all([
-    db.farmer.findMany({
-      where: { ...shopFilter, isActive: true },
-      orderBy: { name: "asc" },
-    }),
+  const farmers = await db.farmer.findMany({
+    where: { ...shopFilter, isActive: true },
+    orderBy: { name: "asc" },
+  })
+
+  const farmerIds = farmers.map((f) => f.id)
+  if (farmerIds.length === 0) return NextResponse.json({ farmers: [] })
+
+  const [farmerPurchaseTotals, productPurchaseTotals, commissionTotals, paymentTotals] = await Promise.all([
     db.farmerPurchase.groupBy({
       by: ["farmerId"],
       _sum: { totalAmount: true },
-      where: shopFilter,
+      where: { farmerId: { in: farmerIds } },
     }),
     db.purchase.groupBy({
       by: ["farmerId"],
       _sum: { totalAmount: true },
-      where: { farmerId: { not: null }, ...shopFilter },
+      where: { farmerId: { in: farmerIds } },
     }),
     db.commission.groupBy({
       by: ["farmerId"],
       _sum: { sellerPayable: true },
-      where: { farmerId: { not: null }, ...shopFilter },
+      where: { farmerId: { in: farmerIds } },
     }),
     db.farmerPayment.groupBy({
       by: ["farmerId"],
       _sum: { amount: true },
-      where: shopFilter,
+      where: { farmerId: { in: farmerIds } },
     }),
   ])
 
@@ -40,11 +44,11 @@ export async function GET() {
   const cmMap = Object.fromEntries(commissionTotals.map((r) => [r.farmerId!, r._sum.sellerPayable || 0]))
   const pymtMap = Object.fromEntries(paymentTotals.map((r) => [r.farmerId, r._sum.amount || 0]))
 
-  const result = farmers.map((f) => {
-    const totalDebit = (fpMap[f.id] || 0) + (ppMap[f.id] || 0) + (cmMap[f.id] || 0)
-    const totalCredit = pymtMap[f.id] || 0
-    return { ...f, totalDebit, totalCredit }
-  })
+  const result = farmers.map((f) => ({
+    ...f,
+    totalDebit: (fpMap[f.id] || 0) + (ppMap[f.id] || 0) + (cmMap[f.id] || 0),
+    totalCredit: pymtMap[f.id] || 0,
+  }))
 
   return NextResponse.json({ farmers: result })
 }

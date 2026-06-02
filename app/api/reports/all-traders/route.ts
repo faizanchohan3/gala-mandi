@@ -8,30 +8,34 @@ export async function GET() {
 
   const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
 
-  const [customers, saleTotals, commissionTotals, pesticideSaleTotals, paymentTotals] = await Promise.all([
-    db.customer.findMany({
-      where: { ...shopFilter, isActive: true },
-      orderBy: { name: "asc" },
-    }),
+  const customers = await db.customer.findMany({
+    where: { ...shopFilter, isActive: true },
+    orderBy: { name: "asc" },
+  })
+
+  const customerIds = customers.map((c) => c.id)
+  if (customerIds.length === 0) return NextResponse.json({ customers: [] })
+
+  const [saleTotals, commissionTotals, pesticideSaleTotals, paymentTotals] = await Promise.all([
     db.sale.groupBy({
       by: ["customerId"],
       _sum: { totalAmount: true },
-      where: { customerId: { not: null }, ...shopFilter },
+      where: { customerId: { in: customerIds } },
     }),
     db.commission.groupBy({
       by: ["customerId"],
       _sum: { totalValue: true },
-      where: { customerId: { not: null }, ...shopFilter },
+      where: { customerId: { in: customerIds } },
     }),
     db.pesticideSale.groupBy({
       by: ["customerId"],
       _sum: { totalAmount: true },
-      where: { customerId: { not: null }, ...shopFilter },
+      where: { customerId: { in: customerIds } },
     }),
     db.customerPayment.groupBy({
       by: ["customerId"],
       _sum: { amount: true },
-      where: { direction: "RECEIVE", ...shopFilter },
+      where: { customerId: { in: customerIds }, direction: "RECEIVE" },
     }),
   ])
 
@@ -40,11 +44,11 @@ export async function GET() {
   const pestMap = Object.fromEntries(pesticideSaleTotals.map((r) => [r.customerId!, r._sum.totalAmount || 0]))
   const pymtMap = Object.fromEntries(paymentTotals.map((r) => [r.customerId, r._sum.amount || 0]))
 
-  const result = customers.map((c) => {
-    const totalDebit = (saleMap[c.id] || 0) + (commMap[c.id] || 0) + (pestMap[c.id] || 0)
-    const totalCredit = pymtMap[c.id] || 0
-    return { ...c, totalDebit, totalCredit }
-  })
+  const result = customers.map((c) => ({
+    ...c,
+    totalDebit: (saleMap[c.id] || 0) + (commMap[c.id] || 0) + (pestMap[c.id] || 0),
+    totalCredit: pymtMap[c.id] || 0,
+  }))
 
   return NextResponse.json({ customers: result })
 }
