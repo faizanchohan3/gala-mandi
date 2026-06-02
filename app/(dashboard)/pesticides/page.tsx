@@ -83,7 +83,7 @@ export default function PesticidesPage() {
     setForm({
       name: p.name, categoryId: p.categoryId || "", manufacturer: p.manufacturer || "",
       batchNumber: p.batchNumber || "",
-      expiryDate: isoExpiry ? isoToDMY(isoExpiry) : "",
+      expiryDate: isoExpiry || "",
       quantity: String(p.quantity), unit: p.unit,
       purchasePrice: String(p.purchasePrice), salePrice: String(p.salePrice), incentive: String(savedPct), minStock: String(p.minStock),
     })
@@ -110,7 +110,7 @@ export default function PesticidesPage() {
       categoryId = cd.category.id
     }
 
-    const isoExpiry = form.expiryDate ? dmyToIso(form.expiryDate) : ""
+    const isoExpiry = form.expiryDate || ""
     const qty = parseFloat(form.quantity) || 0
     const purchasePrice = parseFloat(form.purchasePrice) || 0
     const incentivePct = parseFloat(form.incentive) || 0
@@ -442,7 +442,7 @@ ${buildPrintHeader(shop)}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Expiry Date</Label>
-                <Input placeholder="DD/MM/YYYY" value={form.expiryDate}
+                <Input type="date" value={form.expiryDate}
                   onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
               </div>
               <div>
