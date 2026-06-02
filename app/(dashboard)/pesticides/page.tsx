@@ -145,7 +145,8 @@ export default function PesticidesPage() {
         <td>${i + 1}</td>
         <td><strong>${p.name}</strong></td>
         <td>${p.category?.name || "—"}</td>
-        <td>${p.quantity} ${p.unit}</td>
+        <td>${p.quantity}</td>
+        <td>${p.unit}</td>
         <td>${p.batchNumber || "—"}</td>
         <td>${expLabel}</td>
         <td style="text-align:right">PKR ${(p.purchasePrice || 0).toLocaleString()}</td>
@@ -167,12 +168,12 @@ ${buildPrintHeader(shop)}
 <div class="body-pad">
   <table>
     <thead><tr>
-      <th>#</th><th>Name</th><th>Category</th><th>Stock</th><th>Batch</th><th>Expiry</th>
+      <th>#</th><th>Name</th><th>Category</th><th>Qty</th><th>Unit</th><th>Batch</th><th>Expiry</th>
       <th style="text-align:right">Purchase Price</th><th style="text-align:right">Incentive</th><th style="text-align:right">Sale Price</th>
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <td colspan="3"><strong>Total Products: ${filtered.length}</strong></td>
+      <td colspan="4"><strong>Total Products: ${filtered.length}</strong></td>
       <td colspan="5"></td>
     </tr></tfoot>
   </table>
@@ -365,7 +366,7 @@ ${buildPrintHeader(shop)}
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["Name", "Category", "Stock", "Batch", "Expiry", "Purchase", "Incentive", "Sale", "Actions"].map((h) => (
+                    {["Name", "Category", "Qty", "Unit", "Batch", "Expiry", "Purchase", "Incentive", "Sale", "Actions"].map((h) => (
                       <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
                     ))}
                   </tr>
@@ -380,9 +381,10 @@ ${buildPrintHeader(shop)}
                         <td className="py-3 px-3 text-gray-600">{p.category?.name}</td>
                         <td className="py-3 px-3">
                           <span className={p.quantity <= p.minStock ? "text-red-600 font-semibold" : "text-gray-700"}>
-                            {p.quantity} {p.unit}
+                            {p.quantity}
                           </span>
                         </td>
+                        <td className="py-3 px-3 text-gray-500">{p.unit}</td>
                         <td className="py-3 px-3 text-gray-600">{p.batchNumber || "-"}</td>
                         <td className="py-3 px-3">
                           {p.expiryDate ? (
@@ -417,7 +419,7 @@ ${buildPrintHeader(shop)}
                       </tr>
                     )
                   })}
-                  {filtered.length === 0 && <tr><td colSpan={8} className="text-center py-8 text-gray-400">No pesticides found</td></tr>}
+                  {filtered.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-gray-400">No pesticides found</td></tr>}
                 </tbody>
               </table>
             )}
