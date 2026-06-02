@@ -239,6 +239,48 @@ ${buildPrintHeader(shop)}
     loadData()
   }
 
+  function printSinglePesticide(p: any) {
+    const date = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
+    const expiry = p.expiryDate ? formatDateDMY(p.expiryDate) : "—"
+    const isExpired = p.expiryDate && new Date(p.expiryDate) < new Date()
+    const netCost = p.purchasePrice * p.quantity - (p.incentive || 0)
+    const w = window.open("", "_blank")!
+    w.document.write(`<html><head><title>Stock Card — ${p.name}</title>
+<style>${receiptCSS}
+  body { max-width: 480px; margin: 0 auto; }
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .card-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; }
+  .card-lbl { font-size: 9px; color: #9ca3af; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+  .card-val { font-size: 14px; font-weight: 800; color: #111827; margin-top: 3px; }
+  .stock-banner { background: ${p.quantity <= p.minStock ? "#fee2e2" : "#f0fdf4"}; border: 1px solid ${p.quantity <= p.minStock ? "#fca5a5" : "#86efac"}; border-radius: 8px; padding: 14px 16px; text-align: center; margin-bottom: 14px; }
+  .stock-qty { font-size: 28px; font-weight: 900; color: ${p.quantity <= p.minStock ? "#b91c1c" : "#15803d"}; }
+  .stock-unit { font-size: 13px; color: #6b7280; margin-top: 2px; }
+</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div><div class="doc-title">${p.name}</div><div class="doc-sub">${p.category?.name || "No Category"} &nbsp;|&nbsp; Batch: ${p.batchNumber || "—"}</div></div>
+  <div class="doc-meta"><div>Printed: ${date}</div>${isExpired ? '<div style="color:#b91c1c;font-weight:700">EXPIRED</div>' : ""}</div>
+</div>
+<div class="body-pad">
+  <div class="stock-banner">
+    <div class="stock-qty">${p.quantity} ${p.unit}</div>
+    <div class="stock-unit">Current Stock${p.quantity <= p.minStock ? " — LOW STOCK" : ""}</div>
+  </div>
+  <div class="card-grid">
+    <div class="card-item"><div class="card-lbl">Purchase Price</div><div class="card-val">PKR ${(p.purchasePrice || 0).toLocaleString()}</div></div>
+    <div class="card-item"><div class="card-lbl">Sale Price</div><div class="card-val">PKR ${(p.salePrice || 0).toLocaleString()}</div></div>
+    <div class="card-item"><div class="card-lbl">Incentive / Discount</div><div class="card-val">${p.incentive > 0 ? "PKR " + (p.incentive || 0).toLocaleString() : "—"}</div></div>
+    <div class="card-item"><div class="card-lbl">Min Stock Level</div><div class="card-val">${p.minStock || 0} ${p.unit}</div></div>
+    <div class="card-item"><div class="card-lbl">Expiry Date</div><div class="card-val" style="${isExpired ? "color:#b91c1c" : ""}">${expiry}</div></div>
+    <div class="card-item"><div class="card-lbl">Manufacturer</div><div class="card-val" style="font-size:12px">${p.manufacturer || "—"}</div></div>
+  </div>
+  <div class="sig-row"><span>${shop?.name || ""}</span><span>Stock Card — ${date}</span></div>
+</div>
+<script>window.onload=()=>{window.print()}<\/script>
+</body></html>`)
+    w.document.close()
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Delete this pesticide? This cannot be undone.")) return
     const res = await fetch(`/api/pesticides/${id}`, { method: "DELETE" })
@@ -360,6 +402,9 @@ ${buildPrintHeader(shop)}
                           <div className="flex items-center gap-2">
                             <button onClick={() => openSale(p)} className="p-1 text-gray-400 hover:text-green-600" title="Sell">
                               <ShoppingCart className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => printSinglePesticide(p)} className="p-1 text-gray-400 hover:text-purple-600" title="Print Stock Card">
+                              <Printer className="w-4 h-4" />
                             </button>
                             <button onClick={() => openEdit(p)} className="p-1 text-gray-400 hover:text-blue-600">
                               <Edit className="w-4 h-4" />
