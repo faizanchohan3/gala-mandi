@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency, formatDateDMY } from "@/lib/utils"
-import { buildPrintHeader, reportCSS } from "@/lib/print-utils"
+import { buildPrintHeader, reportCSS, receiptCSS } from "@/lib/print-utils"
 import { Plus, Search, AlertTriangle, ShoppingCart, Edit, Sprout, Trash2, Tag, Printer } from "lucide-react"
 
 export default function PesticidesPage() {
