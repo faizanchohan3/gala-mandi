@@ -376,8 +376,9 @@ ${buildPrintHeader(shop)}
           <div className="p-5 space-y-5">
 
             {/* ── Section 1: Basic Info ── */}
-            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Product Info</p>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Product Info</h3>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
               <div>
                 <Label className="text-xs font-semibold text-gray-600">Product Name *</Label>
                 <Input className="mt-1" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -400,11 +401,13 @@ ${buildPrintHeader(shop)}
                   </div>
                 )}
               </div>
+              </div>
             </div>
 
             {/* ── Section 2: Unit & Stock ── */}
-            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Unit & Stock</p>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Unit & Stock</h3>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-gray-600">Unit *</Label>
@@ -444,11 +447,13 @@ ${buildPrintHeader(shop)}
                   </div>
                 )}
               </div>
+              </div>
             </div>
 
             {/* ── Section 3: Pricing ── */}
-            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Pricing</p>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Pricing</h3>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-gray-600">Purchase Price (PKR)</Label>
@@ -466,6 +471,7 @@ ${buildPrintHeader(shop)}
                       onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
                   </div>
                 </div>
+              </div>
               </div>
             </div>
 

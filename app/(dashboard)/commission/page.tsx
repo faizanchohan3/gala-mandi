@@ -498,8 +498,9 @@ ${buildPrintHeader(shop)}
           <div className="p-5 space-y-5">
 
             {/* ── Section 1: Parties ── */}
-            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Seller & Buyer</p>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Seller & Buyer</h3>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-gray-600">Seller (Farmer / Supplier)</Label>
@@ -535,8 +536,11 @@ ${buildPrintHeader(shop)}
             </div>
 
             {/* ── Section 2: Commodity & Quantity ── */}
-            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Commodity Details</p>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Commodity Details</h3>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
               <div>
                 <Label className="text-xs font-semibold text-gray-600">Commodity / Product</Label>
                 <Input className="mt-1" placeholder="e.g. Wheat, Rice, Cotton, Sugar..." value={commodity}
@@ -567,8 +571,9 @@ ${buildPrintHeader(shop)}
             </div>
 
             {/* ── Section 3: Amounts ── */}
-            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Amounts & Commission</p>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Amounts & Commission</h3>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-1">
                   <Label className="text-xs font-semibold text-gray-600">Total Amount (PKR) <span className="text-red-500">*</span></Label>
@@ -620,8 +625,9 @@ ${buildPrintHeader(shop)}
             </div>
 
             {/* ── Section 4: Payment & Notes ── */}
-            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Payment & Notes</p>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Payment & Notes</h3>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold text-gray-600">Initial Payment (PKR)</Label>
@@ -642,6 +648,9 @@ ${buildPrintHeader(shop)}
                 <Label className="text-xs font-semibold text-gray-600">Notes (optional)</Label>
                 <Textarea className="mt-1" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
                   placeholder="Any additional details..." />
+              </div>
+            </div>
+
               </div>
             </div>
 
