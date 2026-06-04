@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,9 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Plus, Search, Tractor, Edit, Trash2, ChevronDown, ChevronRight, BookOpen, Banknote, Printer, Check } from "lucide-react"
+import { Plus, Search, Tractor, Edit, Trash2, ChevronDown, ChevronRight, BookOpen, Banknote, Printer, Check, Upload } from "lucide-react"
 
 export default function FarmersPage() {
+  const router = useRouter()
+  const { data: session } = useSession()
   const [farmers, setFarmers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -22,6 +26,14 @@ export default function FarmersPage() {
   const [form, setForm] = useState({
     name: "", phone: "", otherPhone: "", address: "", village: "", cnic: "", picture: "", creditLimit: "0",
   })
+  const [photoPreview, setPhotoPreview] = useState<string>("")
+
+  // Restrict CASHIER from accessing this page
+  useEffect(() => {
+    if (session && session.user?.role === "CASHIER") {
+      router.push("/dashboard")
+    }
+  }, [session, router])
 
   // Payment state
   const [showPayModal, setShowPayModal] = useState(false)
@@ -299,8 +311,28 @@ export default function FarmersPage() {
           <div className="space-y-3 max-h-[70vh] overflow-y-auto">
             <div><Label>Full Name *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Farmer name" autoFocus /></div>
-            <div><Label>Picture (Optional)</Label>
-              <Input type="url" value={form.picture} onChange={(e) => setForm({ ...form, picture: e.target.value })} placeholder="https://example.com/image.jpg" /></div>
+            <div>
+              <Label>Profile Picture (Optional)</Label>
+              {photoPreview && (
+                <div className="mb-2 relative">
+                  <img src={photoPreview} alt="Preview" className="w-20 h-20 rounded-lg object-cover" />
+                  <button onClick={() => { setPhotoPreview(""); setForm({ ...form, picture: "" }); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">✕</button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border-2 border-dashed border-green-400 rounded-lg cursor-pointer hover:bg-green-50 transition">
+                  <Upload className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-700">Upload Photo</span>
+                  <input type="file" accept="image/*" hidden onChange={(e) => {
+                    const file = e.target.files?.[0]; if (file) {
+                      const reader = new FileReader(); reader.onload = (ev) => {
+                        const base64 = ev.target?.result as string; setPhotoPreview(base64); setForm({ ...form, picture: base64 });
+                      }; reader.readAsDataURL(file);
+                    }
+                  }} />
+                </label>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Phone</Label>
                 <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="03001234567" /></div>
