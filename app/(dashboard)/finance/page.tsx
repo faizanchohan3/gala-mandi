@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDateTime } from "@/lib/utils"
 import {
   Plus, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle,
-  Building2,
+  Building2, Banknote, CreditCard, ChevronDown,
 } from "lucide-react"
 
 export default function FinancePage() {
@@ -43,20 +43,34 @@ export default function FinancePage() {
   useEffect(() => { loadData() }, [])
 
   async function handleSave() {
-    if (!form.amount || !form.description) return alert("Amount and description required")
+    if (!form.amount || parseFloat(form.amount) <= 0) return alert("Enter a valid amount")
+    if (!form.description.trim()) return alert("Description is required")
+    setSaving(true)
     const res = await fetch("/api/finance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, amount: parseFloat(form.amount), bankId: form.bankId || null, accountId: form.accountId || null }),
     })
+    setSaving(false)
     if (res.ok) {
       setShowModal(false)
+      setShowMoreCats(false)
       setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "" })
       loadData()
     }
   }
 
-  const PRESET_CATEGORIES = ["Sales", "Purchases", "Salary", "Rent", "Utilities", "Pesticides", "Miscellaneous"]
+  function openModal() {
+    setShowMoreCats(false)
+    setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "" })
+    setShowModal(true)
+  }
+
+  const [saving, setSaving] = useState(false)
+  const [showMoreCats, setShowMoreCats] = useState(false)
+
+  const INCOME_CATS  = ["Sales", "Commission", "Pesticide Sale", "Rent Received", "Other Income"]
+  const EXPENSE_CATS = ["Purchases", "Salary", "Rent", "Utilities", "Transport", "Labour", "Repair", "Miscellaneous"]
 
   return (
     <div className="space-y-6">
@@ -71,7 +85,7 @@ export default function FinancePage() {
               <Building2 className="w-4 h-4" /> Manage Banks
             </Button>
           </Link>
-          <Button onClick={() => setShowModal(true)} className="gap-2">
+          <Button onClick={openModal} className="gap-2">
             <Plus className="w-4 h-4" /> Add Transaction
           </Button>
         </div>
@@ -184,30 +198,174 @@ export default function FinancePage() {
         </CardContent>
       </Card>
 
-      {/* Add Transaction Modal */}
-      <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      {/* Add Transaction Modal — Redesigned */}
+      <Dialog open={showModal} onOpenChange={(o) => { setShowModal(o); if (!o) setShowMoreCats(false) }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Transaction</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${form.type === "CREDIT" ? "bg-green-100" : "bg-red-100"}`}>
+                {form.type === "CREDIT"
+                  ? <ArrowUpCircle className="w-4 h-4 text-green-600" />
+                  : <ArrowDownCircle className="w-4 h-4 text-red-600" />}
+              </div>
+              Add Transaction
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Type</Label>
-              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v, accountId: "" })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CREDIT">Income (Credit)</SelectItem>
-                  <SelectItem value="DEBIT">Expense (Debit)</SelectItem>
-                </SelectContent>
-              </Select>
+
+          <div className="space-y-5">
+
+            {/* ── Step 1: Type Toggle ── */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setForm({ ...form, type: "CREDIT", category: "", accountId: "" })}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-semibold text-sm transition-all ${
+                  form.type === "CREDIT"
+                    ? "border-green-500 bg-green-50 text-green-700 shadow-sm"
+                    : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <ArrowUpCircle className="w-4 h-4" />
+                Income
+              </button>
+              <button
+                onClick={() => setForm({ ...form, type: "DEBIT", category: "", accountId: "" })}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-semibold text-sm transition-all ${
+                  form.type === "DEBIT"
+                    ? "border-red-500 bg-red-50 text-red-700 shadow-sm"
+                    : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <ArrowDownCircle className="w-4 h-4" />
+                Expense
+              </button>
             </div>
+
+            {/* ── Step 2: Amount ── */}
             <div>
-              <Label>Account (Chart of Accounts)</Label>
+              <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Amount (PKR) *</Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">PKR</span>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  className={`pl-12 text-xl font-bold h-12 ${form.type === "CREDIT" ? "focus:border-green-400" : "focus:border-red-400"}`}
+                  autoFocus
+                />
+              </div>
+              {form.amount && parseFloat(form.amount) > 0 && (
+                <p className={`text-xs mt-1 font-medium ${form.type === "CREDIT" ? "text-green-600" : "text-red-600"}`}>
+                  {form.type === "CREDIT" ? "+" : "−"} {formatCurrency(parseFloat(form.amount))}
+                </p>
+              )}
+            </div>
+
+            {/* ── Step 3: Description ── */}
+            <div>
+              <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Description *</Label>
+              <Input
+                className="mt-1"
+                placeholder={form.type === "CREDIT" ? "e.g. Wheat sales, Commission received..." : "e.g. Rent payment, Staff salary..."}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+
+            {/* ── Step 4: Category Chips ── */}
+            <div>
+              <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Category</Label>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {(form.type === "CREDIT" ? INCOME_CATS : EXPENSE_CATS)
+                  .slice(0, showMoreCats ? undefined : 4)
+                  .map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setForm({ ...form, category: form.category === cat ? "" : cat })}
+                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                        form.category === cat
+                          ? form.type === "CREDIT"
+                            ? "bg-green-600 text-white border-green-600"
+                            : "bg-red-600 text-white border-red-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                <button
+                  onClick={() => setShowMoreCats(!showMoreCats)}
+                  className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:border-gray-500 hover:text-gray-600 flex items-center gap-1"
+                >
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showMoreCats ? "rotate-180" : ""}`} />
+                  {showMoreCats ? "Less" : "More"}
+                </button>
+              </div>
+              {/* Custom category input */}
+              {form.category !== "" && ![...INCOME_CATS, ...EXPENSE_CATS].includes(form.category) && (
+                <Input className="mt-2 text-xs" placeholder="Custom category..." value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })} />
+              )}
+              <button
+                onClick={() => setForm({ ...form, category: "___custom___" })}
+                className="text-xs text-gray-400 hover:text-gray-600 mt-1.5 underline"
+              >
+                + Custom category
+              </button>
+              {form.category === "___custom___" && (
+                <Input className="mt-1.5 text-sm" autoFocus placeholder="Enter category name..."
+                  onChange={(e) => setForm({ ...form, category: e.target.value })} />
+              )}
+            </div>
+
+            {/* ── Step 5: Payment Method ── */}
+            <div>
+              <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Payment Method</Label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <button
+                  onClick={() => setForm({ ...form, bankId: "" })}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
+                    !form.bankId
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  <Banknote className="w-4 h-4" /> Cash
+                </button>
+                <button
+                  onClick={() => banks.length > 0 && setForm({ ...form, bankId: banks[0].id })}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
+                    form.bankId
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  <CreditCard className="w-4 h-4" /> Bank
+                </button>
+              </div>
+              {form.bankId && banks.length > 0 && (
+                <Select value={form.bankId} onValueChange={(v) => setForm({ ...form, bankId: v })}>
+                  <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {banks.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}{b.accountNumber ? ` — ${b.accountNumber}` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {form.bankId && banks.length === 0 && (
+                <p className="text-xs text-amber-600 mt-1.5">No banks added yet — <Link href="/banks" className="underline">add a bank</Link></p>
+              )}
+            </div>
+
+            {/* ── Step 6: Account (collapsed by default) ── */}
+            <div>
+              <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Chart of Account <span className="font-normal normal-case text-gray-400">(optional)</span></Label>
               {accounts.length === 0 ? (
-                <p className="text-xs text-gray-400 mt-1 py-2">No accounts yet — go to <strong>Accounts</strong> page and click "Load Default Accounts"</p>
+                <p className="text-xs text-gray-400 mt-1">No accounts — <Link href="/accounts" className="underline text-blue-600">load default accounts</Link></p>
               ) : (
                 <Select value={form.accountId || "none"} onValueChange={(v) => setForm({ ...form, accountId: v === "none" ? "" : v })}>
-                  <SelectTrigger><SelectValue placeholder="Select account..." /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select account..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— No account —</SelectItem>
                     {(() => {
@@ -227,59 +385,31 @@ export default function FinancePage() {
                 </Select>
               )}
             </div>
-            <div><Label>Amount (PKR)</Label><Input type="number" placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
-            <div><Label>Description</Label><Input placeholder="e.g. Wheat sales, Rent payment" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+
+            {/* ── Step 7: Reference ── */}
             <div>
-              <Label>Category</Label>
-              {(() => {
-                const isCustom = form.category !== "" && !PRESET_CATEGORIES.includes(form.category)
-                return (
-                  <>
-                    <Select
-                      value={isCustom ? "Custom" : (form.category || "none")}
-                      onValueChange={(v) => {
-                        if (v === "Custom") setForm({ ...form, category: "" })
-                        else if (v === "none") setForm({ ...form, category: "" })
-                        else setForm({ ...form, category: v })
-                      }}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">— No category —</SelectItem>
-                        {PRESET_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        <SelectItem value="Custom">Custom...</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {isCustom && (
-                      <Input
-                        className="mt-2"
-                        placeholder="Enter custom category..."
-                        value={form.category}
-                        onChange={(e) => setForm({ ...form, category: e.target.value })}
-                        autoFocus
-                      />
-                    )}
-                  </>
-                )
-              })()}
+              <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Reference <span className="font-normal normal-case text-gray-400">(optional)</span></Label>
+              <Input className="mt-1" placeholder="Invoice #, Cheque #, Note..." value={form.reference}
+                onChange={(e) => setForm({ ...form, reference: e.target.value })} />
             </div>
-            <div>
-              <Label>Bank Account (optional)</Label>
-              <Select value={form.bankId || "CASH"} onValueChange={(v) => setForm({ ...form, bankId: v === "CASH" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder="Cash / No Bank" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CASH">Cash (No Bank)</SelectItem>
-                  {banks.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}{b.accountNumber ? ` — ${b.accountNumber}` : ""}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            {/* ── Action Buttons ── */}
+            <div className="flex gap-3 pt-1">
+              <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1" disabled={saving}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className={`flex-1 gap-2 ${form.type === "CREDIT" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}
+              >
+                {form.type === "CREDIT"
+                  ? <ArrowUpCircle className="w-4 h-4" />
+                  : <ArrowDownCircle className="w-4 h-4" />}
+                {saving ? "Saving..." : form.type === "CREDIT" ? "Add Income" : "Add Expense"}
+              </Button>
             </div>
-            <div><Label>Reference (optional)</Label><Input placeholder="Invoice #, Cheque #" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
-              <Button onClick={handleSave} className="flex-1">Add Transaction</Button>
-            </div>
+
           </div>
         </DialogContent>
       </Dialog>
