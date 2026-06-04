@@ -381,7 +381,8 @@ ${buildPrintHeader(shop)}
                   <div className="mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
                     📂 No categories yet. Go to <strong>Categories</strong> tab above to add one.
                   </div>
-                ) : (
+                ) : categories.length <= 10 ? (
+                  // Chips for few categories
                   <div className="mt-1 flex flex-wrap gap-2">
                     {categories.map((c: any) => (
                       <button
@@ -397,6 +398,18 @@ ${buildPrintHeader(shop)}
                       </button>
                     ))}
                   </div>
+                ) : (
+                  // Dropdown for many categories
+                  <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Search or select category..." />
+                    </SelectTrigger>
+                    <SelectContent position="popper" side="bottom" className="max-h-48">
+                      {categories.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             </div>
