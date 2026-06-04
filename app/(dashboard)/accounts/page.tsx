@@ -64,6 +64,12 @@ export default function AccountsPage() {
     else { loadAccounts() }
   }
 
+  async function resetBalance(a: any) {
+    if (!confirm(`Reset balance of "${a.name}" from PKR ${(a.balance || 0).toLocaleString()} to 0?`)) return
+    await fetch(`/api/accounts/${a.id}`, { method: "PATCH" })
+    loadAccounts()
+  }
+
   function openAdd() {
     setEditing(null)
     setForm(BLANK_FORM)
@@ -308,8 +314,19 @@ export default function AccountsPage() {
                             </button>
                           </td>
                           <td className="py-2.5 px-4 text-gray-400 text-xs hidden md:table-cell">{a.description || "—"}</td>
-                          <td className={`py-2.5 px-4 text-right font-semibold ${a.balance > 0 ? meta.color : "text-gray-400"}`}>
-                            {formatCurrency(a.balance)}
+                          <td className={`py-2.5 px-4 text-right font-semibold ${(a.balance || 0) < 0 ? "text-red-600" : a.balance > 0 ? meta.color : "text-gray-400"}`}>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {formatCurrency(a.balance)}
+                              {(a.balance || 0) < 0 && (
+                                <button
+                                  onClick={() => resetBalance(a)}
+                                  className="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 font-medium"
+                                  title="Balance is negative — click to reset to 0"
+                                >
+                                  Fix
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2.5 px-4 text-right print:hidden">
                             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">

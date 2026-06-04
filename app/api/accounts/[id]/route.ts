@@ -61,6 +61,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   return NextResponse.json({ account })
 }
 
+// Reset a negative/incorrect balance back to 0
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth()
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { id } = await params
+  const account = await db.account.findUnique({ where: { id }, select: { name: true, balance: true } })
+  if (!account) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const updated = await db.account.update({ where: { id }, data: { balance: 0 } })
+  await createAuditLog({ userId: session.user.id, action: "UPDATE", module: "ACCOUNTS", details: `Balance reset to 0: ${account.name} (was PKR ${account.balance?.toLocaleString()})` })
+  return NextResponse.json({ account: updated })
+}
+
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
