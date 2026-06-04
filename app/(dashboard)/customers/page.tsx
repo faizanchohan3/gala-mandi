@@ -41,6 +41,8 @@ export default function CustomersPage() {
   const [saving, setSaving] = useState(false)
   const [statusTab, setStatusTab] = useState<StatusTab>("active")
   const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; balance: number; direction?: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; phone?: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function loadData() {
@@ -147,14 +149,21 @@ export default function CustomersPage() {
     loadData()
   }
 
-  async function handlePermanentDelete(id: string, name: string) {
-    if (!confirm(`Delete trader profile "${name}"?\n\nThe trader will be removed from your list.\nAll their sales, payments and ledger records will be kept in the system.\n\nThis cannot be undone.`)) return
-    const res = await fetch(`/api/customers/${id}?permanent=true`, { method: "DELETE" })
+  function handlePermanentDelete(id: string, name: string, phone?: string) {
+    setDeleteTarget({ id, name, phone })
+  }
+
+  async function confirmPermanentDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const res = await fetch(`/api/customers/${deleteTarget.id}?permanent=true`, { method: "DELETE" })
+    setDeleting(false)
     if (!res.ok) {
       const data = await res.json()
       alert(data.error || "Delete failed")
       return
     }
+    setDeleteTarget(null)
     loadData()
   }
 
@@ -331,9 +340,9 @@ export default function CustomersPage() {
                           </button>
                           {!c.isActive && (
                             <button
-                              onClick={() => handlePermanentDelete(c.id, c.name)}
+                              onClick={() => handlePermanentDelete(c.id, c.name, c.phone)}
                               className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded"
-                              title="Delete permanently (removes all ledger records)"
+                              title="Delete trader profile"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -716,6 +725,78 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
+
+      {/* ── Delete Confirmation Modal ─────────────────────────── */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </div>
+              Delete Trader
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Trader info */}
+            <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-green-700 font-bold text-sm">
+                  {deleteTarget?.name?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">{deleteTarget?.name}</p>
+                {deleteTarget?.phone && (
+                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                    <Phone className="w-3 h-3" />{deleteTarget.phone}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Warning message */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-semibold text-amber-800">What happens when you delete?</p>
+              <ul className="text-xs text-amber-700 space-y-1">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-amber-500 mt-0.5">✓</span>
+                  <span>Trader profile (name, phone, address) will be <strong>removed</strong></span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-green-600 mt-0.5">✓</span>
+                  <span>All sales, commissions & ledger records are <strong>kept safe</strong></span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-green-600 mt-0.5">✓</span>
+                  <span>Your financial totals and reports <strong>remain accurate</strong></span>
+                </li>
+              </ul>
+            </div>
+
+            <p className="text-xs text-gray-400 text-center">This action cannot be undone.</p>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 gap-2"
+                onClick={confirmPermanentDelete}
+                disabled={deleting}
+              >
+                <Trash2 className="w-4 h-4" />
+                {deleting ? "Deleting..." : "Yes, Delete"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Payment Modal ──────────────────────────────────────── */}
       <Dialog open={showPaymentModal} onOpenChange={(open) => { setShowPaymentModal(open); if (!open) setLastPayment(null) }}>
