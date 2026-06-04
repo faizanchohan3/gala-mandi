@@ -10,7 +10,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
 import { buildPrintHeader, receiptCSS, reportCSS } from "@/lib/print-utils"
-import { Plus, Search, Percent, CreditCard, Printer } from "lucide-react"
+import { Plus, Search, Percent, CreditCard, Printer, Trash2 } from "lucide-react"
 
 export default function CommissionPage() {
   const [commissions, setCommissions] = useState<any[]>([])
@@ -45,6 +45,18 @@ export default function CommissionPage() {
   const [payMethod, setPayMethod] = useState("CASH")
   const [payNotes, setPayNotes] = useState("")
   const [paying, setPaying] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const res = await fetch(`/api/commissions/${deleteTarget.id}`, { method: "DELETE" })
+    setDeleting(false)
+    if (!res.ok) { alert("Failed to delete commission"); return }
+    setDeleteTarget(null)
+    loadData()
+  }
 
   async function safeFetch(url: string, fallback: any = {}) {
     try {
@@ -436,12 +448,15 @@ ${buildPrintHeader(shop)}
                         )}
                       </td>
                       <td className="py-3 px-2">
-                        <div className="flex gap-1 flex-nowrap">
+                        <div className="flex gap-1 flex-nowrap items-center">
                           <button onClick={() => printForSeller(c)} className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 whitespace-nowrap">
                             <Printer className="w-3 h-3" /> Seller
                           </button>
                           <button onClick={() => printForBuyer(c)} className="flex items-center gap-1 px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 whitespace-nowrap">
                             <Printer className="w-3 h-3" /> Buyer
+                          </button>
+                          <button onClick={() => setDeleteTarget(c)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete Commission">
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -655,6 +670,62 @@ ${buildPrintHeader(shop)}
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Commission Confirmation Modal */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </div>
+              Delete Commission Entry
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Reference</span>
+                <span className="font-semibold">#{deleteTarget?.id?.slice(-6).toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Commodity</span>
+                <span className="font-semibold">{deleteTarget?.commodity || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Buyer</span>
+                <span className="font-semibold">{deleteTarget?.customer?.name || deleteTarget?.walkInCustomer || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Seller</span>
+                <span className="font-semibold">{deleteTarget?.farmer?.name || deleteTarget?.supplier?.name || deleteTarget?.walkInSeller || "—"}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1.5">
+                <span className="text-gray-500">Total Value</span>
+                <span className="font-bold text-red-600">{formatCurrency(deleteTarget?.totalValue || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Date</span>
+                <span>{deleteTarget ? formatDate(deleteTarget.createdAt) : ""}</span>
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+              <p className="font-semibold">What happens when deleted:</p>
+              <p>✓ Removed from buyer (trader) ledger</p>
+              <p>✓ Removed from seller (farmer/supplier) ledger</p>
+              <p>✓ Commission income reversed from accounts</p>
+              <p>✓ Labour expense reversed from accounts</p>
+              <p>✗ This cannot be undone</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+              <Button className="flex-1 bg-red-600 hover:bg-red-700 gap-2" onClick={confirmDelete} disabled={deleting}>
+                <Trash2 className="w-4 h-4" />{deleting ? "Deleting..." : "Delete Commission"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
