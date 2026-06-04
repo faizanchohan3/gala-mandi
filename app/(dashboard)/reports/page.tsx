@@ -8,7 +8,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts"
 import {
-  BarChart3, TrendingUp, Users, ShoppingCart, DollarSign, BookOpen,
+  BarChart3, TrendingUp, Users, ShoppingCart, ShoppingBag, DollarSign, BookOpen,
   ArrowRight, Package, TrendingDown, AlertTriangle, Wallet, Tractor, Store, UserCheck,
 } from "lucide-react"
 import Link from "next/link"
@@ -21,6 +21,13 @@ const reportCards = [
     description: "Detailed sales transactions with date & customer filters",
     icon: ShoppingCart,
     color: "from-green-700 to-green-800",
+  },
+  {
+    href: "/reports/purchases",
+    title: "Purchase Report",
+    description: "Detailed purchase transactions with date & supplier filters",
+    icon: ShoppingBag,
+    color: "from-amber-600 to-amber-700",
   },
   {
     href: "/reports/customers",
@@ -101,6 +108,7 @@ export default function ReportsPage() {
   // Filter reports based on role
   const visibleReportCards = isCashier ? reportCards.filter(card => [
     "/reports/sales",
+    "/reports/purchases",
     "/reports/all-farmers",
     "/reports/all-traders",
     "/reports/all-suppliers",
