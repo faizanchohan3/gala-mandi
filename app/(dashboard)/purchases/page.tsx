@@ -47,6 +47,18 @@ export default function PurchasesPage() {
   const [cPaidAmount, setCPaidAmount] = useState("0")
   const [cNotes, setCNotes] = useState("")
   const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function confirmDeletePurchase() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const res = await fetch(`/api/purchases/${deleteTarget.id}`, { method: "DELETE" })
+    setDeleting(false)
+    if (!res.ok) { alert("Failed to delete purchase"); return }
+    setDeleteTarget(null)
+    loadData()
+  }
 
   async function safeFetch(url: string, fallback: any = {}) {
     try {
@@ -383,9 +395,14 @@ ${buildPrintHeader(shop)}
                       <td className="py-3 px-3 text-gray-500">{formatDate(p.createdAt)}</td>
                       <td className="py-3 px-3 text-gray-500">{p.createdBy?.name}</td>
                       <td className="py-3 px-3">
-                        <button onClick={() => printPurchase(p)} className="text-gray-400 hover:text-green-700" title="Print">
-                          <Printer className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-1">
+                          <button onClick={() => printPurchase(p)} className="p-1.5 text-gray-400 hover:text-green-700 hover:bg-green-50 rounded" title="Print">
+                            <Printer className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setDeleteTarget(p)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete Purchase">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -591,6 +608,52 @@ ${buildPrintHeader(shop)}
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Purchase Confirmation Modal */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </div>
+              Delete Purchase Entry
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Reference</span>
+                <span className="font-semibold">#{deleteTarget?.id?.slice(-8).toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Supplier / Party</span>
+                <span className="font-semibold">{deleteTarget?.supplier?.name || deleteTarget?.farmer?.name || deleteTarget?.sellerCustomer?.name || deleteTarget?.walkinSeller || "Walk-in"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Amount</span>
+                <span className="font-bold text-red-600">{formatCurrency(deleteTarget?.totalAmount || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Date</span>
+                <span>{deleteTarget ? formatDate(deleteTarget.createdAt) : ""}</span>
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+              <p className="font-semibold">What happens when deleted:</p>
+              <p>✓ Purchase removed from supplier/farmer ledger</p>
+              <p>✓ Stock quantities reversed</p>
+              <p>✗ This cannot be undone</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+              <Button className="flex-1 bg-red-600 hover:bg-red-700 gap-2" onClick={confirmDeletePurchase} disabled={deleting}>
+                <Trash2 className="w-4 h-4" />{deleting ? "Deleting..." : "Delete Purchase"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -31,6 +31,8 @@ export default function SalesPage() {
   const [showPesticideSaleModal, setShowPesticideSaleModal] = useState(false)
   const [showPesticideDetailModal, setShowPesticideDetailModal] = useState(false)
   const [selectedSale, setSelectedSale] = useState<any>(null)
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const [deleting, setDeleting] = useState(false)
   const [selectedPesticideSaleDetail, setSelectedPesticideSaleDetail] = useState<any>(null)
   const [customerId, setCustomerId] = useState("")
   const [paidAmount, setPaidAmount] = useState("0")
@@ -172,6 +174,16 @@ export default function SalesPage() {
   function openDetail(sale: any) {
     setSelectedSale(sale)
     setShowDetailModal(true)
+  }
+
+  async function confirmDeleteSale() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const res = await fetch(`/api/sales/${deleteTarget.id}`, { method: "DELETE" })
+    setDeleting(false)
+    if (!res.ok) { alert("Failed to delete sale"); return }
+    setDeleteTarget(null)
+    loadData()
   }
 
   function handlePrint() {
@@ -592,6 +604,13 @@ ${buildPrintHeader(shop)}
                                 title="Print Invoice"
                               >
                                 <Printer className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteTarget(s)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete Sale"
+                              >
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -1024,6 +1043,52 @@ ${buildPrintHeader(shop)}
             </DialogContent>
           </Dialog>
         )}
+      {/* Delete Sale Confirmation Modal */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </div>
+              Delete Sale Entry
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Invoice</span>
+                <span className="font-semibold">#{deleteTarget?.id?.slice(-8).toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Customer</span>
+                <span className="font-semibold">{deleteTarget?.customer?.name || deleteTarget?.farmer?.name || "Walk-in"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Amount</span>
+                <span className="font-bold text-red-600">{formatCurrency(deleteTarget?.totalAmount || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Date</span>
+                <span>{deleteTarget ? formatDate(deleteTarget.createdAt) : ""}</span>
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+              <p className="font-semibold">What happens when deleted:</p>
+              <p>✓ Sale removed from customer ledger</p>
+              <p>✓ Stock quantities restored</p>
+              <p>✗ This cannot be undone</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+              <Button className="flex-1 bg-red-600 hover:bg-red-700 gap-2" onClick={confirmDeleteSale} disabled={deleting}>
+                <Trash2 className="w-4 h-4" />{deleting ? "Deleting..." : "Delete Sale"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       </div>
     </>
   )
