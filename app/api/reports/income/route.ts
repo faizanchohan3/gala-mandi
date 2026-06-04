@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 
   const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
 
-  const [sales, purchases, transactions] = await Promise.all([
+  const [sales, purchases, pesticideSales, transactions] = await Promise.all([
     db.sale.aggregate({
       where: { ...dateWhere, ...shopFilter },
       _sum: { totalAmount: true, paidAmount: true, balance: true },
@@ -34,6 +34,11 @@ export async function GET(req: Request) {
       _sum: { totalAmount: true, paidAmount: true, balance: true },
       _count: true,
     }),
+    db.pesticideSale.aggregate({
+      where: { ...dateWhere, ...shopFilter },
+      _sum: { totalAmount: true, paidAmount: true, balance: true, incentive: true },
+      _count: true,
+    }),
     db.transaction.findMany({
       where: { ...dateWhere, ...shopFilter },
       orderBy: { createdAt: "desc" },
@@ -42,8 +47,12 @@ export async function GET(req: Request) {
   ])
 
   const salesTotal = sales._sum.totalAmount || 0
+  const pesticideSalesTotal = pesticideSales._sum.totalAmount || 0
+  const pesticideIncentive = pesticideSales._sum.incentive || 0
+  const totalRevenue = salesTotal + pesticideSalesTotal
+
   const purchasesTotal = purchases._sum.totalAmount || 0
-  const grossProfit = salesTotal - purchasesTotal
+  const grossProfit = totalRevenue - purchasesTotal - pesticideIncentive
 
   const otherIncome = transactions.filter((t) => t.type === "CREDIT").reduce((s, t) => s + t.amount, 0)
   const otherExpense = transactions.filter((t) => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0)
@@ -54,6 +63,12 @@ export async function GET(req: Request) {
     salesCount: sales._count,
     salesPaid: sales._sum.paidAmount || 0,
     salesBalance: sales._sum.balance || 0,
+    pesticideSalesTotal,
+    pesticideSalesCount: pesticideSales._count,
+    pesticideSalesPaid: pesticideSales._sum.paidAmount || 0,
+    pesticideSalesBalance: pesticideSales._sum.balance || 0,
+    pesticideIncentive,
+    totalRevenue,
     purchasesTotal,
     purchasesCount: purchases._count,
     purchasesPaid: purchases._sum.paidAmount || 0,

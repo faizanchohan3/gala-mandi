@@ -105,7 +105,7 @@ export default function ProfitLossPage() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center py-2 border-b">
                   <div>
-                    <p className="font-medium text-gray-800">Sales Revenue</p>
+                    <p className="font-medium text-gray-800">Agricultural Sales</p>
                     <p className="text-xs text-gray-500">{data.salesCount} transactions</p>
                   </div>
                   <p className="font-semibold text-gray-900">{formatCurrency(data.salesTotal)}</p>
@@ -118,6 +118,25 @@ export default function ProfitLossPage() {
                   <p className="text-gray-600 text-sm">Sales Receivable</p>
                   <p className="text-orange-600">{formatCurrency(data.salesBalance)}</p>
                 </div>
+                {data.pesticideSalesTotal > 0 && (
+                  <>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <div>
+                        <p className="font-medium text-gray-800">Pesticide Sales</p>
+                        <p className="text-xs text-gray-500">{data.pesticideSalesCount} transactions</p>
+                      </div>
+                      <p className="font-semibold text-gray-900">{formatCurrency(data.pesticideSalesTotal)}</p>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <p className="text-gray-600 text-sm">Pesticide Collected</p>
+                      <p className="text-green-700">{formatCurrency(data.pesticideSalesPaid)}</p>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <p className="text-gray-600 text-sm">Pesticide Receivable</p>
+                      <p className="text-orange-600">{formatCurrency(data.pesticideSalesBalance)}</p>
+                    </div>
+                  </>
+                )}
                 {data.otherIncome > 0 && (
                   <div className="flex justify-between items-center py-2 border-b">
                     <p className="text-gray-600 text-sm">Other Income</p>
@@ -126,7 +145,7 @@ export default function ProfitLossPage() {
                 )}
                 <div className="flex justify-between items-center pt-2 font-bold text-green-700 bg-green-50 px-2 py-2 rounded">
                   <p>Total Revenue</p>
-                  <p>{formatCurrency(data.salesTotal + data.otherIncome)}</p>
+                  <p>{formatCurrency(data.totalRevenue + data.otherIncome)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -154,6 +173,12 @@ export default function ProfitLossPage() {
                   <p className="text-gray-600 text-sm">Purchases Payable</p>
                   <p className="text-orange-600">{formatCurrency(data.purchasesBalance)}</p>
                 </div>
+                {data.pesticideIncentive > 0 && (
+                  <div className="flex justify-between items-center py-2 border-b bg-amber-50 px-2">
+                    <p className="text-gray-600 text-sm font-medium">Pesticide Incentive Given to Buyers</p>
+                    <p className="text-amber-600 font-medium">{formatCurrency(data.pesticideIncentive)}</p>
+                  </div>
+                )}
                 {data.otherExpense > 0 && (
                   <div className="flex justify-between items-center py-2 border-b">
                     <p className="text-gray-600 text-sm">Other Expenses</p>
@@ -162,7 +187,7 @@ export default function ProfitLossPage() {
                 )}
                 <div className="flex justify-between items-center pt-2 font-bold text-red-600 bg-red-50 px-2 py-2 rounded">
                   <p>Total Expenses</p>
-                  <p>{formatCurrency(data.purchasesTotal + data.otherExpense)}</p>
+                  <p>{formatCurrency(data.purchasesTotal + data.otherExpense + (data.pesticideIncentive || 0))}</p>
                 </div>
               </CardContent>
             </Card>
@@ -178,13 +203,29 @@ export default function ProfitLossPage() {
             <CardContent>
               <div className="space-y-3 max-w-md mx-auto">
                 <div className="flex justify-between py-2 border-b">
-                  <p className="text-gray-600">Sales Revenue</p>
+                  <p className="text-gray-600">Agricultural Sales</p>
                   <p className="font-medium">{formatCurrency(data.salesTotal)}</p>
+                </div>
+                {data.pesticideSalesTotal > 0 && (
+                  <div className="flex justify-between py-2 border-b">
+                    <p className="text-gray-600">Pesticide Sales</p>
+                    <p className="font-medium">{formatCurrency(data.pesticideSalesTotal)}</p>
+                  </div>
+                )}
+                <div className="flex justify-between py-2 border-b font-semibold text-green-700 bg-green-50 px-2">
+                  <p>Total Revenue</p>
+                  <p>{formatCurrency(data.totalRevenue)}</p>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <p className="text-gray-600">Cost of Purchases</p>
                   <p className="font-medium text-red-600">− {formatCurrency(data.purchasesTotal)}</p>
                 </div>
+                {data.pesticideIncentive > 0 && (
+                  <div className="flex justify-between py-2 border-b">
+                    <p className="text-gray-600 text-sm">Pesticide Incentive</p>
+                    <p className="font-medium text-amber-600">− {formatCurrency(data.pesticideIncentive)}</p>
+                  </div>
+                )}
                 <div className="flex justify-between py-2 border-b font-semibold">
                   <p className="text-gray-800">Gross Profit</p>
                   <p className={data.grossProfit >= 0 ? "text-green-700" : "text-red-600"}>
