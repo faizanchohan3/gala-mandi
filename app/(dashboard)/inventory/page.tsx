@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SearchableSelect } from "@/components/ui/searchable-select"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { buildPrintHeader, reportCSS } from "@/lib/print-utils"
 import { Plus, Search, Package, AlertTriangle, Edit, Trash2, Tag, ChevronDown, ChevronUp, X, Printer } from "lucide-react"
@@ -391,15 +390,18 @@ ${buildPrintHeader(shop)}
                     📂 No categories yet. Go to <strong>Categories</strong> tab above to add one.
                   </div>
                 ) : (
-                  <div className="mt-1">
-                    <SearchableSelect
-                      value={form.categoryId}
-                      onValueChange={(v) => setForm({ ...form, categoryId: v })}
-                      placeholder="Search categories..."
-                      options={categories.map((c: any) => ({ value: c.id, label: c.name }))}
-                      side="bottom"
-                    />
-                  </div>
+                  <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
               </div>
