@@ -353,7 +353,7 @@ ${buildPrintHeader(shop)}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="w-[96vw] max-w-2xl max-h-[92vh] overflow-y-auto p-0">
           {/* Header */}
-          <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-4 rounded-t-lg">
+          <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                 <Package className="w-5 h-5 text-white" />
@@ -363,6 +363,13 @@ ${buildPrintHeader(shop)}
                 <p className="text-blue-100 text-xs">Fill in product details and pricing</p>
               </div>
             </div>
+            <button
+              onClick={() => setShowModal(false)}
+              className="text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors flex-shrink-0"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           <div className="p-5 space-y-5">
