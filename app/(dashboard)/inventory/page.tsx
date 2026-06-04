@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { buildPrintHeader, reportCSS } from "@/lib/print-utils"
 import { Plus, Search, Package, AlertTriangle, Edit, Trash2, Tag, ChevronDown, ChevronUp, X, Printer } from "lucide-react"
@@ -388,35 +389,15 @@ ${buildPrintHeader(shop)}
                   <div className="mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
                     📂 No categories yet. Go to <strong>Categories</strong> tab above to add one.
                   </div>
-                ) : categories.length <= 10 ? (
-                  // Chips for few categories
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {categories.map((c: any) => (
-                      <button
-                        key={c.id}
-                        onClick={() => setForm({ ...form, categoryId: form.categoryId === c.id ? "" : c.id })}
-                        className={`px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all ${
-                          form.categoryId === c.id
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
-                        }`}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
                 ) : (
-                  // Dropdown for many categories
-                  <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Search or select category..." />
-                    </SelectTrigger>
-                    <SelectContent position="popper" side="bottom" className="max-h-48">
-                      {categories.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="mt-1">
+                    <SearchableSelect
+                      value={form.categoryId}
+                      onValueChange={(v) => setForm({ ...form, categoryId: v })}
+                      placeholder="Search categories..."
+                      options={categories.map((c: any) => ({ value: c.id, label: c.name }))}
+                    />
+                  </div>
                 )}
               </div>
             </div>
