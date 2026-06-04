@@ -44,6 +44,13 @@ const reportCards = [
     color: "from-violet-600 to-violet-700",
   },
   {
+    href: "/reports/balance-sheet",
+    title: "Balance Sheet & P&L",
+    description: "Complete financial statement with assets, liabilities, equity & profit/loss",
+    icon: Wallet,
+    color: "from-indigo-600 to-indigo-700",
+  },
+  {
     href: "/reports/profit-loss",
     title: "Profit & Loss",
     description: "Revenue vs expenses, gross profit and net income",
