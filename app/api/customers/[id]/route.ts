@@ -228,8 +228,31 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
+  const { searchParams } = new URL(req.url)
+  const permanent = searchParams.get("permanent") === "true"
+
+  if (permanent) {
+    const customer = await db.customer.findUnique({ where: { id }, select: { name: true, isActive: true } })
+    if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 })
+    if (customer.isActive) return NextResponse.json({ error: "Cannot delete an active trader. Deactivate first." }, { status: 400 })
+
+    // Unlink customer from all records that allow null (financial data preserved)
+    // CustomerPayment has non-nullable FK so those records are deleted
+    await db.$transaction([
+      db.sale.updateMany({ where: { customerId: id }, data: { customerId: null } }),
+      db.commission.updateMany({ where: { customerId: id }, data: { customerId: null } }),
+      db.pesticideSale.updateMany({ where: { customerId: id }, data: { customerId: null } }),
+      db.purchase.updateMany({ where: { sellerCustomerId: id }, data: { sellerCustomerId: null } }),
+      db.customerPayment.deleteMany({ where: { customerId: id } }),
+      db.customer.delete({ where: { id } }),
+    ])
+
+    await createAuditLog({ userId: session.user.id, action: "DELETE", module: "CUSTOMERS", details: `Deleted trader profile: ${customer.name} (transaction records preserved)` })
+    return NextResponse.json({ success: true })
+  }
+
+  // Default: just deactivate
   await db.customer.update({ where: { id }, data: { isActive: false } })
   await createAuditLog({ userId: session.user.id, action: "DELETE", module: "CUSTOMERS", details: `Deactivated customer ID: ${id}` })
-
   return NextResponse.json({ success: true })
 }

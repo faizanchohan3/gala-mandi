@@ -12,7 +12,7 @@ import {
   Plus, Search, Edit, Phone, MapPin, Wallet,
   TrendingUp, ArrowDownCircle, Eye, Users, X,
   BookOpen, ShoppingCart, ExternalLink, Camera, UserCheck,
-  CreditCard, Shield, Printer, Check,
+  CreditCard, Shield, Printer, Check, Trash2,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -144,6 +144,17 @@ export default function CustomersPage() {
   async function handleDelete(id: string, name: string) {
     if (!confirm(`Remove customer "${name}"?`)) return
     await fetch(`/api/customers/${id}`, { method: "DELETE" })
+    loadData()
+  }
+
+  async function handlePermanentDelete(id: string, name: string) {
+    if (!confirm(`Delete trader profile "${name}"?\n\nThe trader will be removed from your list.\nAll their sales, payments and ledger records will be kept in the system.\n\nThis cannot be undone.`)) return
+    const res = await fetch(`/api/customers/${id}?permanent=true`, { method: "DELETE" })
+    if (!res.ok) {
+      const data = await res.json()
+      alert(data.error || "Delete failed")
+      return
+    }
     loadData()
   }
 
@@ -318,6 +329,15 @@ export default function CustomersPage() {
                           >
                             {c.isActive ? "Deactivate" : "Activate"}
                           </button>
+                          {!c.isActive && (
+                            <button
+                              onClick={() => handlePermanentDelete(c.id, c.name)}
+                              className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded"
+                              title="Delete permanently (removes all ledger records)"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
