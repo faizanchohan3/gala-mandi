@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { Printer, TrendingUp, TrendingDown, Wallet, AlertCircle } from "lucide-react"
-import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
+import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts"
 
 export default function BalanceSheetPage() {
   const [data, setData] = useState<any>(null)
@@ -293,33 +293,67 @@ export default function BalanceSheetPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Pie Charts Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Revenue vs Expenses Pie Chart */}
+            <Card className="border-2 border-emerald-200 bg-emerald-50 print:hidden">
+              <CardHeader className="pb-2 border-b-2 border-emerald-200">
+                <CardTitle className="text-base text-emerald-900">💰 Revenue vs Expenses</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: "Revenue", value: data.totalRevenue, fill: "#10b981" },
+                        { name: "Expenses", value: data.purchasesTotal + data.otherExpense, fill: "#ef4444" },
+                      ].filter(d => d.value > 0)}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={true}
+                      label={({ name, value, percent }) => `${name}: ${(percent != null ? (percent * 100).toFixed(1) : 0)}%`}
+                      outerRadius={90}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      <Cell fill="#10b981" />
+                      <Cell fill="#ef4444" />
+                    </Pie>
+                    <Tooltip formatter={(value: any) => typeof value === 'number' ? formatCurrency(value) : value} contentStyle={{ backgroundColor: "#f9fafb", border: "1px solid #d1d5db", borderRadius: "8px", padding: "8px" }} />
+                    <Legend wrapperStyle={{ paddingTop: "12px" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
             {/* Assets Breakdown Pie Chart */}
             {data.totalAssets > 0 && (
               <Card className="border-2 border-blue-200 bg-blue-50">
                 <CardHeader className="pb-2 border-b-2 border-blue-200">
-                  <CardTitle className="text-base text-blue-900">📊 Assets Breakdown</CardTitle>
+                  <CardTitle className="text-base text-blue-900">🏦 Assets Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <ResponsiveContainer width="100%" height={250}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <PieChart>
                       <Pie
                         data={[
-                          { name: "Receivables", value: Math.max(0, data.totalReceivables) },
-                          { name: "Stock Value", value: Math.max(0, data.totalStockValue) },
+                          { name: "Receivables", value: Math.max(0, data.totalReceivables), fill: "#3b82f6" },
+                          { name: "Stock Value", value: Math.max(0, data.totalStockValue), fill: "#06b6d4" },
                         ].filter(d => d.value > 0)}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        label={(entry) => `${entry.name}: ${((entry.value / data.totalAssets) * 100).toFixed(1)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
+                        labelLine={true}
+                        label={({ name, percent }) => `${name}: ${(percent != null ? (percent * 100).toFixed(1) : 0)}%`}
+                        outerRadius={90}
                         dataKey="value"
                       >
                         <Cell fill="#3b82f6" />
                         <Cell fill="#06b6d4" />
                       </Pie>
-                      <Tooltip formatter={(value: any) => typeof value === 'number' ? formatCurrency(value) : value} />
+                      <Tooltip formatter={(value: any) => typeof value === 'number' ? formatCurrency(value) : value} contentStyle={{ backgroundColor: "#f9fafb", border: "1px solid #d1d5db", borderRadius: "8px", padding: "8px" }} />
+                      <Legend wrapperStyle={{ paddingTop: "12px" }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -327,24 +361,56 @@ export default function BalanceSheetPage() {
             )}
           </div>
 
-          {/* P&L vs Balance Sheet Comparison */}
-          <Card className="border-2 border-amber-200 bg-amber-50">
-            <CardHeader className="pb-2 border-b-2 border-amber-200">
-              <CardTitle className="text-base text-amber-900">📈 Financial Summary Diagram</CardTitle>
+          {/* Financial Summary Bar Chart */}
+          <Card className="border-2 border-violet-200 bg-violet-50 print:hidden">
+            <CardHeader className="pb-2 border-b-2 border-violet-200">
+              <CardTitle className="text-base text-violet-900">📊 Financial Summary Comparison</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={[
-                  { name: "Revenue", value: data.totalRevenue, fill: "#10b981" },
-                  { name: "Expenses", value: data.purchasesTotal + data.otherExpense, fill: "#ef4444" },
-                  { name: "Net Profit", value: data.netIncome > 0 ? data.netIncome : 0, fill: data.netIncome >= 0 ? "#3b82f6" : "#f97316" },
-                  { name: "Total Assets", value: data.totalAssets, fill: "#8b5cf6" },
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
-                  <XAxis dataKey="name" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(value: any) => typeof value === 'number' ? formatCurrency(value) : value} contentStyle={{ backgroundColor: "#fff", border: "1px solid #d1d5db", borderRadius: "8px" }} />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart
+                  data={[
+                    { category: "Revenue", amount: data.totalRevenue, fill: "#10b981" },
+                    { category: "Purchases", amount: data.purchasesTotal, fill: "#f59e0b" },
+                    { category: "Other Exp.", amount: data.otherExpense, fill: "#ef4444" },
+                    { category: "Net Profit", amount: Math.max(0, data.netIncome), fill: data.netIncome >= 0 ? "#3b82f6" : "#f97316" },
+                    { category: "Total Assets", amount: data.totalAssets, fill: "#8b5cf6" },
+                  ]}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" vertical={false} />
+                  <XAxis
+                    dataKey="category"
+                    stroke="#6b7280"
+                    style={{ fontSize: "12px", fontWeight: "500" }}
+                    tick={{ fill: "#6b7280" }}
+                  />
+                  <YAxis
+                    stroke="#6b7280"
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                    style={{ fontSize: "12px" }}
+                    tick={{ fill: "#6b7280" }}
+                  />
+                  <Tooltip
+                    formatter={(value: any) => typeof value === 'number' ? formatCurrency(value) : value}
+                    contentStyle={{ backgroundColor: "#f9fafb", border: "2px solid #d1d5db", borderRadius: "8px", padding: "12px" }}
+                    labelStyle={{ color: "#1f2937", fontWeight: "600" }}
+                  />
+                  <Bar
+                    dataKey="amount"
+                    radius={[8, 8, 0, 0]}
+                    fill="#3b82f6"
+                  >
+                    {[
+                      { category: "Revenue", fill: "#10b981" },
+                      { category: "Purchases", fill: "#f59e0b" },
+                      { category: "Other Exp.", fill: "#ef4444" },
+                      { category: "Net Profit", fill: data.netIncome >= 0 ? "#3b82f6" : "#f97316" },
+                      { category: "Total Assets", fill: "#8b5cf6" },
+                    ].map((item, index) => (
+                      <Cell key={`cell-${index}`} fill={item.fill} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
