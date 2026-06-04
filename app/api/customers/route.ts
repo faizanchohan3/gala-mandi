@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
+import { cachedJson } from "@/lib/api-cache"
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -10,7 +11,7 @@ export async function GET(req: Request) {
   const all = searchParams.get("all") === "true"
   const activeFilter = all ? {} : { isActive: true }
   const customers = await db.customer.findMany({ where: { ...shopFilter, ...activeFilter }, orderBy: { name: "asc" } })
-  return NextResponse.json({ customers })
+  return cachedJson({ customers })
 }
 
 export async function POST(req: Request) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
+import { cachedJson } from "@/lib/api-cache"
 
 export async function GET() {
   const session = await auth()
@@ -44,5 +45,5 @@ export async function GET() {
     totalCredit: pymtMap[s.id] || 0,
   }))
 
-  return NextResponse.json({ suppliers: result })
+  return cachedJson({ suppliers: result })
 }

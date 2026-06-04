@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
+import { cachedJson } from "@/lib/api-cache"
 
 export async function GET() {
   const session = await auth()
@@ -15,7 +16,7 @@ export async function GET() {
     },
   })
 
-  return NextResponse.json({ farmers })
+  return cachedJson({ farmers })
 }
 
 export async function POST(req: Request) {

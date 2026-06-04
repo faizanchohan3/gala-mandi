@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
+import { cachedJson } from "@/lib/api-cache"
 
 export async function GET() {
   const session = await auth()
@@ -11,7 +12,7 @@ export async function GET() {
     where: { ...shopFilter, isActive: true },
     orderBy: { name: "asc" },
   })
-  return NextResponse.json({ banks })
+  return cachedJson({ banks })
 }
 
 export async function POST(req: Request) {

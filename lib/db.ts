@@ -7,7 +7,8 @@ const globalForPrisma = globalThis as unknown as {
 export const db =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    log: ["error"],
   })
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db
+// Always persist singleton — reuses connection on Vercel warm invocations
+globalForPrisma.prisma = db

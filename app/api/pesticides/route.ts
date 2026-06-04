@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { createAuditLog } from "@/lib/audit"
+import { cachedJson } from "@/lib/api-cache"
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -15,7 +16,7 @@ export async function GET(req: Request) {
     orderBy: { name: "asc" },
   })
 
-  return NextResponse.json({ pesticides })
+  return cachedJson({ pesticides })
 }
 
 export async function POST(req: Request) {

@@ -99,6 +99,9 @@ export function Sidebar() {
     if (pathname.startsWith("/reports")) setReportsOpen(true)
   }, [pathname])
 
+  // Warm up Neon DB connection so the first click isn't slow
+  useEffect(() => { fetch("/api/ping").catch(() => {}) }, [])
+
   useEffect(() => {
     if (!isSuperAdmin && session?.user?.shopId) {
       fetch("/api/settings")

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
+import { cachedJson } from "@/lib/api-cache"
 
 export async function GET() {
   const session = await auth()
@@ -16,7 +17,7 @@ export async function GET() {
         moduleFarmers: true, moduleCommission: true, modulePesticides: true,
       },
     })
-    return NextResponse.json({ shop })
+    return cachedJson({ shop }, 30, 120)
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Failed to load settings" }, { status: 500 })
   }
