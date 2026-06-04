@@ -200,7 +200,7 @@ export default function FinancePage() {
 
       {/* Add Transaction Modal — Redesigned */}
       <Dialog open={showModal} onOpenChange={(o) => { setShowModal(o); if (!o) setShowMoreCats(false) }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-lg sm:w-full max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${form.type === "CREDIT" ? "bg-green-100" : "bg-red-100"}`}>
