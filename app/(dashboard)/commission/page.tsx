@@ -472,151 +472,176 @@ ${buildPrintHeader(shop)}
         </CardContent>
       </Card>
 
-      {/* New Commission Modal */}
+      {/* New Commission Modal — Redesigned */}
       <Dialog open={showNew} onOpenChange={setShowNew}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Percent className="w-5 h-5" /> New Commission Transaction
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-
-            {/* Seller */}
-            <div>
-              <Label>Seller (Farmer / Supplier) <span className="text-gray-400 font-normal">— optional</span></Label>
-              <SearchableSelect
-                value={partyId}
-                onValueChange={(v) => { setPartyId(v); if (v !== "walkin") setWalkInSeller("") }}
-                placeholder="Select seller or walk-in..."
-                options={sellerOptions}
-              />
-              {partyId === "walkin" && (
-                <Input
-                  className="mt-2"
-                  placeholder="Enter seller name..."
-                  value={walkInSeller}
-                  onChange={(e) => setWalkInSeller(e.target.value)}
-                />
-              )}
-            </div>
-
-            {/* Buyer */}
-            <div>
-              <Label>Buyer (Customer) <span className="text-red-500">*</span></Label>
-              <SearchableSelect
-                value={customerId}
-                onValueChange={(v) => { setCustomerId(v); if (v !== "walkin") setWalkInCustomer("") }}
-                placeholder="Select customer or walk-in..."
-                options={customerOptions}
-              />
-              {customerId === "walkin" && (
-                <Input
-                  className="mt-2"
-                  placeholder="Enter buyer name..."
-                  value={walkInCustomer}
-                  onChange={(e) => setWalkInCustomer(e.target.value)}
-                />
-              )}
-            </div>
-
-            {/* Commodity */}
-            <div>
-              <Label>Commodity / Product Name</Label>
-              <Input
-                placeholder="e.g. Wheat, Rice, Cotton, Sugar..."
-                value={commodity}
-                onChange={(e) => setCommodity(e.target.value)}
-              />
-            </div>
-
-            {/* Bags + Filling/Bags */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Bags</Label>
-                <Input type="number" placeholder="0" value={bags} onChange={(e) => setBags(e.target.value)} />
-              </div>
-              <div>
-                <Label>Filling / Bags</Label>
-                <Input type="number" placeholder="0" value={weight} onChange={(e) => setWeight(e.target.value)} />
-              </div>
-            </div>
-
-            {/* Mound (auto) + Rate per Bag */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Mound <span className="text-xs text-gray-400 font-normal">(Filling × Bags ÷ 40)</span></Label>
-                <Input type="number" placeholder="0" value={mound} onChange={(e) => setMound(e.target.value)} />
-              </div>
-              <div>
-                <Label>Rate (per Bag)</Label>
-                <Input type="number" placeholder="0" value={rate} onChange={(e) => setRate(e.target.value)} />
-              </div>
-            </div>
-
-            {/* Total Amount + Commission % */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Total Amount <span className="text-red-500">*</span></Label>
-                <Input type="number" placeholder="0" value={totalValue} onChange={(e) => setTotalValue(e.target.value)} />
-                <p className="text-xs text-gray-400 mt-1">Auto-filled: Mound × Rate</p>
-              </div>
-              <div>
-                <Label>Commission %</Label>
-                <Input type="number" placeholder="0" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} />
-              </div>
-            </div>
-
-            {/* Labour Amount */}
-            <div>
-              <Label>Labour Amount (PKR)</Label>
-              <Input type="number" placeholder="0" value={labourAmount} onChange={(e) => setLabourAmount(e.target.value)} />
-              <p className="text-xs text-gray-400 mt-1">Deducted from your commission (not from seller)</p>
-            </div>
-
-            {/* Summary box */}
-            <div className="bg-green-50 rounded-lg p-3 space-y-1.5 text-sm border border-green-100">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Amount (buyer owes):</span>
-                <span className="font-medium">{formatCurrency(total)}</span>
-              </div>
-              <div className="flex justify-between text-green-700">
-                <span>Gross Commission ({commissionRate || 0}%):</span>
-                <span className="font-bold">{formatCurrency(commAmount)}</span>
-              </div>
-              {labourAmt > 0 && (
-                <>
-                  <div className="flex justify-between text-orange-700">
-                    <span>— Labour (deducted from commission):</span>
-                    <span className="font-medium">− {formatCurrency(labourAmt)}</span>
-                  </div>
-                  <div className="flex justify-between text-green-800 border-t border-green-200 pt-1">
-                    <span className="font-semibold">Net Commission (yours):</span>
-                    <span className="font-bold">{formatCurrency(netCommission)}</span>
-                  </div>
-                </>
-              )}
-              <div className="flex justify-between text-blue-700 border-t border-green-200 pt-1.5">
-                <span>Seller Payable (owed to seller):</span>
-                <span className="font-semibold">{formatCurrency(sellerPayable)}</span>
-              </div>
-            </div>
-
-            {/* Initial payment */}
+        <DialogContent className="w-[96vw] max-w-2xl max-h-[92vh] overflow-y-auto p-0">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-gradient-to-r from-orange-600 to-orange-500 text-white px-6 py-4 rounded-t-lg">
             <div className="flex items-center gap-3">
-              <Label className="whitespace-nowrap">Initial Payment:</Label>
-              <Input type="number" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} className="max-w-[150px]" />
-              <span className="text-sm text-gray-500">Balance: {formatCurrency(balance)}</span>
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Percent className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">New Commission</h2>
+                <p className="text-orange-100 text-xs">Fill seller, buyer, and transaction details</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5 space-y-5">
+
+            {/* ── Section 1: Parties ── */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Seller & Buyer</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Seller (Farmer / Supplier)</Label>
+                  <div className="mt-1">
+                    <SearchableSelect
+                      value={partyId}
+                      onValueChange={(v) => { setPartyId(v); if (v !== "walkin") setWalkInSeller("") }}
+                      placeholder="Select or walk-in..."
+                      options={sellerOptions}
+                    />
+                  </div>
+                  {partyId === "walkin" && (
+                    <Input className="mt-2" placeholder="Enter seller name..." value={walkInSeller}
+                      onChange={(e) => setWalkInSeller(e.target.value)} />
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Buyer (Customer) <span className="text-red-500">*</span></Label>
+                  <div className="mt-1">
+                    <SearchableSelect
+                      value={customerId}
+                      onValueChange={(v) => { setCustomerId(v); if (v !== "walkin") setWalkInCustomer("") }}
+                      placeholder="Select or walk-in..."
+                      options={customerOptions}
+                    />
+                  </div>
+                  {customerId === "walkin" && (
+                    <Input className="mt-2" placeholder="Enter buyer name..." value={walkInCustomer}
+                      onChange={(e) => setWalkInCustomer(e.target.value)} />
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label>Notes</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            {/* ── Section 2: Commodity & Quantity ── */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Commodity Details</p>
+              <div>
+                <Label className="text-xs font-semibold text-gray-600">Commodity / Product</Label>
+                <Input className="mt-1" placeholder="e.g. Wheat, Rice, Cotton, Sugar..." value={commodity}
+                  onChange={(e) => setCommodity(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Bags</Label>
+                  <Input type="number" className="mt-1" placeholder="0" value={bags}
+                    onChange={(e) => setBags(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Filling/Bag</Label>
+                  <Input type="number" className="mt-1" placeholder="0" value={weight}
+                    onChange={(e) => setWeight(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Mound <span className="font-normal text-gray-400">(auto)</span></Label>
+                  <Input type="number" className="mt-1 bg-white" placeholder="0" value={mound}
+                    onChange={(e) => setMound(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Rate / Bag</Label>
+                  <Input type="number" className="mt-1" placeholder="0" value={rate}
+                    onChange={(e) => setRate(e.target.value)} />
+                </div>
+              </div>
             </div>
 
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowNew(false)} className="flex-1">Cancel</Button>
-              <Button onClick={handleSave} disabled={saving} className="flex-1">
+            {/* ── Section 3: Amounts ── */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Amounts & Commission</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <Label className="text-xs font-semibold text-gray-600">Total Amount (PKR) <span className="text-red-500">*</span></Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">PKR</span>
+                    <Input type="number" className="pl-9 font-bold" placeholder="0" value={totalValue}
+                      onChange={(e) => setTotalValue(e.target.value)} />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Mound × Rate</p>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Commission %</Label>
+                  <div className="relative mt-1">
+                    <Input type="number" className="pr-8" placeholder="2.5" value={commissionRate}
+                      onChange={(e) => setCommissionRate(e.target.value)} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Labour (PKR)</Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">PKR</span>
+                    <Input type="number" className="pl-9" placeholder="0" value={labourAmount}
+                      onChange={(e) => setLabourAmount(e.target.value)} />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Deducted from commission</p>
+                </div>
+              </div>
+
+              {/* Live Summary */}
+              {total > 0 && (
+                <div className="bg-white rounded-lg border border-orange-100 p-3 mt-1">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-blue-50 rounded-lg p-2.5">
+                      <p className="text-xs text-blue-500 font-medium">Buyer Owes</p>
+                      <p className="font-bold text-blue-700 text-sm mt-0.5">{formatCurrency(total)}</p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-2.5">
+                      <p className="text-xs text-green-500 font-medium">Net Commission</p>
+                      <p className="font-bold text-green-700 text-sm mt-0.5">{formatCurrency(netCommission)}</p>
+                    </div>
+                    <div className="bg-orange-50 rounded-lg p-2.5">
+                      <p className="text-xs text-orange-500 font-medium">Seller Gets</p>
+                      <p className="font-bold text-orange-700 text-sm mt-0.5">{formatCurrency(sellerPayable)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Section 4: Payment & Notes ── */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Payment & Notes</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Initial Payment (PKR)</Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">PKR</span>
+                    <Input type="number" className="pl-9" value={paidAmount}
+                      onChange={(e) => setPaidAmount(e.target.value)} />
+                  </div>
+                </div>
+                <div className="flex flex-col justify-end">
+                  <div className={`rounded-lg px-3 py-2.5 text-center ${balance > 0 ? "bg-red-50 border border-red-100" : "bg-green-50 border border-green-100"}`}>
+                    <p className="text-xs text-gray-500">Balance Due</p>
+                    <p className={`font-bold text-base ${balance > 0 ? "text-red-600" : "text-green-600"}`}>{formatCurrency(balance)}</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-gray-600">Notes (optional)</Label>
+                <Textarea className="mt-1" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
+                  placeholder="Any additional details..." />
+              </div>
+            </div>
+
+            {/* ── Action Buttons ── */}
+            <div className="flex gap-3 pt-1">
+              <Button variant="outline" onClick={() => setShowNew(false)} className="flex-1" disabled={saving}>Cancel</Button>
+              <Button onClick={handleSave} disabled={saving} className="flex-1 bg-orange-600 hover:bg-orange-700 gap-2">
                 {saving ? "Saving..." : "Create Commission"}
               </Button>
             </div>
