@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { Printer, TrendingUp, TrendingDown, Wallet, AlertCircle } from "lucide-react"
+import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 
 export default function BalanceSheetPage() {
   const [data, setData] = useState<any>(null)
@@ -254,6 +255,98 @@ export default function BalanceSheetPage() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* VISUAL DIAGRAMS */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Accounting Equation Diagram */}
+            <Card className="border-2 border-indigo-200 bg-indigo-50">
+              <CardHeader className="pb-2 border-b-2 border-indigo-200">
+                <CardTitle className="text-base text-indigo-900">📐 Accounting Equation</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <div className="text-center flex-1">
+                    <div className="bg-blue-100 border-2 border-blue-500 rounded-lg p-4">
+                      <p className="text-xs text-gray-600 font-medium">ASSETS</p>
+                      <p className="text-2xl font-bold text-blue-700">{formatCurrency(data.totalAssets)}</p>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-600">=</div>
+                  <div className="text-center flex-1">
+                    <div className="bg-red-100 border-2 border-red-500 rounded-lg p-4">
+                      <p className="text-xs text-gray-600 font-medium">LIABILITIES</p>
+                      <p className="text-xl font-bold text-red-700">{formatCurrency(data.totalLiabilities)}</p>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-600">+</div>
+                  <div className="text-center flex-1">
+                    <div className="bg-green-100 border-2 border-green-500 rounded-lg p-4">
+                      <p className="text-xs text-gray-600 font-medium">EQUITY</p>
+                      <p className="text-xl font-bold text-green-700">{formatCurrency(data.equity)}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className={`p-3 rounded-lg text-center font-bold ${data.accountingEquation ? "bg-green-100 text-green-800 border-2 border-green-500" : "bg-red-100 text-red-800 border-2 border-red-500"}`}>
+                  {data.accountingEquation ? "✓ EQUATION BALANCED" : "⚠ EQUATION IMBALANCED"}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Assets Breakdown Pie Chart */}
+            {data.totalAssets > 0 && (
+              <Card className="border-2 border-blue-200 bg-blue-50">
+                <CardHeader className="pb-2 border-b-2 border-blue-200">
+                  <CardTitle className="text-base text-blue-900">📊 Assets Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Receivables", value: Math.max(0, data.totalReceivables) },
+                          { name: "Stock Value", value: Math.max(0, data.totalStockValue) },
+                        ].filter(d => d.value > 0)}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(entry) => `${entry.name}: ${((entry.value / data.totalAssets) * 100).toFixed(1)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        <Cell fill="#3b82f6" />
+                        <Cell fill="#06b6d4" />
+                      </Pie>
+                      <Tooltip formatter={(value: any) => typeof value === 'number' ? formatCurrency(value) : value} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* P&L vs Balance Sheet Comparison */}
+          <Card className="border-2 border-amber-200 bg-amber-50">
+            <CardHeader className="pb-2 border-b-2 border-amber-200">
+              <CardTitle className="text-base text-amber-900">📈 Financial Summary Diagram</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={[
+                  { name: "Revenue", value: data.totalRevenue, fill: "#10b981" },
+                  { name: "Expenses", value: data.purchasesTotal + data.otherExpense, fill: "#ef4444" },
+                  { name: "Net Profit", value: data.netIncome > 0 ? data.netIncome : 0, fill: data.netIncome >= 0 ? "#3b82f6" : "#f97316" },
+                  { name: "Total Assets", value: data.totalAssets, fill: "#8b5cf6" },
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d1d5db" />
+                  <XAxis dataKey="name" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value: any) => typeof value === 'number' ? formatCurrency(value) : value} contentStyle={{ backgroundColor: "#fff", border: "1px solid #d1d5db", borderRadius: "8px" }} />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
 

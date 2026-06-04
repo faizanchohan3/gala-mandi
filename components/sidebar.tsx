@@ -22,6 +22,7 @@ type NavItem = {
 
 const allReportSubItems = [
   { href: "/reports", label: "Overview" },
+  { href: "/reports/balance-sheet", label: "Balance Sheet & P&L" },
   { href: "/reports/sales", label: "Sales Report" },
   { href: "/reports/pesticide-sales", label: "Pesticide Sales" },
   { href: "/reports/customers", label: "Trader Report" },
