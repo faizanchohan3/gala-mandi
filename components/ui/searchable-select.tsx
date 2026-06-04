@@ -22,6 +22,7 @@ type Props = {
   groups?: SelectGroup[]
   className?: string
   disabled?: boolean
+  side?: "top" | "right" | "bottom" | "left"
 }
 
 export function SearchableSelect({
@@ -32,13 +33,14 @@ export function SearchableSelect({
   groups = [],
   className,
   disabled,
+  side = "bottom",
 }: Props) {
   return (
     <Select value={value || undefined} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger className={cn("w-full", className)}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent side={side}>
         {options.map(o => (
           <SelectItem key={o.value} value={o.value}>
             {o.label}{o.sub ? <span className="ml-1.5 text-xs text-gray-400">{o.sub}</span> : null}
