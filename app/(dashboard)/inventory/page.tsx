@@ -351,88 +351,132 @@ ${buildPrintHeader(shop)}
 
       {/* Add/Edit Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Product" : "Add Product"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Product Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Wheat" />
+        <DialogContent className="w-[96vw] max-w-2xl max-h-[92vh] overflow-y-auto p-0">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-4 rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">{editing ? "Edit Product" : "Add Product"}</h2>
+                <p className="text-blue-100 text-xs">Fill in product details and pricing</p>
+              </div>
             </div>
-            <div>
-              <Label>Category</Label>
-              {categories.length === 0 ? (
-                <div className="mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  No categories yet. Close this and click <strong>Categories</strong> to add one first.
-                </div>
-              ) : (
-                <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>
+          </div>
+
+          <div className="p-5 space-y-5">
+
+            {/* ── Section 1: Basic Info ── */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Product Info</p>
+              <div>
+                <Label className="text-xs font-semibold text-gray-600">Product Name *</Label>
+                <Input className="mt-1" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Wheat, Rice, Cotton..." />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-gray-600">Category *</Label>
+                {categories.length === 0 ? (
+                  <div className="mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                    📂 No categories yet. Go to <strong>Categories</strong> tab above to add one.
+                  </div>
+                ) : (
+                  <div className="mt-1 flex flex-wrap gap-2">
                     {categories.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Unit</Label>
-                {(() => {
-                  const PRESETS = ["KG", "Quintal", "Maund", "Bag", "Litre", "Piece"]
-                  const isCustom = !PRESETS.includes(form.unit)
-                  return (
-                    <>
-                      <Select
-                        value={isCustom ? "Custom" : form.unit}
-                        onValueChange={(v) => setForm({ ...form, unit: v === "Custom" ? "" : v })}
+                      <button
+                        key={c.id}
+                        onClick={() => setForm({ ...form, categoryId: form.categoryId === c.id ? "" : c.id })}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all ${
+                          form.categoryId === c.id
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
+                        }`}
                       >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {PRESETS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                          <SelectItem value="Custom">Custom...</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {isCustom && (
-                        <Input
-                          className="mt-2"
-                          placeholder="Enter unit name (e.g. Ton, Dozen)"
-                          value={form.unit}
-                          onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                          autoFocus
-                        />
-                      )}
-                    </>
-                  )
-                })()}
-              </div>
-              <div>
-                <Label>Min Stock</Label>
-                <Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} />
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Purchase Price (PKR)</Label>
-                <Input type="number" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} />
-              </div>
-              <div>
-                <Label>Sale Price (PKR)</Label>
-                <Input type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
+
+            {/* ── Section 2: Unit & Stock ── */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Unit & Stock</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Unit *</Label>
+                  {(() => {
+                    const PRESETS = ["KG", "Quintal", "Maund", "Bag", "Litre", "Piece"]
+                    const isCustom = !PRESETS.includes(form.unit)
+                    return (
+                      <>
+                        <Select
+                          value={isCustom ? "Custom" : form.unit}
+                          onValueChange={(v) => setForm({ ...form, unit: v === "Custom" ? "" : v })}
+                        >
+                          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                          <SelectContent position="popper" side="bottom">
+                            {PRESETS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                            <SelectItem value="Custom">Custom...</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {isCustom && (
+                          <Input className="mt-2" placeholder="Enter unit..." value={form.unit}
+                            onChange={(e) => setForm({ ...form, unit: e.target.value })} autoFocus />
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Min Stock</Label>
+                  <Input type="number" className="mt-1" value={form.minStock}
+                    onChange={(e) => setForm({ ...form, minStock: e.target.value })} />
+                </div>
+                {!editing && (
+                  <div>
+                    <Label className="text-xs font-semibold text-gray-600">Opening Stock</Label>
+                    <Input type="number" className="mt-1" value={form.currentStock}
+                      onChange={(e) => setForm({ ...form, currentStock: e.target.value })} />
+                  </div>
+                )}
               </div>
             </div>
-            {!editing && (
-              <div>
-                <Label>Opening Stock</Label>
-                <Input type="number" value={form.currentStock} onChange={(e) => setForm({ ...form, currentStock: e.target.value })} />
+
+            {/* ── Section 3: Pricing ── */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Pricing</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Purchase Price (PKR)</Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">PKR</span>
+                    <Input type="number" className="pl-9" value={form.purchasePrice}
+                      onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Sale Price (PKR)</Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">PKR</span>
+                    <Input type="number" className="pl-9" value={form.salePrice}
+                      onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
+                  </div>
+                </div>
               </div>
-            )}
-            <div className="flex gap-3 pt-2">
+            </div>
+
+            {/* ── Action Buttons ── */}
+            <div className="flex gap-3 pt-1">
               <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
-              <Button onClick={handleSave} className="flex-1">{editing ? "Update" : "Add Product"}</Button>
+              <Button onClick={handleSave} className="flex-1 bg-blue-600 hover:bg-blue-700 gap-2">
+                <Package className="w-4 h-4" />
+                {editing ? "Update Product" : "Add Product"}
+              </Button>
             </div>
+
           </div>
         </DialogContent>
       </Dialog>
