@@ -366,12 +366,17 @@ export default function FinancePage() {
               ) : (
                 <Select value={form.accountId || "none"} onValueChange={(v) => setForm({ ...form, accountId: v === "none" ? "" : v })}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select account..." /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" side="bottom" className="max-h-56 overflow-y-auto">
                     <SelectItem value="none">— No account —</SelectItem>
                     {(() => {
-                      const relevantTypes = form.type === "CREDIT" ? ["INCOME", "ASSET"] : ["EXPENSE", "LIABILITY"]
-                      const filtered = accounts.filter((a: any) => relevantTypes.includes(a.type))
-                      const grouped = relevantTypes.map((t) => ({ type: t, items: filtered.filter((a: any) => a.type === t) })).filter((g) => g.items.length > 0)
+                      const relevantTypes = form.type === "CREDIT"
+                        ? ["INCOME", "ASSET", "EQUITY"]
+                        : ["EXPENSE", "LIABILITY", "EQUITY"]
+                      const allTypes = ["INCOME", "EXPENSE", "ASSET", "LIABILITY", "EQUITY"]
+                      const grouped = allTypes
+                        .filter((t) => relevantTypes.includes(t))
+                        .map((t) => ({ type: t, items: accounts.filter((a: any) => a.type === t) }))
+                        .filter((g) => g.items.length > 0)
                       return grouped.map((g) => (
                         <SelectGroup key={g.type}>
                           <SelectLabel>{g.type}</SelectLabel>
