@@ -43,6 +43,46 @@ export default function AllFarmersReportPage() {
 
   function printReport() {
     const date = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
+
+    if (isRestrictedRole) {
+      // Summary print for restricted roles (no Dr/Cr)
+      const rows = filtered.map((f, i) => `<tr style="${i % 2 === 0 ? "background:#f9fdf9" : ""}">
+        <td>${i + 1}</td>
+        <td><strong>${f.name}</strong></td>
+        <td>${f.village || "—"}</td>
+        <td>${f.phone || "—"}</td>
+        <td>${f.cnic || "—"}</td>
+      </tr>`).join("")
+
+      const w = window.open("", "_blank")!
+      w.document.write(`<html><head><title>All Farmers Report</title>
+<style>${reportCSS}
+  body { max-width: 960px; margin: 0 auto; }
+</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div><div class="doc-title">All Farmers Report — Profile Summary</div><div class="doc-sub">Total: ${filtered.length} farmers</div></div>
+  <div class="doc-meta"><div>Printed: ${date}</div></div>
+</div>
+<div class="body-pad">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Name</th><th>Village</th><th>Phone</th><th>CNIC</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="5"><strong>Total: ${filtered.length} farmers</strong></td>
+    </tr></tfoot>
+  </table>
+  <div class="sig-row"><span>Generated on ${date}</span><span>${shop?.name || ""}</span></div>
+</div>
+<script>window.onload=()=>{window.print()}<\/script>
+</body></html>`)
+      w.document.close()
+      return
+    }
+
+    // Full print for admin roles (with Dr/Cr)
     const rows = filtered.map((f, i) => {
       const bal = f.balance || 0
       const status = bal > 0 ? "Payable" : bal < 0 ? "Advance" : "Settled"
@@ -120,13 +160,11 @@ ${buildPrintHeader(shop)}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">All Farmers Report</h2>
-          <p className="text-gray-500 text-sm">{isRestrictedRole ? "Profile summary only" : "Balance summary for all registered farmers"}</p>
+          <p className="text-gray-500 text-sm">{isRestrictedRole ? "Profile details for all farmers" : "Balance summary for all registered farmers"}</p>
         </div>
-        {!isRestrictedRole && (
-          <Button variant="outline" onClick={printReport} className="gap-2">
-            <Printer className="w-4 h-4" /> Print Report
-          </Button>
-        )}
+        <Button variant="outline" onClick={printReport} className="gap-2">
+          <Printer className="w-4 h-4" /> Print Report
+        </Button>
       </div>
 
       {/* Summary Cards */}

@@ -55,6 +55,45 @@ export default function AllTradersReportPage() {
 
   function printReport() {
     const date = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
+
+    if (isRestrictedRole) {
+      // Summary print for restricted roles (no Dr/Cr)
+      const rows = filtered.map((t, i) => `<tr style="${i % 2 === 0 ? "background:#f9fdf9" : ""}">
+        <td>${i + 1}</td>
+        <td><strong>${t.name}</strong></td>
+        <td>${t.phone || "—"}</td>
+        <td>${t.address || "—"}</td>
+      </tr>`).join("")
+
+      const w = window.open("", "_blank")!
+      w.document.write(`<html><head><title>All Traders Report</title>
+<style>${reportCSS}
+  body { max-width: 900px; margin: 0 auto; }
+</style></head><body>
+${buildPrintHeader(shop)}
+<div class="doc-header">
+  <div><div class="doc-title">All Traders Report — Profile Summary</div><div class="doc-sub">Total: ${filtered.length} traders</div></div>
+  <div class="doc-meta"><div>Printed: ${date}</div></div>
+</div>
+<div class="body-pad">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Name</th><th>Phone</th><th>Address</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="4"><strong>Total: ${filtered.length} traders</strong></td>
+    </tr></tfoot>
+  </table>
+  <div class="sig-row"><span>Generated on ${date}</span><span>${shop?.name || ""}</span></div>
+</div>
+<script>window.onload=()=>{window.print()}<\/script>
+</body></html>`)
+      w.document.close()
+      return
+    }
+
+    // Full print for admin roles (with Dr/Cr)
     const rows = filtered.map((t, i) => {
       const bal = (t.totalDebit || 0) - (t.totalCredit || 0)
       const status = bal > 0 ? "Receivable" : bal < 0 ? "Payable" : "Settled"
@@ -131,13 +170,11 @@ ${buildPrintHeader(shop)}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">All Traders Report</h2>
-          <p className="text-gray-500 text-sm">{isRestrictedRole ? "Profile summary only" : "Balance summary for all traders (buyers/sellers)"}</p>
+          <p className="text-gray-500 text-sm">{isRestrictedRole ? "Profile details for all traders" : "Balance summary for all traders (buyers/sellers)"}</p>
         </div>
-        {!isRestrictedRole && (
-          <Button variant="outline" onClick={printReport} className="gap-2">
-            <Printer className="w-4 h-4" /> Print Report
-          </Button>
-        )}
+        <Button variant="outline" onClick={printReport} className="gap-2">
+          <Printer className="w-4 h-4" /> Print Report
+        </Button>
       </div>
 
       {/* Summary Cards */}
