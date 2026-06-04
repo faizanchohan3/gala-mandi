@@ -48,7 +48,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     // Reverse commission income account balance
     if (commission.commissionAmount > 0) {
       const commAccount = await tx.account.findFirst({
-        where: { ...shopFilter, type: "INCOME", name: "Commission Income", isActive: true },
+        where: { ...shopFilter, type: "INCOME", name: { contains: "Commission" }, isActive: true },
+        orderBy: { code: "asc" },
       })
       if (commAccount) {
         await tx.account.update({
@@ -61,7 +62,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     // Reverse labour expense account balance
     if (commission.labourAmount > 0) {
       const labourAccount = await tx.account.findFirst({
-        where: { ...shopFilter, type: "EXPENSE", name: "Labour", isActive: true },
+        where: { ...shopFilter, type: "EXPENSE", name: { contains: "Labour" }, isActive: true },
+        orderBy: { code: "asc" },
       })
       if (labourAccount) {
         await tx.account.update({

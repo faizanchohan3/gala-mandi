@@ -129,7 +129,8 @@ export async function POST(req: Request) {
     // Record commission as income in finance/transactions
     const shopFilter = session.user.shopId ? { shopId: session.user.shopId } : {}
     const commissionAccount = await tx.account.findFirst({
-      where: { ...shopFilter, type: "INCOME", name: "Commission Income", isActive: true },
+      where: { ...shopFilter, type: "INCOME", name: { contains: "Commission" }, isActive: true },
+      orderBy: { code: "asc" },
     })
     await tx.transaction.create({
       data: {
@@ -150,7 +151,8 @@ export async function POST(req: Request) {
     // Post labour as expense to Labour account
     if (labourAmt > 0) {
       const labourAccount = await tx.account.findFirst({
-        where: { ...shopFilter, type: "EXPENSE", name: "Labour", isActive: true },
+        where: { ...shopFilter, type: "EXPENSE", name: { contains: "Labour" }, isActive: true },
+        orderBy: { code: "asc" },
       })
       await tx.transaction.create({
         data: {
