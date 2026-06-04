@@ -34,59 +34,53 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         payments: { orderBy: { createdAt: "asc" } },
       },
     }),
-    db.commission.findMany({
-      where: { supplierId: id, ...dateWhere },
-      orderBy: { createdAt: "asc" },
-    }),
-    db.supplierPayment.findMany({
-      where: { supplierId: id, ...dateWhere },
-      orderBy: { createdAt: "asc" },
-    }),
+    db.commission.findMany({ where: { supplierId: id, ...dateWhere }, orderBy: { createdAt: "asc" } }),
+    db.supplierPayment.findMany({ where: { supplierId: id, ...dateWhere }, orderBy: { createdAt: "asc" } }),
   ])
 
   const events: any[] = []
 
+  // Supplier gives you goods → Credit supplier (Credit the Giver)
   for (const purchase of purchases) {
     events.push({
       date: purchase.createdAt,
       type: "PURCHASE",
       description: `Purchase #${purchase.id.slice(-6).toUpperCase()} — ${purchase.items.map((i) => `${i.quantity} ${i.product.unit} ${i.product.name}`).join(", ")}`,
-      debit: purchase.totalAmount,
-      credit: 0,
+      debit: 0,
+      credit: purchase.totalAmount,
     })
 
     if (purchase.payments.length > 0) {
-      // Use actual payment records
+      // You give payment → Debit supplier (Debit the Receiver)
       for (const payment of purchase.payments) {
         events.push({
           date: payment.createdAt,
           type: "PAYMENT",
           description: `Payment made — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
-          debit: 0,
-          credit: payment.amount,
+          debit: payment.amount,
+          credit: 0,
         })
       }
     } else if (purchase.paidAmount > 0) {
-      // Fallback: purchase was created with paidAmount but no Payment record exists (legacy data)
       events.push({
         date: purchase.createdAt,
         type: "PAYMENT",
         description: `Payment made — CASH (recorded at purchase)`,
-        debit: 0,
-        credit: purchase.paidAmount,
+        debit: purchase.paidAmount,
+        credit: 0,
       })
     }
   }
 
-  // Commission transactions where supplier is the seller — mandi owes supplier sellerPayable
+  // Commission: supplier gave goods through mandi → Credit supplier (Credit the Giver)
   for (const comm of commissions) {
     const parts = [comm.commodity, comm.bags ? `${comm.bags} bags` : null, comm.weight ? `${comm.weight} kg` : null].filter(Boolean).join(", ")
     events.push({
       date: comm.createdAt,
       type: "COMMISSION",
       description: `Commission #${comm.id.slice(-6).toUpperCase()}${parts ? ` — ${parts}` : ""}`,
-      debit: comm.sellerPayable,
-      credit: 0,
+      debit: 0,
+      credit: comm.sellerPayable,
     })
   }
 
@@ -98,16 +92,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       description: isPay
         ? `Paid to Supplier — ${sp.method}${sp.notes ? ` (${sp.notes})` : ""}`
         : `Received from Supplier — ${sp.method}${sp.notes ? ` (${sp.notes})` : ""}`,
-      debit: isPay ? 0 : sp.amount,
-      credit: isPay ? sp.amount : 0,
+      // Pay to supplier → Debit supplier (they receive). Receive from supplier → Credit supplier (they give)
+      debit: isPay ? sp.amount : 0,
+      credit: isPay ? 0 : sp.amount,
     })
   }
 
   events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
+  // Standard: running = credit - debit
+  // Positive (Cr) = you owe supplier | Negative (Dr) = supplier owes you / advance paid
   let running = 0
   const entries = events.map((e) => {
-    running += e.debit - e.credit
+    running += e.credit - e.debit
     return { ...e, balance: running }
   })
 

@@ -29,9 +29,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     db.farmerPurchase.findMany({
       where: { farmerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
-      include: {
-        items: { include: { product: { select: { name: true, unit: true } } } },
-      },
+      include: { items: { include: { product: { select: { name: true, unit: true } } } } },
     }),
     db.purchase.findMany({
       where: { farmerId: id, ...dateWhere },
@@ -41,21 +39,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         payments: { orderBy: { createdAt: "asc" } },
       },
     }),
-    db.farmerPayment.findMany({
-      where: { farmerId: id, ...dateWhere },
-      orderBy: { createdAt: "asc" },
-    }),
+    db.farmerPayment.findMany({ where: { farmerId: id, ...dateWhere }, orderBy: { createdAt: "asc" } }),
     db.sale.findMany({
       where: { farmerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
-      include: {
-        items: { include: { product: { select: { name: true, unit: true } } } },
-      },
+      include: { items: { include: { product: { select: { name: true, unit: true } } } } },
     }),
-    db.commission.findMany({
-      where: { farmerId: id, ...dateWhere },
-      orderBy: { createdAt: "asc" },
-    }),
+    db.commission.findMany({ where: { farmerId: id, ...dateWhere }, orderBy: { createdAt: "asc" } }),
     db.pesticideSale.findMany({
       where: { farmerId: id, ...dateWhere },
       orderBy: { createdAt: "asc" },
@@ -65,20 +55,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const events: any[] = []
 
+  // Farmer gives you goods → Credit farmer (Credit the Giver)
   for (const purchase of farmerPurchases) {
     const parts: string[] = []
     if (purchase.commodity) parts.push(purchase.commodity)
     if (purchase.bags) parts.push(`${purchase.bags} Bags`)
     if (purchase.weight) parts.push(`${purchase.weight} KG`)
-    if (!parts.length && purchase.items.length) {
+    if (!parts.length && purchase.items.length)
       parts.push(purchase.items.map((i) => `${i.quantity} ${i.product.unit} ${i.product.name}`).join(", "))
-    }
     events.push({
       date: purchase.createdAt,
       type: "PURCHASE",
       description: `Purchase #${purchase.id.slice(-6).toUpperCase()}${parts.length ? ` — ${parts.join(", ")}` : ""}`,
-      debit: purchase.totalAmount,
-      credit: 0,
+      debit: 0,
+      credit: purchase.totalAmount,
     })
   }
 
@@ -88,89 +78,95 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       date: purchase.createdAt,
       type: "PURCHASE",
       description: `Purchase #${purchase.id.slice(-6).toUpperCase()}${desc ? ` — ${desc}` : ""}`,
-      debit: purchase.totalAmount,
-      credit: 0,
+      debit: 0,
+      credit: purchase.totalAmount,
     })
+    // You give payment → Debit farmer (Debit the Receiver)
     for (const payment of purchase.payments) {
       events.push({
         date: payment.createdAt,
         type: "PAYMENT",
         description: `Payment — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
-        debit: 0,
-        credit: payment.amount,
+        debit: payment.amount,
+        credit: 0,
       })
     }
   }
 
   for (const payment of payments) {
-    const isReceive = payment.amount < 0
+    const isReceive = payment.amount < 0 // Farmer gives you cash (unusual)
     const displayAmt = Math.abs(payment.amount)
     events.push({
       date: payment.createdAt,
       type: isReceive ? "INCOME" : "PAYMENT",
-      description: `${isReceive ? "Received from Farmer" : "Payment"} — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
-      debit: isReceive ? displayAmt : 0,
-      credit: isReceive ? 0 : displayAmt,
+      description: `${isReceive ? "Received from Farmer" : "Payment to Farmer"} — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
+      // Pay to farmer → Dr farmer. Receive from farmer → Cr farmer (farmer is giver)
+      debit: isReceive ? 0 : displayAmt,
+      credit: isReceive ? displayAmt : 0,
     })
   }
 
+  // You sell to farmer → Debit farmer (Debit the Receiver)
   for (const sale of farmerSales) {
     const itemDesc = sale.items.map((i: any) => `${i.quantity} ${i.product.unit} ${i.product.name}`).join(", ")
     events.push({
       date: sale.createdAt,
       type: "SALE",
       description: `Sale #${sale.id.slice(-6).toUpperCase()}${itemDesc ? ` — ${itemDesc}` : ""}`,
-      debit: 0,
-      credit: sale.totalAmount,
+      debit: sale.totalAmount,
+      credit: 0,
     })
     if (sale.paidAmount > 0) {
       events.push({
         date: sale.createdAt,
         type: "PAYMENT",
         description: `Payment received — Sale #${sale.id.slice(-6).toUpperCase()}`,
-        debit: sale.paidAmount,
-        credit: 0,
+        debit: 0,
+        credit: sale.paidAmount,
       })
     }
   }
 
-  // Pesticide sales to farmer — farmer owes mandi (credit reduces running balance)
+  // You sell pesticide to farmer → Debit farmer (Debit the Receiver)
   for (const ps of pesticideSales) {
     events.push({
       date: ps.createdAt,
       type: "PESTICIDE_SALE",
       description: `Pesticide Sale #${ps.id.slice(-6).toUpperCase()} — ${ps.quantity} ${ps.pesticide?.unit || ""} ${ps.pesticide?.name || ""}`,
-      debit: 0,
-      credit: ps.totalAmount,
+      debit: ps.totalAmount,
+      credit: 0,
     })
     if (ps.paidAmount > 0) {
+      // Farmer pays you → Credit farmer (Credit the Giver)
       events.push({
         date: ps.createdAt,
         type: "PAYMENT",
         description: `Payment received — Pesticide sale`,
-        debit: ps.paidAmount,
-        credit: 0,
+        debit: 0,
+        credit: ps.paidAmount,
       })
     }
   }
 
-  // Commission transactions where farmer is the seller — mandi owes farmer sellerPayable
+  // Commission: farmer gave goods through mandi → Credit farmer (Credit the Giver)
   for (const comm of commissions) {
     const parts = [comm.commodity, comm.bags ? `${comm.bags} bags` : null, comm.weight ? `${comm.weight} kg` : null].filter(Boolean).join(", ")
     events.push({
       date: comm.createdAt,
       type: "COMMISSION",
       description: `Commission #${comm.id.slice(-6).toUpperCase()}${parts ? ` — ${parts}` : ""}`,
-      debit: comm.sellerPayable,
-      credit: 0,
+      debit: 0,
+      credit: comm.sellerPayable,
     })
   }
 
   events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
+  // Standard: running = credit - debit
+  // Positive (Cr) = you owe farmer | Negative (Dr) = farmer owes you / advance paid
   let running = 0
   const entries = events.map((e) => {
-    running += e.debit - e.credit
+    running += e.credit - e.debit
     return { ...e, balance: running }
   })
 

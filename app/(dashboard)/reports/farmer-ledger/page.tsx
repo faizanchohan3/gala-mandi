@@ -102,7 +102,7 @@ function FarmerLedgerContent() {
           <td style="font-size:9px">${e.description}</td>
           <td style="text-align:right">${e.debit>0?"PKR "+e.debit.toLocaleString():"—"}</td>
           <td style="text-align:right;color:#15803d">${e.credit>0?"PKR "+e.credit.toLocaleString():"—"}</td>
-          <td style="text-align:right;font-weight:600;color:${e.balance>0?"#b91c1c":"#15803d"}">PKR ${Math.abs(e.balance).toLocaleString()} ${e.balance>0?"Dr":e.balance<0?"Cr":""}</td>
+          <td style="text-align:right;font-weight:600;color:${e.balance>0?"#b91c1c":"#15803d"}">PKR ${Math.abs(e.balance).toLocaleString()} ${e.balance>0?"Cr":e.balance<0?"Dr":""}</td>
         </tr>`).join("")
       return `<div style="margin-bottom:28px">
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
@@ -121,7 +121,7 @@ function FarmerLedgerContent() {
           <tfoot><tr><td colspan="4"><strong>Closing — ${(data.entries||[]).length} entries</strong></td>
             <td style="text-align:right"><strong>PKR ${(data.totalDebit||0).toLocaleString()}</strong></td>
             <td style="text-align:right;color:#15803d"><strong>PKR ${(data.totalCredit||0).toLocaleString()}</strong></td>
-            <td style="text-align:right;color:${balColor}"><strong>PKR ${Math.abs(bal).toLocaleString()} ${bal>0?"Dr":bal<0?"Cr":""}</strong></td>
+            <td style="text-align:right;color:${balColor}"><strong>PKR ${Math.abs(bal).toLocaleString()} ${bal>0?"Cr":bal<0?"Dr":""}</strong></td>
           </tr></tfoot>
         </table>`:`<p style="text-align:center;color:#9ca3af;font-size:10px;padding:8px 0">No transactions</p>`}
       </div>`
@@ -229,7 +229,7 @@ ${buildPrintHeader(shop)}
                       <td className="px-3 py-2 text-right text-gray-700 text-xs">{formatCurrency(f.totalDebit||0)}</td>
                       <td className="px-3 py-2 text-right text-green-700 text-xs">{formatCurrency(f.totalCredit||0)}</td>
                       <td className={`px-3 py-2 text-right font-bold text-xs ${bal>0?"text-red-600":bal<0?"text-green-700":"text-gray-400"}`}>
-                        {formatCurrency(Math.abs(bal))}{bal!==0&&<span className="font-normal ml-0.5">{bal>0?"Dr":"Cr"}</span>}
+                        {formatCurrency(Math.abs(bal))}{bal!==0&&<span className="font-normal ml-0.5">{bal>0?"Cr":"Dr"}</span>}
                       </td>
                       <td className="px-3 py-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${bal>0?"bg-red-100 text-red-700":bal<0?"bg-green-100 text-green-700":"bg-gray-100 text-gray-500"}`}>
@@ -350,7 +350,7 @@ ${buildPrintHeader(shop)}
                             <td className="px-4 py-3 text-right text-green-700">{entry.credit > 0 ? formatCurrency(entry.credit) : "—"}</td>
                             <td className={`px-4 py-3 text-right font-medium ${entry.balance > 0 ? "text-red-600" : "text-green-700"}`}>
                               {formatCurrency(Math.abs(entry.balance))}
-                              {entry.balance !== 0 && <span className="text-xs ml-1 font-normal">{entry.balance > 0 ? "Dr" : "Cr"}</span>}
+                              {entry.balance !== 0 && <span className="text-xs ml-1 font-normal">{entry.balance > 0 ? "Cr" : "Dr"}</span>}
                             </td>
                           </tr>
                         ))}
@@ -363,7 +363,7 @@ ${buildPrintHeader(shop)}
                           <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(ledger.totalCredit)}</td>
                           <td className={`px-4 py-3 text-right font-bold text-lg ${ledger.closingBalance > 0 ? "text-red-600" : "text-green-700"}`}>
                             {formatCurrency(Math.abs(ledger.closingBalance))}
-                            <span className="text-sm ml-1 font-normal">{ledger.closingBalance > 0 ? "Dr" : "Cr"}</span>
+                            <span className="text-sm ml-1 font-normal">{ledger.closingBalance > 0 ? "Cr" : "Dr"}</span>
                           </td>
                         </tr>
                       </tfoot>
