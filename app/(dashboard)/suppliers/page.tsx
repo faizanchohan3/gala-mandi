@@ -24,7 +24,7 @@ export default function SuppliersPage() {
   const [editing, setEditing] = useState<any>(null)
   const [selected, setSelected] = useState<any>(null)
   const [detail, setDetail] = useState<any>(null)
-  const [form, setForm] = useState({ name: "", phone: "", address: "" })
+  const [form, setForm] = useState({ name: "", phone: "", otherPhone: "", address: "", picture: "" })
   const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "", direction: "PAY" })
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
@@ -52,13 +52,13 @@ export default function SuppliersPage() {
 
   function openAdd() {
     setEditing(null)
-    setForm({ name: "", phone: "", address: "" })
+    setForm({ name: "", phone: "", otherPhone: "", address: "", picture: "" })
     setShowModal(true)
   }
 
   function openEdit(s: any) {
     setEditing(s)
-    setForm({ name: s.name, phone: s.phone || "", address: s.address || "" })
+    setForm({ name: s.name, phone: s.phone || "", otherPhone: s.otherPhone || "", address: s.address || "", picture: s.picture || "" })
     setShowModal(true)
   }
 
@@ -259,17 +259,27 @@ export default function SuppliersPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Supplier" : "Add Supplier"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             <div>
               <Label>Business Name *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Punjab Agri Traders" />
             </div>
             <div>
-              <Label>Phone Number</Label>
-              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="042-12345678" />
+              <Label>Picture (Optional)</Label>
+              <Input type="url" value={form.picture} onChange={(e) => setForm({ ...form, picture: e.target.value })} placeholder="https://example.com/image.jpg" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Phone Number</Label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="042-12345678" />
+              </div>
+              <div>
+                <Label>Other Number (Optional)</Label>
+                <Input value={form.otherPhone} onChange={(e) => setForm({ ...form, otherPhone: e.target.value })} placeholder="03001234567" />
+              </div>
             </div>
             <div>
-              <Label>Address</Label>
+              <Label>Address (Optional)</Label>
               <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="City / Area" />
             </div>
             <div className="flex gap-3 pt-2">

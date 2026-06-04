@@ -20,7 +20,7 @@ export default function FarmersPage() {
   const [expanded, setExpanded] = useState<Record<string, any>>({})
   const [loadingRow, setLoadingRow] = useState<string | null>(null)
   const [form, setForm] = useState({
-    name: "", phone: "", address: "", village: "", cnic: "", creditLimit: "0",
+    name: "", phone: "", otherPhone: "", address: "", village: "", cnic: "", picture: "", creditLimit: "0",
   })
 
   // Payment state
@@ -43,12 +43,12 @@ export default function FarmersPage() {
 
   function openAdd() {
     setEditing(null)
-    setForm({ name: "", phone: "", address: "", village: "", cnic: "", creditLimit: "0" })
+    setForm({ name: "", phone: "", otherPhone: "", address: "", village: "", cnic: "", picture: "", creditLimit: "0" })
     setShowModal(true)
   }
   function openEdit(f: any) {
     setEditing(f)
-    setForm({ name: f.name, phone: f.phone || "", address: f.address || "", village: f.village || "", cnic: f.cnic || "", creditLimit: String(f.creditLimit) })
+    setForm({ name: f.name, phone: f.phone || "", otherPhone: f.otherPhone || "", address: f.address || "", village: f.village || "", cnic: f.cnic || "", picture: f.picture || "", creditLimit: String(f.creditLimit) })
     setShowModal(true)
   }
 
@@ -296,23 +296,27 @@ export default function FarmersPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Farmer" : "Add Farmer"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto">
             <div><Label>Full Name *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Farmer name" autoFocus /></div>
+            <div><Label>Picture (Optional)</Label>
+              <Input type="url" value={form.picture} onChange={(e) => setForm({ ...form, picture: e.target.value })} placeholder="https://example.com/image.jpg" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Phone</Label>
                 <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="03001234567" /></div>
+              <div><Label>Other Number (Optional)</Label>
+                <Input value={form.otherPhone} onChange={(e) => setForm({ ...form, otherPhone: e.target.value })} placeholder="03009876543" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div><Label>Village / Area</Label>
                 <Input value={form.village} onChange={(e) => setForm({ ...form, village: e.target.value })} placeholder="Village name" /></div>
-            </div>
-            <div><Label>Address</Label>
-              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Full address" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>CNIC</Label>
+              <div><Label>CNIC (Optional)</Label>
                 <Input value={form.cnic} onChange={(e) => setForm({ ...form, cnic: e.target.value })} placeholder="35202-..." /></div>
-              <div><Label>Credit Limit (PKR)</Label>
-                <Input type="number" value={form.creditLimit} onChange={(e) => setForm({ ...form, creditLimit: e.target.value })} /></div>
             </div>
+            <div><Label>Address (Optional)</Label>
+              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Full address" /></div>
+            <div><Label>Credit Limit (PKR)</Label>
+              <Input type="number" value={form.creditLimit} onChange={(e) => setForm({ ...form, creditLimit: e.target.value })} /></div>
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
               <Button onClick={handleSave} className="flex-1 bg-green-700 hover:bg-green-800">

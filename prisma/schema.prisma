@@ -250,7 +250,9 @@ model Supplier {
   shopId    String?
   name      String
   phone     String?
+  otherPhone String?
   address   String?
+  picture   String?
   balance   Float    @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -505,9 +507,11 @@ model Farmer {
   shopId      String?
   name        String
   phone       String?
+  otherPhone  String?
   address     String?
   village     String?
   cnic        String?
+  picture     String?
   balance     Float    @default(0)
   creditLimit Float    @default(0)
   isActive    Boolean  @default(true)

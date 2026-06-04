@@ -397,6 +397,7 @@ ${buildPrintHeader(shop)}
                       onValueChange={(v) => setForm({ ...form, categoryId: v })}
                       placeholder="Search categories..."
                       options={categories.map((c: any) => ({ value: c.id, label: c.name }))}
+                      side="bottom"
                     />
                   </div>
                 )}
