@@ -51,6 +51,7 @@ export default function AllFarmersReportPage() {
         <td><strong>${f.name}</strong></td>
         <td>${f.village || "—"}</td>
         <td>${f.phone || "—"}</td>
+        <td>${f.otherPhone || "—"}</td>
         <td>${f.cnic || "—"}</td>
       </tr>`).join("")
 
@@ -67,11 +68,11 @@ ${buildPrintHeader(shop)}
 <div class="body-pad">
   <table>
     <thead><tr>
-      <th>#</th><th>Name</th><th>Village</th><th>Phone</th><th>CNIC</th>
+      <th>#</th><th>Name</th><th>Village</th><th>Phone</th><th>Other Phone</th><th>CNIC</th>
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <td colspan="5"><strong>Total: ${filtered.length} farmers</strong></td>
+      <td colspan="6"><strong>Total: ${filtered.length} farmers</strong></td>
     </tr></tfoot>
   </table>
   <div class="sig-row"><span>Generated on ${date}</span><span>${shop?.name || ""}</span></div>
@@ -92,6 +93,7 @@ ${buildPrintHeader(shop)}
         <td><strong>${f.name}</strong></td>
         <td>${f.village || "—"}</td>
         <td>${f.phone || "—"}</td>
+        <td>${f.otherPhone || "—"}</td>
         <td>${f.cnic || "—"}</td>
         <td style="text-align:right">PKR ${(f.totalDebit || 0).toLocaleString()}</td>
         <td style="text-align:right">PKR ${(f.totalCredit || 0).toLocaleString()}</td>
@@ -133,7 +135,7 @@ ${buildPrintHeader(shop)}
   </div>
   <table>
     <thead><tr>
-      <th>#</th><th>Name</th><th>Village</th><th>Phone</th><th>CNIC</th>
+      <th>#</th><th>Name</th><th>Village</th><th>Phone</th><th>Other Phone</th><th>CNIC</th>
       <th style="text-align:right">Total Dr</th>
       <th style="text-align:right">Total Cr</th>
       <th style="text-align:right">Balance</th>
@@ -141,7 +143,7 @@ ${buildPrintHeader(shop)}
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <td colspan="5"><strong>Total: ${filtered.length} farmers</strong></td>
+      <td colspan="6"><strong>Total: ${filtered.length} farmers</strong></td>
       <td style="text-align:right"><strong>PKR ${filtered.reduce((s, f) => s + (f.totalDebit || 0), 0).toLocaleString()}</strong></td>
       <td style="text-align:right"><strong>PKR ${filtered.reduce((s, f) => s + (f.totalCredit || 0), 0).toLocaleString()}</strong></td>
       <td style="text-align:right;color:#b91c1c"><strong>PKR ${totalPayable.toLocaleString()}</strong></td>
@@ -220,9 +222,12 @@ ${buildPrintHeader(shop)}
               <thead className="bg-gray-50 border-b border-t">
                 <tr>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">#</th>
+                  {isRestrictedRole && <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Photo</th>}
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Name</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Village</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Phone</th>
+                  {isRestrictedRole && <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Other Phone</th>}
+                  {!isRestrictedRole && <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Other Phone</th>}
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">CNIC</th>
                   {!isRestrictedRole && (
                     <>
@@ -250,9 +255,22 @@ ${buildPrintHeader(shop)}
                   return (
                     <tr key={f.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
+                      {isRestrictedRole && (
+                        <td className="px-4 py-3 text-center">
+                          {f.picture ? (
+                            <img src={f.picture} alt={f.name} className="w-8 h-8 rounded-full object-cover mx-auto" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-200 mx-auto flex items-center justify-center text-xs text-gray-500">
+                              {f.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3 font-medium text-gray-900">{f.name}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{f.village || "—"}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{f.phone || "—"}</td>
+                      {isRestrictedRole && <td className="px-4 py-3 text-gray-500 text-xs">{f.otherPhone || "—"}</td>}
+                      {!isRestrictedRole && <td className="px-4 py-3 text-gray-500 text-xs">{f.otherPhone || "—"}</td>}
                       <td className="px-4 py-3 text-gray-400 text-xs">{f.cnic || "—"}</td>
                       {!isRestrictedRole && (
                         <>

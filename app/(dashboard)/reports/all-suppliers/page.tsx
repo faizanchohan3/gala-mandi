@@ -50,13 +50,14 @@ export default function AllSuppliersReportPage() {
         <td>${i + 1}</td>
         <td><strong>${s.name}</strong></td>
         <td>${s.phone || "—"}</td>
+        <td>${s.otherPhone || "—"}</td>
         <td>${s.address || "—"}</td>
       </tr>`).join("")
 
       const w = window.open("", "_blank")!
       w.document.write(`<html><head><title>All Suppliers Report</title>
 <style>${reportCSS}
-  body { max-width: 900px; margin: 0 auto; }
+  body { max-width: 960px; margin: 0 auto; }
 </style></head><body>
 ${buildPrintHeader(shop)}
 <div class="doc-header">
@@ -66,11 +67,11 @@ ${buildPrintHeader(shop)}
 <div class="body-pad">
   <table>
     <thead><tr>
-      <th>#</th><th>Name</th><th>Phone</th><th>Address</th>
+      <th>#</th><th>Name</th><th>Phone</th><th>Other Phone</th><th>Address</th>
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <td colspan="4"><strong>Total: ${filtered.length} suppliers</strong></td>
+      <td colspan="5"><strong>Total: ${filtered.length} suppliers</strong></td>
     </tr></tfoot>
   </table>
   <div class="sig-row"><span>Generated on ${date}</span><span>${shop?.name || ""}</span></div>
@@ -90,6 +91,7 @@ ${buildPrintHeader(shop)}
         <td>${i + 1}</td>
         <td><strong>${s.name}</strong></td>
         <td>${s.phone || "—"}</td>
+        <td>${s.otherPhone || "—"}</td>
         <td>${s.address || "—"}</td>
         <td style="text-align:right">PKR ${(s.totalDebit || 0).toLocaleString()}</td>
         <td style="text-align:right">PKR ${(s.totalCredit || 0).toLocaleString()}</td>
@@ -131,7 +133,7 @@ ${buildPrintHeader(shop)}
   </div>
   <table>
     <thead><tr>
-      <th>#</th><th>Name</th><th>Phone</th><th>Address</th>
+      <th>#</th><th>Name</th><th>Phone</th><th>Other Phone</th><th>Address</th>
       <th style="text-align:right">Total Dr</th>
       <th style="text-align:right">Total Cr</th>
       <th style="text-align:right">Balance</th>
@@ -139,7 +141,7 @@ ${buildPrintHeader(shop)}
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <td colspan="4"><strong>Total: ${filtered.length} suppliers</strong></td>
+      <td colspan="5"><strong>Total: ${filtered.length} suppliers</strong></td>
       <td style="text-align:right"><strong>PKR ${filtered.reduce((s, f) => s + (f.totalDebit || 0), 0).toLocaleString()}</strong></td>
       <td style="text-align:right"><strong>PKR ${filtered.reduce((s, f) => s + (f.totalCredit || 0), 0).toLocaleString()}</strong></td>
       <td style="text-align:right;color:#b91c1c"><strong>PKR ${totalPayable.toLocaleString()}</strong></td>
@@ -218,8 +220,11 @@ ${buildPrintHeader(shop)}
               <thead className="bg-gray-50 border-b border-t">
                 <tr>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">#</th>
+                  {isRestrictedRole && <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Photo</th>}
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Name</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Phone</th>
+                  {isRestrictedRole && <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Other Phone</th>}
+                  {!isRestrictedRole && <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Other Phone</th>}
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Address</th>
                   {!isRestrictedRole && (
                     <>
@@ -247,8 +252,21 @@ ${buildPrintHeader(shop)}
                   return (
                     <tr key={s.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
+                      {isRestrictedRole && (
+                        <td className="px-4 py-3 text-center">
+                          {s.picture ? (
+                            <img src={s.picture} alt={s.name} className="w-8 h-8 rounded-full object-cover mx-auto" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-200 mx-auto flex items-center justify-center text-xs text-gray-500">
+                              {s.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3 font-medium text-gray-900">{s.name}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{s.phone || "—"}</td>
+                      {isRestrictedRole && <td className="px-4 py-3 text-gray-500 text-xs">{s.otherPhone || "—"}</td>}
+                      {!isRestrictedRole && <td className="px-4 py-3 text-gray-500 text-xs">{s.otherPhone || "—"}</td>}
                       <td className="px-4 py-3 text-gray-500 text-xs">{s.address || "—"}</td>
                       {!isRestrictedRole && (
                         <>
