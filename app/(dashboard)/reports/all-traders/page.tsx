@@ -7,12 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import { buildPrintHeader, reportCSS } from "@/lib/print-utils"
-import { Printer, Search, Tractor, ArrowRight } from "lucide-react"
+import { Printer, Search, Users, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
-export default function AllFarmersReportPage() {
+export default function AllTradersReportPage() {
   const { data: session } = useSession()
-  const [farmers, setFarmers] = useState<any[]>([])
+  const [traders, setTraders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [shop, setShop] = useState<any>(null)
@@ -21,45 +21,56 @@ export default function AllFarmersReportPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/reports/all-farmers").then((r) => r.json()),
+      fetch("/api/reports/all-traders").then((r) => r.json()),
       fetch("/api/settings").then((r) => r.json()).catch(() => ({ shop: null })),
-    ]).then(([fd, sd]) => {
-      setFarmers(fd.farmers || [])
+    ]).then(([td, sd]) => {
+      setTraders(td.customers || [])
       setShop(sd.shop || null)
       setLoading(false)
     })
   }, [])
 
-  const filtered = farmers.filter(
-    (f) =>
-      f.name.toLowerCase().includes(search.toLowerCase()) ||
-      (f.village || "").toLowerCase().includes(search.toLowerCase()) ||
-      (f.phone || "").includes(search)
+  const filtered = traders.filter(
+    (t) =>
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      (t.phone || "").includes(search) ||
+      (t.address || "").toLowerCase().includes(search.toLowerCase())
   )
 
-  const totalPayable = filtered.filter((f) => f.balance > 0).reduce((s, f) => s + f.balance, 0)
-  const totalAdvance = filtered.filter((f) => f.balance < 0).reduce((s, f) => s + Math.abs(f.balance), 0)
-  const settled = filtered.filter((f) => f.balance === 0).length
+  const totalPayable = filtered.filter((t) => {
+    const bal = (t.totalDebit || 0) - (t.totalCredit || 0)
+    return bal > 0
+  }).reduce((s, t) => {
+    const bal = (t.totalDebit || 0) - (t.totalCredit || 0)
+    return s + bal
+  }, 0)
+  const totalAdvance = filtered.filter((t) => {
+    const bal = (t.totalDebit || 0) - (t.totalCredit || 0)
+    return bal < 0
+  }).reduce((s, t) => {
+    const bal = (t.totalDebit || 0) - (t.totalCredit || 0)
+    return s + Math.abs(bal)
+  }, 0)
+  const settled = filtered.filter((t) => (t.totalDebit || 0) === (t.totalCredit || 0)).length
 
   function printReport() {
     const date = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
-    const rows = filtered.map((f, i) => {
-      const bal = f.balance || 0
-      const status = bal > 0 ? "Payable" : bal < 0 ? "Advance" : "Settled"
-      const statusColor = bal > 0 ? "#b91c1c" : bal < 0 ? "#15803d" : "#6b7280"
+    const rows = filtered.map((t, i) => {
+      const bal = (t.totalDebit || 0) - (t.totalCredit || 0)
+      const status = bal > 0 ? "Receivable" : bal < 0 ? "Payable" : "Settled"
+      const statusColor = bal > 0 ? "#15803d" : bal < 0 ? "#b91c1c" : "#6b7280"
       return `<tr style="${i % 2 === 0 ? "background:#f9fdf9" : ""}">
         <td>${i + 1}</td>
-        <td><strong>${f.name}</strong></td>
-        <td>${f.village || "—"}</td>
-        <td>${f.phone || "—"}</td>
-        <td>${f.cnic || "—"}</td>
-        <td style="text-align:right">PKR ${(f.totalDebit || 0).toLocaleString()}</td>
-        <td style="text-align:right">PKR ${(f.totalCredit || 0).toLocaleString()}</td>
+        <td><strong>${t.name}</strong></td>
+        <td>${t.phone || "—"}</td>
+        <td>${t.address || "—"}</td>
+        <td style="text-align:right">PKR ${(t.totalDebit || 0).toLocaleString()}</td>
+        <td style="text-align:right">PKR ${(t.totalCredit || 0).toLocaleString()}</td>
         <td style="text-align:right;font-weight:700;color:${statusColor}">
           PKR ${Math.abs(bal).toLocaleString()}
         </td>
         <td style="text-align:center">
-          <span style="font-size:9px;padding:2px 7px;border-radius:99px;background:${bal > 0 ? "#fee2e2" : bal < 0 ? "#dcfce7" : "#f3f4f6"};color:${statusColor};font-weight:700">
+          <span style="font-size:9px;padding:2px 7px;border-radius:99px;background:${bal > 0 ? "#dcfce7" : bal < 0 ? "#fee2e2" : "#f3f4f6"};color:${statusColor};font-weight:700">
             ${status}
           </span>
         </td>
@@ -67,33 +78,33 @@ export default function AllFarmersReportPage() {
     }).join("")
 
     const w = window.open("", "_blank")!
-    w.document.write(`<html><head><title>All Farmers Report</title>
+    w.document.write(`<html><head><title>All Traders Report</title>
 <style>${reportCSS}
-  body { max-width: 960px; margin: 0 auto; }
+  body { max-width: 900px; margin: 0 auto; }
 </style></head><body>
 ${buildPrintHeader(shop)}
 <div class="doc-header">
-  <div><div class="doc-title">All Farmers Report</div><div class="doc-sub">Total: ${filtered.length} farmers</div></div>
+  <div><div class="doc-title">All Traders Report</div><div class="doc-sub">Total: ${filtered.length} traders</div></div>
   <div class="doc-meta"><div>Printed: ${date}</div></div>
 </div>
 <div class="body-pad">
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px">
-      <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;font-weight:700">Payable to Farmers</div>
-      <div style="font-size:16px;font-weight:900;color:#b91c1c;margin-top:3px">PKR ${totalPayable.toLocaleString()}</div>
+    <div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:12px 16px">
+      <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;font-weight:700">Receivable from Traders</div>
+      <div style="font-size:16px;font-weight:900;color:#15803d;margin-top:3px">PKR ${totalPayable.toLocaleString()}</div>
     </div>
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px">
-      <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;font-weight:700">Advance Paid</div>
-      <div style="font-size:16px;font-weight:900;color:#15803d;margin-top:3px">PKR ${totalAdvance.toLocaleString()}</div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px">
+      <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;font-weight:700">Payable to Traders</div>
+      <div style="font-size:16px;font-weight:900;color:#b91c1c;margin-top:3px">PKR ${totalAdvance.toLocaleString()}</div>
     </div>
     <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px">
       <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;font-weight:700">Settled / Clear</div>
-      <div style="font-size:16px;font-weight:900;color:#374151;margin-top:3px">${settled} farmers</div>
+      <div style="font-size:16px;font-weight:900;color:#374151;margin-top:3px">${settled} traders</div>
     </div>
   </div>
   <table>
     <thead><tr>
-      <th>#</th><th>Name</th><th>Village</th><th>Phone</th><th>CNIC</th>
+      <th>#</th><th>Name</th><th>Phone</th><th>Address</th>
       <th style="text-align:right">Total Dr</th>
       <th style="text-align:right">Total Cr</th>
       <th style="text-align:right">Balance</th>
@@ -101,10 +112,10 @@ ${buildPrintHeader(shop)}
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <td colspan="5"><strong>Total: ${filtered.length} farmers</strong></td>
+      <td colspan="4"><strong>Total: ${filtered.length} traders</strong></td>
       <td style="text-align:right"><strong>PKR ${filtered.reduce((s, f) => s + (f.totalDebit || 0), 0).toLocaleString()}</strong></td>
       <td style="text-align:right"><strong>PKR ${filtered.reduce((s, f) => s + (f.totalCredit || 0), 0).toLocaleString()}</strong></td>
-      <td style="text-align:right;color:#b91c1c"><strong>PKR ${totalPayable.toLocaleString()}</strong></td>
+      <td style="text-align:right;color:#15803d"><strong>PKR ${totalPayable.toLocaleString()}</strong></td>
       <td></td>
     </tr></tfoot>
   </table>
@@ -119,8 +130,8 @@ ${buildPrintHeader(shop)}
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">All Farmers Report</h2>
-          <p className="text-gray-500 text-sm">{isRestrictedRole ? "Profile summary only" : "Balance summary for all registered farmers"}</p>
+          <h2 className="text-2xl font-bold text-gray-900">All Traders Report</h2>
+          <p className="text-gray-500 text-sm">{isRestrictedRole ? "Profile summary only" : "Balance summary for all traders (buyers/sellers)"}</p>
         </div>
         {!isRestrictedRole && (
           <Button variant="outline" onClick={printReport} className="gap-2">
@@ -133,22 +144,22 @@ ${buildPrintHeader(shop)}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500 font-medium uppercase">Total Farmers</p>
+            <p className="text-xs text-gray-500 font-medium uppercase">Total Traders</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">{loading ? "—" : filtered.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-red-200 bg-red-50/40">
-          <CardContent className="p-4">
-            <p className="text-xs text-red-500 font-medium uppercase">Payable to Farmers</p>
-            <p className="text-2xl font-bold text-red-600 mt-1">{loading ? "—" : formatCurrency(totalPayable)}</p>
-            <p className="text-xs text-red-400 mt-0.5">{filtered.filter((f) => f.balance > 0).length} farmers</p>
           </CardContent>
         </Card>
         <Card className="border-green-200 bg-green-50/40">
           <CardContent className="p-4">
-            <p className="text-xs text-green-600 font-medium uppercase">Advance Paid</p>
-            <p className="text-2xl font-bold text-green-700 mt-1">{loading ? "—" : formatCurrency(totalAdvance)}</p>
-            <p className="text-xs text-green-500 mt-0.5">{filtered.filter((f) => f.balance < 0).length} farmers</p>
+            <p className="text-xs text-green-600 font-medium uppercase">Receivable</p>
+            <p className="text-2xl font-bold text-green-700 mt-1">{loading ? "—" : formatCurrency(totalPayable)}</p>
+            <p className="text-xs text-green-500 mt-0.5">{filtered.filter((t) => ((t.totalDebit || 0) - (t.totalCredit || 0)) > 0).length} traders</p>
+          </CardContent>
+        </Card>
+        <Card className="border-red-200 bg-red-50/40">
+          <CardContent className="p-4">
+            <p className="text-xs text-red-500 font-medium uppercase">Payable</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">{loading ? "—" : formatCurrency(totalAdvance)}</p>
+            <p className="text-xs text-red-400 mt-0.5">{filtered.filter((t) => ((t.totalDebit || 0) - (t.totalCredit || 0)) < 0).length} traders</p>
           </CardContent>
         </Card>
         <Card>
@@ -166,7 +177,7 @@ ${buildPrintHeader(shop)}
           <div className="flex items-center justify-between gap-4">
             <div className="relative max-w-sm flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input placeholder="Search by name, village, phone..." value={search}
+              <Input placeholder="Search by name, phone, address..." value={search}
                 onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
             {isRestrictedRole && (
@@ -183,9 +194,8 @@ ${buildPrintHeader(shop)}
                 <tr>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">#</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Name</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Village</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Phone</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">CNIC</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Address</th>
                   {!isRestrictedRole && (
                     <>
                       <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Total Dr</th>
@@ -199,43 +209,42 @@ ${buildPrintHeader(shop)}
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
-                  <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
+                  <tr><td colSpan={isRestrictedRole ? 4 : 9} className="px-4 py-10 text-center text-gray-400">Loading...</td></tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-4 py-16 text-center text-gray-400">
-                      <Tractor className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      No farmers found
+                    <td colSpan={isRestrictedRole ? 4 : 9} className="px-4 py-16 text-center text-gray-400">
+                      <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      No traders found
                     </td>
                   </tr>
-                ) : filtered.map((f, i) => {
-                  const bal = f.balance || 0
+                ) : filtered.map((t, i) => {
+                  const bal = (t.totalDebit || 0) - (t.totalCredit || 0)
                   return (
-                    <tr key={f.id} className="hover:bg-gray-50">
+                    <tr key={t.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{f.name}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{f.village || "—"}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{f.phone || "—"}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{f.cnic || "—"}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">{t.name}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{t.phone || "—"}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{t.address || "—"}</td>
                       {!isRestrictedRole && (
                         <>
-                          <td className="px-4 py-3 text-right text-gray-700">{formatCurrency(f.totalDebit || 0)}</td>
-                          <td className="px-4 py-3 text-right text-green-700">{formatCurrency(f.totalCredit || 0)}</td>
-                          <td className={`px-4 py-3 text-right font-bold ${bal > 0 ? "text-red-600" : bal < 0 ? "text-green-700" : "text-gray-400"}`}>
+                          <td className="px-4 py-3 text-right text-gray-700">{formatCurrency(t.totalDebit || 0)}</td>
+                          <td className="px-4 py-3 text-right text-green-700">{formatCurrency(t.totalCredit || 0)}</td>
+                          <td className={`px-4 py-3 text-right font-bold ${bal > 0 ? "text-green-700" : bal < 0 ? "text-red-600" : "text-gray-400"}`}>
                             {formatCurrency(Math.abs(bal))}
                             {bal !== 0 && <span className="text-xs font-normal ml-1">{bal > 0 ? "Dr" : "Cr"}</span>}
                           </td>
                           <td className="px-4 py-3">
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                              bal > 0 ? "bg-red-100 text-red-700"
-                              : bal < 0 ? "bg-green-100 text-green-700"
+                              bal > 0 ? "bg-green-100 text-green-700"
+                              : bal < 0 ? "bg-red-100 text-red-700"
                               : "bg-gray-100 text-gray-500"
                             }`}>
-                              {bal > 0 ? "Payable" : bal < 0 ? "Advance" : "Settled"}
+                              {bal > 0 ? "Receivable" : bal < 0 ? "Payable" : "Settled"}
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <Link href={`/reports/farmer-ledger?id=${f.id}`}
-                              className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 font-medium">
+                            <Link href={`/reports/customer-ledger?id=${t.id}`}
+                              className="flex items-center gap-1 text-xs text-blue-700 hover:text-blue-900 font-medium">
                               Ledger <ArrowRight className="w-3 h-3" />
                             </Link>
                           </td>
@@ -248,7 +257,7 @@ ${buildPrintHeader(shop)}
               {!loading && filtered.length > 0 && (
                 <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                   <tr>
-                    <td colSpan={isRestrictedRole ? 5 : 5} className="px-4 py-3 font-bold text-gray-700">{filtered.length} farmers</td>
+                    <td colSpan={isRestrictedRole ? 4 : 4} className="px-4 py-3 font-bold text-gray-700">{filtered.length} traders</td>
                     {!isRestrictedRole && (
                       <>
                         <td className="px-4 py-3 text-right font-bold text-gray-900">
@@ -257,7 +266,7 @@ ${buildPrintHeader(shop)}
                         <td className="px-4 py-3 text-right font-bold text-green-700">
                           {formatCurrency(filtered.reduce((s, f) => s + (f.totalCredit || 0), 0))}
                         </td>
-                        <td className="px-4 py-3 text-right font-bold text-red-600">
+                        <td className="px-4 py-3 text-right font-bold text-green-700">
                           {formatCurrency(totalPayable)}
                         </td>
                         <td colSpan={2} />

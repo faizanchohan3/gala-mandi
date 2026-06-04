@@ -9,7 +9,7 @@ import {
 } from "recharts"
 import {
   BarChart3, TrendingUp, Users, ShoppingCart, DollarSign, BookOpen,
-  ArrowRight, Package, TrendingDown, AlertTriangle, Wallet, Tractor, Store,
+  ArrowRight, Package, TrendingDown, AlertTriangle, Wallet, Tractor, Store, UserCheck,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -76,6 +76,13 @@ const reportCards = [
     description: "Balance summary for all suppliers — payable, advance, and settled",
     icon: Store,
     color: "from-cyan-600 to-cyan-700",
+  },
+  {
+    href: "/reports/all-traders",
+    title: "All Traders Report",
+    description: "Balance summary for all traders (buyers/sellers) — receivable, payable, and settled",
+    icon: UserCheck,
+    color: "from-indigo-600 to-indigo-700",
   },
 ]
 
