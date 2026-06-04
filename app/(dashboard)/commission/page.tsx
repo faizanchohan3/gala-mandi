@@ -92,7 +92,9 @@ export default function CommissionPage() {
   const commRate = commissionRate !== "" ? parseFloat(commissionRate) : 0
   const commAmount = total > 0 ? parseFloat(((total * commRate) / 100).toFixed(2)) : 0
   const labourAmt = parseFloat(labourAmount || "0")
-  const sellerPayable = total > 0 ? parseFloat((total - commAmount - labourAmt).toFixed(2)) : 0
+  // Seller payable = total minus commission only (labour is deducted from commission, not from seller)
+  const sellerPayable = total > 0 ? parseFloat((total - commAmount).toFixed(2)) : 0
+  const netCommission = commAmount - labourAmt
   const balance = total - parseFloat(paidAmount || "0")
 
   function resetNewForm() {
@@ -554,7 +556,7 @@ ${buildPrintHeader(shop)}
             <div>
               <Label>Labour Amount (PKR)</Label>
               <Input type="number" placeholder="0" value={labourAmount} onChange={(e) => setLabourAmount(e.target.value)} />
-              <p className="text-xs text-gray-400 mt-1">Deducted from seller payable</p>
+              <p className="text-xs text-gray-400 mt-1">Deducted from your commission (not from seller)</p>
             </div>
 
             {/* Summary box */}
@@ -564,17 +566,23 @@ ${buildPrintHeader(shop)}
                 <span className="font-medium">{formatCurrency(total)}</span>
               </div>
               <div className="flex justify-between text-green-700">
-                <span>Your Commission ({commissionRate || 0}%):</span>
+                <span>Gross Commission ({commissionRate || 0}%):</span>
                 <span className="font-bold">{formatCurrency(commAmount)}</span>
               </div>
               {labourAmt > 0 && (
-                <div className="flex justify-between text-orange-700">
-                  <span>Labour Amount:</span>
-                  <span className="font-medium">{formatCurrency(labourAmt)}</span>
-                </div>
+                <>
+                  <div className="flex justify-between text-orange-700">
+                    <span>— Labour (deducted from commission):</span>
+                    <span className="font-medium">− {formatCurrency(labourAmt)}</span>
+                  </div>
+                  <div className="flex justify-between text-green-800 border-t border-green-200 pt-1">
+                    <span className="font-semibold">Net Commission (yours):</span>
+                    <span className="font-bold">{formatCurrency(netCommission)}</span>
+                  </div>
+                </>
               )}
               <div className="flex justify-between text-blue-700 border-t border-green-200 pt-1.5">
-                <span>Seller Payable (owed to them):</span>
+                <span>Seller Payable (owed to seller):</span>
                 <span className="font-semibold">{formatCurrency(sellerPayable)}</span>
               </div>
             </div>
