@@ -71,14 +71,17 @@ export default async function DashboardPage() {
   const session = await auth()
   const shopId = session?.user?.shopId ?? null
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
+  const isCashier = session?.user?.role === "CASHIER"
   const data = await getDashboardData(shopId)
 
-  const stats = [
-    { title: "Today's Sales", value: formatCurrency(data.todaySales), icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50", href: "/sales" },
-    { title: "Month Sales", value: formatCurrency(data.monthSales), icon: TrendingUp, color: "text-green-600", bg: "bg-green-50", href: "/sales" },
-    { title: "Total Products", value: data.totalProducts.toString(), icon: Package, color: "text-purple-600", bg: "bg-purple-50", href: "/inventory" },
-    { title: "Total Traders", value: data.totalCustomers.toString(), icon: Users, color: "text-orange-600", bg: "bg-orange-50", href: "/customers" },
-    { title: "Pending Notes", value: data.pendingTasks.toString(), icon: CheckSquare, color: "text-yellow-600", bg: "bg-yellow-50", href: "/tasks" },
+  // CASHIER: Only show Sales, Month Sales (for reports), and Traders (for transactions)
+  // ADMIN: Show all stats
+  const allStats = [
+    { title: "Today's Sales", value: formatCurrency(data.todaySales), icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50", href: "/sales", role: "all" },
+    { title: "Month Sales", value: formatCurrency(data.monthSales), icon: TrendingUp, color: "text-green-600", bg: "bg-green-50", href: "/sales", role: "all" },
+    { title: "Total Products", value: data.totalProducts.toString(), icon: Package, color: "text-purple-600", bg: "bg-purple-50", href: "/inventory", role: "admin" },
+    { title: "Total Traders", value: data.totalCustomers.toString(), icon: Users, color: "text-orange-600", bg: "bg-orange-50", href: "/customers", role: "admin" },
+    { title: "Pending Notes", value: data.pendingTasks.toString(), icon: CheckSquare, color: "text-yellow-600", bg: "bg-yellow-50", href: "/tasks", role: "admin" },
     {
       title: "Pesticide Alerts",
       value: data.expiredPesticides.toString(),
@@ -86,8 +89,14 @@ export default async function DashboardPage() {
       color: data.expiredPesticides > 0 ? "text-red-600" : "text-teal-600",
       bg: data.expiredPesticides > 0 ? "bg-red-50" : "bg-teal-50",
       href: "/pesticides",
+      role: "admin",
     },
   ]
+
+  // Filter stats based on role
+  const stats = isCashier
+    ? allStats.filter(s => s.role === "all")
+    : allStats
 
   return (
     <div className="space-y-6">
@@ -98,6 +107,8 @@ export default async function DashboardPage() {
         <p className="text-gray-500 text-sm mt-1">
           {isSuperAdmin
             ? "Platform overview — all shops combined."
+            : isCashier
+            ? "Sales & Transaction Dashboard — Process transactions and view quick reports."
             : `Here's what's happening at ${session?.user?.shopName || "your shop"} today.`}
         </p>
       </div>
@@ -137,8 +148,8 @@ export default async function DashboardPage() {
         </Link>
       )}
 
-      {/* Critical Stock Alert */}
-      {data.criticalStockProducts.length > 0 && (
+      {/* Critical Stock Alert - Admin only */}
+      {!isCashier && data.criticalStockProducts.length > 0 && (
         <Link href="/inventory">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 hover:bg-red-100 transition-colors cursor-pointer">
             <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -180,16 +191,21 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <SalesChart />
-        </div>
-        <div>
-          <TasksSummary />
-        </div>
-      </div>
+      {/* Charts and Summaries - Admin only */}
+      {!isCashier && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <SalesChart />
+            </div>
+            <div>
+              <TasksSummary />
+            </div>
+          </div>
 
-      <RecentSales sales={data.recentSales} />
+          <RecentSales sales={data.recentSales} />
+        </>
+      )}
     </div>
   )
 }
