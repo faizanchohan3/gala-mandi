@@ -137,6 +137,12 @@ export default function ProfitLossPage() {
                     </div>
                   </>
                 )}
+                {data.pesticideDiscountFromSupplier > 0 && (
+                  <div className="flex justify-between items-center py-2 border-b bg-green-50 px-2">
+                    <p className="text-gray-600 text-sm font-medium">Pesticide Discount from Supplier</p>
+                    <p className="text-green-700 font-medium">{formatCurrency(data.pesticideDiscountFromSupplier)}</p>
+                  </div>
+                )}
                 {data.otherIncome > 0 && (
                   <div className="flex justify-between items-center py-2 border-b">
                     <p className="text-gray-600 text-sm">Other Income</p>
@@ -173,12 +179,6 @@ export default function ProfitLossPage() {
                   <p className="text-gray-600 text-sm">Purchases Payable</p>
                   <p className="text-orange-600">{formatCurrency(data.purchasesBalance)}</p>
                 </div>
-                {data.pesticideIncentive > 0 && (
-                  <div className="flex justify-between items-center py-2 border-b bg-amber-50 px-2">
-                    <p className="text-gray-600 text-sm font-medium">Pesticide Incentive Given to Buyers</p>
-                    <p className="text-amber-600 font-medium">{formatCurrency(data.pesticideIncentive)}</p>
-                  </div>
-                )}
                 {data.otherExpense > 0 && (
                   <div className="flex justify-between items-center py-2 border-b">
                     <p className="text-gray-600 text-sm">Other Expenses</p>
@@ -187,7 +187,7 @@ export default function ProfitLossPage() {
                 )}
                 <div className="flex justify-between items-center pt-2 font-bold text-red-600 bg-red-50 px-2 py-2 rounded">
                   <p>Total Expenses</p>
-                  <p>{formatCurrency(data.purchasesTotal + data.otherExpense + (data.pesticideIncentive || 0))}</p>
+                  <p>{formatCurrency(data.purchasesTotal + data.otherExpense)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -232,6 +232,12 @@ export default function ProfitLossPage() {
                     {formatCurrency(data.grossProfit)}
                   </p>
                 </div>
+                {data.pesticideDiscountFromSupplier > 0 && (
+                  <div className="flex justify-between py-2 border-b">
+                    <p className="text-gray-600">Pesticide Discount from Supplier</p>
+                    <p className="text-green-700">+ {formatCurrency(data.pesticideDiscountFromSupplier)}</p>
+                  </div>
+                )}
                 {data.otherIncome > 0 && (
                   <div className="flex justify-between py-2 border-b">
                     <p className="text-gray-600">Other Income</p>

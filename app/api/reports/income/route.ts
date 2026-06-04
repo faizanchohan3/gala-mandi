@@ -48,15 +48,16 @@ export async function GET(req: Request) {
 
   const salesTotal = sales._sum.totalAmount || 0
   const pesticideSalesTotal = pesticideSales._sum.totalAmount || 0
-  const pesticideIncentive = pesticideSales._sum.incentive || 0
+  const pesticideDiscountFromSupplier = pesticideSales._sum.incentive || 0
   const totalRevenue = salesTotal + pesticideSalesTotal
 
   const purchasesTotal = purchases._sum.totalAmount || 0
-  const grossProfit = totalRevenue - purchasesTotal - pesticideIncentive
+  const grossProfit = totalRevenue - purchasesTotal
 
   const otherIncome = transactions.filter((t) => t.type === "CREDIT").reduce((s, t) => s + t.amount, 0)
   const otherExpense = transactions.filter((t) => t.type === "DEBIT").reduce((s, t) => s + t.amount, 0)
-  const netIncome = grossProfit + otherIncome - otherExpense
+  const totalIncome = otherIncome + pesticideDiscountFromSupplier
+  const netIncome = grossProfit + totalIncome - otherExpense
 
   return NextResponse.json({
     salesTotal,
@@ -67,7 +68,7 @@ export async function GET(req: Request) {
     pesticideSalesCount: pesticideSales._count,
     pesticideSalesPaid: pesticideSales._sum.paidAmount || 0,
     pesticideSalesBalance: pesticideSales._sum.balance || 0,
-    pesticideIncentive,
+    pesticideDiscountFromSupplier,
     totalRevenue,
     purchasesTotal,
     purchasesCount: purchases._count,
@@ -75,6 +76,7 @@ export async function GET(req: Request) {
     purchasesBalance: purchases._sum.balance || 0,
     grossProfit,
     otherIncome,
+    pesticideIncomeTotal: otherIncome + pesticideDiscountFromSupplier,
     otherExpense,
     netIncome,
     transactions,
