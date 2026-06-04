@@ -45,31 +45,27 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     // Delete finance transactions linked to this commission
     await tx.transaction.deleteMany({ where: { reference: id } })
 
-    // Reverse commission income account balance
+    // Reverse commission income account balance — never go below 0
     if (commission.commissionAmount > 0) {
       const commAccount = await tx.account.findFirst({
         where: { ...shopFilter, type: "INCOME", name: { contains: "Commission" }, isActive: true },
         orderBy: { code: "asc" },
       })
       if (commAccount) {
-        await tx.account.update({
-          where: { id: commAccount.id },
-          data: { balance: { decrement: commission.commissionAmount } },
-        })
+        const newBal = Math.max(0, (commAccount.balance || 0) - commission.commissionAmount)
+        await tx.account.update({ where: { id: commAccount.id }, data: { balance: newBal } })
       }
     }
 
-    // Reverse labour expense account balance
+    // Reverse labour expense account balance — never go below 0
     if (commission.labourAmount > 0) {
       const labourAccount = await tx.account.findFirst({
         where: { ...shopFilter, type: "EXPENSE", name: { contains: "Labour" }, isActive: true },
         orderBy: { code: "asc" },
       })
       if (labourAccount) {
-        await tx.account.update({
-          where: { id: labourAccount.id },
-          data: { balance: { decrement: commission.labourAmount } },
-        })
+        const newBal = Math.max(0, (labourAccount.balance || 0) - commission.labourAmount)
+        await tx.account.update({ where: { id: labourAccount.id }, data: { balance: newBal } })
       }
     }
 
