@@ -27,7 +27,6 @@ const allReportSubItems = [
   { href: "/reports/pesticide-sales", label: "Pesticide Sales" },
   { href: "/reports/customers", label: "Trader Report" },
   { href: "/reports/products", label: "Product Report" },
-  { href: "/reports/profit-loss", label: "Profit & Loss" },
   { href: "/reports/customer-ledger", label: "Trader Ledger" },
   { href: "/reports/all-farmers", label: "All Farmers" },
   { href: "/reports/farmer-ledger", label: "Farmer Ledger" },
