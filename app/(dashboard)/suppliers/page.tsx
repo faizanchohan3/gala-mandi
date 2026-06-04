@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -10,10 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
 import {
   Plus, Search, Edit, Phone, MapPin, ArrowUpCircle,
-  Eye, Truck, X, TrendingDown, Printer, Check, BookOpen, ShoppingBag,
+  Eye, Truck, X, TrendingDown, Printer, Check, BookOpen, ShoppingBag, Upload,
 } from "lucide-react"
 
 export default function SuppliersPage() {
+  const router = useRouter()
+  const { data: session } = useSession()
   const [suppliers, setSuppliers] = useState<any[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
@@ -25,6 +29,14 @@ export default function SuppliersPage() {
   const [selected, setSelected] = useState<any>(null)
   const [detail, setDetail] = useState<any>(null)
   const [form, setForm] = useState({ name: "", phone: "", otherPhone: "", address: "", picture: "" })
+  const [photoPreview, setPhotoPreview] = useState<string>("")
+
+  // Restrict CASHIER from accessing this page
+  useEffect(() => {
+    if (session && session.user?.role === "CASHIER") {
+      router.push("/dashboard")
+    }
+  }, [session, router])
   const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "", direction: "PAY" })
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
@@ -53,12 +65,14 @@ export default function SuppliersPage() {
   function openAdd() {
     setEditing(null)
     setForm({ name: "", phone: "", otherPhone: "", address: "", picture: "" })
+    setPhotoPreview("")
     setShowModal(true)
   }
 
   function openEdit(s: any) {
     setEditing(s)
     setForm({ name: s.name, phone: s.phone || "", otherPhone: s.otherPhone || "", address: s.address || "", picture: s.picture || "" })
+    setPhotoPreview(s.picture || "")
     setShowModal(true)
   }
 
@@ -75,6 +89,23 @@ export default function SuppliersPage() {
     setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "", direction: "PAY" })
     setLastPayment(null)
     setShowPaymentModal(true)
+  }
+
+  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      const base64 = evt.target?.result as string
+      setPhotoPreview(base64)
+      setForm({ ...form, picture: base64 })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function deletePhoto() {
+    setPhotoPreview("")
+    setForm({ ...form, picture: "" })
   }
 
   async function handleSave() {
@@ -266,7 +297,28 @@ export default function SuppliersPage() {
             </div>
             <div>
               <Label>Picture (Optional)</Label>
-              <Input type="url" value={form.picture} onChange={(e) => setForm({ ...form, picture: e.target.value })} placeholder="https://example.com/image.jpg" />
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <div className="relative border-2 border-gray-200 rounded-lg p-3 text-center hover:border-green-500 transition-colors">
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                      <Upload className="w-4 h-4" />
+                      <span>Click to upload photo</span>
+                    </div>
+                  </div>
+                </div>
+                {(photoPreview || form.picture) && !photoPreview && form.picture && (
+                  <img src={form.picture} alt="Preview" className="w-12 h-12 rounded object-cover border" />
+                )}
+                {photoPreview && (
+                  <div className="flex gap-2 items-center">
+                    <img src={photoPreview} alt="Preview" className="w-12 h-12 rounded object-cover border" />
+                    <button type="button" onClick={deletePhoto} className="p-1.5 rounded hover:bg-red-100">
+                      <X className="w-4 h-4 text-red-600" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
