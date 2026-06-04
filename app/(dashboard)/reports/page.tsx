@@ -12,6 +12,7 @@ import {
   ArrowRight, Package, TrendingDown, AlertTriangle, Wallet, Tractor, Store, UserCheck,
 } from "lucide-react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 
 const reportCards = [
   {
@@ -87,12 +88,23 @@ const reportCards = [
 ]
 
 export default function ReportsPage() {
+  const { data: session } = useSession()
   const [monthlySales, setMonthlySales] = useState<any[]>([])
   const [financeData, setFinanceData] = useState({ income: 0, expense: 0, balance: 0 })
   const [customerData, setCustomerData] = useState({ count: 0, outstanding: 0, totalBusiness: 0 })
   const [productData, setProductData] = useState({ totalProducts: 0, stockValue: 0, totalSaleAmount: 0, lowStockCount: 0 })
   const [expenseData, setExpenseData] = useState({ total: 0, topCategories: [] as any[] })
   const [loading, setLoading] = useState(true)
+
+  const isCashier = session?.user?.role === "CASHIER"
+
+  // Filter reports based on role
+  const visibleReportCards = isCashier ? reportCards.filter(card => [
+    "/reports/sales",
+    "/reports/all-farmers",
+    "/reports/all-traders",
+    "/reports/all-suppliers",
+  ].includes(card.href)) : reportCards
 
   useEffect(() => {
     Promise.all([
@@ -339,7 +351,7 @@ export default function ReportsPage() {
       <div>
         <h3 className="text-base font-semibold text-gray-700 mb-3">Detailed Reports</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {reportCards.map(({ href, title, description, icon: Icon, color }) => (
+          {visibleReportCards.map(({ href, title, description, icon: Icon, color }) => (
             <Link key={href} href={href}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer border border-gray-100 group">
                 <CardContent className="p-5 flex items-start gap-4">

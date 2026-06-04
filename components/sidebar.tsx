@@ -20,7 +20,7 @@ type NavItem = {
   hasChildren?: true
 }
 
-const reportSubItems = [
+const allReportSubItems = [
   { href: "/reports", label: "Overview" },
   { href: "/reports/sales", label: "Sales Report" },
   { href: "/reports/pesticide-sales", label: "Pesticide Sales" },
@@ -32,7 +32,16 @@ const reportSubItems = [
   { href: "/reports/farmer-ledger", label: "Farmer Ledger" },
   { href: "/reports/all-suppliers", label: "All Suppliers" },
   { href: "/reports/supplier-ledger", label: "Supplier Ledger" },
+  { href: "/reports/all-traders", label: "All Traders" },
   { href: "/reports/bank-transactions", label: "Bank Transactions" },
+]
+
+const cashierReportSubItems = [
+  { href: "/reports/sales", label: "Sales Report" },
+  { href: "/reports/purchases", label: "Purchase Report" },
+  { href: "/reports/all-farmers", label: "All Farmers" },
+  { href: "/reports/all-traders", label: "All Traders" },
+  { href: "/reports/all-suppliers", label: "All Suppliers" },
 ]
 
 const shopNavItems: NavItem[] = [
@@ -83,9 +92,19 @@ export function Sidebar() {
   })
 
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
+  const isCashier = session?.user?.role === "CASHIER"
   const shopName = liveShopName ?? session?.user?.shopName
 
+  const reportSubItems = isCashier ? cashierReportSubItems : allReportSubItems
+
   const navItems = isSuperAdmin ? superAdminNavItems : shopNavItems.filter((item) => {
+    // CASHIER role restrictions
+    if (isCashier) {
+      const allowedPaths = ["/dashboard", "/sales", "/purchases", "/commission", "/transport", "/reports"]
+      if (!allowedPaths.includes(item.href)) return false
+    }
+
+    // Module-based filtering
     if (item.href === "/warehouse")  return shopModules.moduleGodown
     if (item.href === "/gate")       return shopModules.moduleGate
     if (item.href === "/transport")  return shopModules.moduleTransport
