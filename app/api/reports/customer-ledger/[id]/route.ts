@@ -156,10 +156,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       date: cp.createdAt,
       type: "PAYMENT",
       description: isPay
-        ? `Paid to Customer — ${cp.method}${cp.notes ? ` (${cp.notes})` : ""}`
+        ? `Paid to Customer (Refund/Settlement) — ${cp.method}${cp.notes ? ` (${cp.notes})` : ""}`
         : `Received from Customer — ${cp.method}${cp.notes ? ` (${cp.notes})` : ""}`,
-      debit: isPay ? cp.amount : 0,
-      credit: isPay ? 0 : cp.amount,
+      debit: 0,
+      credit: cp.amount,
     })
   }
 
