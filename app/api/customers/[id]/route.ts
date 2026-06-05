@@ -53,11 +53,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     sales.reduce((s, sale) => s + sale.paidAmount, 0) +
     commissions.reduce((s, c) => s + c.paidAmount, 0) +
     pesticideSales.reduce((s, ps) => s + ps.paidAmount, 0)
-  // Only RECEIVE payments count as "paid" — PAY entries are advances (debits)
-  const cpTotal = customerPayments.reduce((s, p) => p.direction === "RECEIVE" ? s + p.amount : s - p.amount, 0)
-  const totalPaid = initialPaid + cpTotal
+  // Only RECEIVE payments count as "paid" — PAY entries are advances (they owe us more)
+  const cpReceived = customerPayments.reduce((s, p) => p.direction === "RECEIVE" ? s + p.amount : s, 0)
+  const cpAdvances = customerPayments.reduce((s, p) => p.direction === "PAY" ? s + p.amount : s, 0)
+  const totalPaid = initialPaid + cpReceived
 
-  const totalBalance = totalBusiness - totalPaid
+  // Balance = Business (sales + advances) - Paid (received)
+  const totalBalance = totalBusiness + cpAdvances - totalPaid
 
   // Build ledger entries from all sources, sorted by date
   const ledgerEvents: {
