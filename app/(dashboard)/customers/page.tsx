@@ -189,7 +189,7 @@ export default function CustomersPage() {
     (c.referenceName || "").toLowerCase().includes(search.toLowerCase())
   )
 
-  const totalOutstanding = activeCustomers.reduce((s, c) => s + (c.balance || 0), 0)
+  const totalOutstanding = activeCustomers.filter((c) => (c.ledgerBalance || 0) > 0).reduce((s, c) => s + (c.ledgerBalance || 0), 0)
 
   return (
     <div className="space-y-6">
@@ -301,8 +301,11 @@ export default function CustomersPage() {
                         ) : <span className="text-gray-400 text-xs">No limit</span>}
                       </td>
                       <td className="py-3 px-3">
-                        {(c.balance || 0) > 0 ? (
-                          <span className="font-bold text-red-600">{formatCurrency(c.balance)}</span>
+                        {(c.ledgerBalance || 0) !== 0 ? (
+                          <span className={`font-bold ${(c.ledgerBalance || 0) > 0 ? "text-red-600" : "text-green-700"}`}>
+                            {formatCurrency(Math.abs(c.ledgerBalance || 0))}
+                            {(c.ledgerBalance || 0) !== 0 && <span className="text-xs ml-1 font-normal">{(c.ledgerBalance || 0) > 0 ? "Dr" : "Cr"}</span>}
+                          </span>
                         ) : <span className="text-gray-400">—</span>}
                       </td>
                       <td className="py-3 px-3">
