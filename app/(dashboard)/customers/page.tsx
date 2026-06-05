@@ -223,17 +223,6 @@ export default function CustomersPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className={totalOutstanding > 0 ? "border-orange-200" : ""}>
-          <CardContent className="p-5 flex items-center gap-3">
-            <div className="p-2 bg-orange-50 rounded-lg"><Wallet className="w-5 h-5 text-orange-600" /></div>
-            <div>
-              <p className={`text-2xl font-bold ${totalOutstanding > 0 ? "text-orange-600" : "text-gray-900"}`}>
-                {formatCurrency(totalOutstanding)}
-              </p>
-              <p className="text-sm text-gray-500">Total Outstanding (Udhar)</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Active / Inactive Tabs */}
