@@ -394,7 +394,7 @@ ${buildPrintHeader(shop)}
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent side="bottom" sideOffset={8} className="max-h-48 overflow-y-auto">
                       {categories.map((c: any) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
