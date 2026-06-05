@@ -526,10 +526,14 @@ export default function CustomersPage() {
                   </div>
 
                   {/* Balance Cards */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="bg-green-50 rounded-lg p-3 text-center">
                       <p className="text-lg font-bold text-green-700">{formatCurrency(detail.totalBusiness)}</p>
                       <p className="text-xs text-green-600 mt-0.5">Total Business</p>
+                    </div>
+                    <div className="bg-orange-50 rounded-lg p-3 text-center">
+                      <p className="text-lg font-bold text-orange-700">{formatCurrency(detail.totalAdvances || 0)}</p>
+                      <p className="text-xs text-orange-600 mt-0.5">Total Pay</p>
                     </div>
                     <div className="bg-blue-50 rounded-lg p-3 text-center">
                       <p className="text-lg font-bold text-blue-700">{formatCurrency(detail.totalPaid)}</p>

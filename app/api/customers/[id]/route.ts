@@ -190,7 +190,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return { ...e, balance: running }
   })
 
-  return NextResponse.json({ customer, sales, commissions, pesticideSales, totalBusiness, totalPaid, totalBalance, ledger })
+  return NextResponse.json({ customer, sales, commissions, pesticideSales, totalBusiness, totalPaid, totalAdvances: cpAdvances, totalBalance, ledger })
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
