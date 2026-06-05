@@ -348,8 +348,8 @@ ${buildPrintHeader(shop)}
                       <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                         <tr>
                           <td colSpan={4} className="px-4 py-3 font-bold text-gray-700">Closing Balance</td>
-                          <td className="px-4 py-3 text-right font-bold">{formatCurrency(ledger.totalDebit)}</td>
-                          <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(ledger.totalCredit)}</td>
+                          <td className="px-4 py-3 text-right font-bold">{formatCurrency((ledger.entries || []).reduce((s: number, e: any) => s + e.debit, 0))}</td>
+                          <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency((ledger.entries || []).reduce((s: number, e: any) => s + e.credit, 0))}</td>
                           <td className={`px-4 py-3 text-right font-bold text-lg ${ledger.closingBalance > 0 ? "text-red-600" : "text-green-700"}`}>
                             {formatCurrency(Math.abs(ledger.closingBalance))}
                             <span className="text-sm ml-1 font-normal">{ledger.closingBalance > 0 ? "Dr" : "Cr"}</span>
