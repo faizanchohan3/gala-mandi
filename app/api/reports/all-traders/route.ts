@@ -33,8 +33,8 @@ export async function GET() {
 
   const result = customers.map((c) => ({
     ...c,
-    totalDebit: (saleMap[c.id] || 0) + (commMap[c.id] || 0) + (pestMap[c.id] || 0),
-    totalCredit: (receivedMap[c.id] || 0) + (paidMap[c.id] || 0),
+    totalDebit: (saleMap[c.id] || 0) + (commMap[c.id] || 0) + (pestMap[c.id] || 0) + (paidMap[c.id] || 0),
+    totalCredit: (receivedMap[c.id] || 0),
   }))
 
   return cachedJson({ customers: result })
