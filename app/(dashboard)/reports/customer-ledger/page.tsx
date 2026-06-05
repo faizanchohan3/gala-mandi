@@ -293,13 +293,16 @@ ${buildPrintHeader(shop)}
 
               <div className={`rounded-lg px-5 py-4 flex items-center justify-between ${ledger.closingBalance > 0 ? "bg-red-50 border border-red-200" : "bg-green-50 border border-green-200"}`}>
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Closing Balance</p>
+                  <p className="text-sm font-medium text-gray-700">Closing Balance (Udhar)</p>
                   <p className="text-xs text-gray-500">{ledger.entries?.length || 0} transactions · {dateLabel}</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Sales: {formatCurrency(ledger.totalDebit)} — Payments Received: {formatCurrency(ledger.totalCredit)}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className={`text-2xl font-bold ${ledger.closingBalance > 0 ? "text-red-700" : "text-green-700"}`}>{formatCurrency(Math.abs(ledger.closingBalance))}</p>
                   <p className={`text-sm font-semibold ${ledger.closingBalance > 0 ? "text-red-600" : "text-green-600"}`}>
-                    {ledger.closingBalance > 0 ? "Outstanding (Trader Owes)" : ledger.closingBalance < 0 ? "Credit (Overpaid)" : "Settled"}
+                    {ledger.closingBalance > 0 ? `Outstanding (Udhar) — Trader Owes ${formatCurrency(ledger.closingBalance)}` : ledger.closingBalance < 0 ? `Overpaid (Credit) — We Owe ${formatCurrency(Math.abs(ledger.closingBalance))}` : "Settled — No Balance"}
                   </p>
                 </div>
               </div>
@@ -316,8 +319,8 @@ ${buildPrintHeader(shop)}
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50 border-b border-t">
                         <tr>
-                          {["#","Date","Type","Description","Debit (Dr)","Credit (Cr)","Balance"].map((h) => (
-                            <th key={h} className={`px-4 py-3 font-semibold text-gray-600 text-xs uppercase ${["Debit (Dr)","Credit (Cr)","Balance"].includes(h)?"text-right":"text-left"}`}>{h}</th>
+                          {["#","Date","Type","Description","Debit (Dr)","Credit (Cr)","Running Balance"].map((h) => (
+                            <th key={h} className={`px-4 py-3 font-semibold text-gray-600 text-xs uppercase ${["Debit (Dr)","Credit (Cr)","Running Balance"].includes(h)?"text-right":"text-left"}`}>{h}</th>
                           ))}
                         </tr>
                       </thead>
