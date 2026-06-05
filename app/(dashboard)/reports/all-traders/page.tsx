@@ -144,9 +144,9 @@ ${buildPrintHeader(shop)}
   <table>
     <thead><tr>
       <th>#</th><th>Name</th><th>Phone</th><th>Address</th>
-      <th style="text-align:right">Total Dr</th>
-      <th style="text-align:right">Total Cr</th>
-      <th style="text-align:right">Balance</th>
+      <th style="text-align:right">Sales (Dr)</th>
+      <th style="text-align:right">Payments (Cr)</th>
+      <th style="text-align:right">Outstanding</th>
       <th style="text-align:center">Status</th>
     </tr></thead>
     <tbody>${rows}</tbody>
@@ -235,9 +235,9 @@ ${buildPrintHeader(shop)}
                   <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-left">Address</th>
                   {!isRestrictedRole && (
                     <>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Total Dr</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Total Cr</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Balance</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Sales (Dr)</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Payments (Cr)</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Outstanding</th>
                       <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Status</th>
                       <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-center"></th>
                     </>
