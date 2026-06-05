@@ -40,7 +40,7 @@ export default function CustomersPage() {
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [statusTab, setStatusTab] = useState<StatusTab>("active")
-  const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; balance: number; direction?: string } | null>(null)
+  const [lastPayment, setLastPayment] = useState<{ id: string; amount: number; method: string; notes: string; name: string; phone?: string; balance: number; direction?: string } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; phone?: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -134,8 +134,9 @@ export default function CustomersPage() {
     })
     setSaving(false)
     if (res.ok) {
+      const data = await res.json()
       const newBalance = (selected.balance || 0) - amt
-      setLastPayment({ amount: amt, method: paymentForm.method, notes: paymentForm.notes, name: selected.name, phone: selected.phone, balance: newBalance, direction: paymentForm.direction })
+      setLastPayment({ id: data.id, amount: amt, method: paymentForm.method, notes: paymentForm.notes, name: selected.name, phone: selected.phone, balance: newBalance, direction: paymentForm.direction })
       loadData()
       if (showDetailModal) loadDetail(selected.id)
     } else {
@@ -833,7 +834,32 @@ export default function CustomersPage() {
                   </span>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={async () => {
+                    if (confirm("Delete this payment?")) {
+                      try {
+                        const res = await fetch(`/api/customers/${selected.id}/payment`, {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ paymentId: lastPayment.id }),
+                        })
+                        if (res.ok) {
+                          setShowPaymentModal(false)
+                          setLastPayment(null)
+                          loadData()
+                        }
+                      } catch (e) {
+                        alert("Failed to delete payment")
+                      }
+                    }
+                  }}
+                  className="gap-1"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </Button>
                 <Button variant="outline" onClick={() => { setShowPaymentModal(false); setLastPayment(null) }} className="flex-1">Close</Button>
                 <Button onClick={() => window.print()} className="flex-1 bg-green-700 hover:bg-green-800 gap-2">
                   <Printer className="w-4 h-4" /> Print Receipt
