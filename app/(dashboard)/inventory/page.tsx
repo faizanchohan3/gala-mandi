@@ -27,6 +27,7 @@ export default function InventoryPage() {
   const [newCatName, setNewCatName] = useState("")
   const [catSaving, setCatSaving] = useState(false)
   const [shop, setShop] = useState<any>(null)
+  const [categorySearch, setCategorySearch] = useState("")
 
   async function loadData() {
     try {
@@ -390,16 +391,25 @@ ${buildPrintHeader(shop)}
                     📂 No categories yet. Go to <strong>Categories</strong> tab above to add one.
                   </div>
                 ) : (
-                  <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
+                  <Select value={form.categoryId} onValueChange={(v) => { setForm({ ...form, categoryId: v }); setCategorySearch("") }}>
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
-                    <SelectContent side="bottom" sideOffset={8} className="max-h-48 overflow-y-auto">
-                      {categories.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
+                    <SelectContent side="bottom" sideOffset={8} className="p-0">
+                      <div className="sticky top-0 bg-white border-b p-2">
+                        <Input placeholder="Search categories..." value={categorySearch} onChange={(e) => setCategorySearch(e.target.value)} className="h-8 text-xs" autoFocus />
+                      </div>
+                      <div className="max-h-40 overflow-y-auto">
+                        {categories.filter((c: any) => c.name.toLowerCase().includes(categorySearch.toLowerCase())).length === 0 ? (
+                          <div className="px-2 py-4 text-xs text-gray-500 text-center">No categories found</div>
+                        ) : (
+                          categories.filter((c: any) => c.name.toLowerCase().includes(categorySearch.toLowerCase())).map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </div>
                     </SelectContent>
                   </Select>
                 )}
