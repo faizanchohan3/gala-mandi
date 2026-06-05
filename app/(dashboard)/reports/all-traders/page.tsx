@@ -208,6 +208,28 @@ ${buildPrintHeader(shop)}
         </Card>
       </div>
 
+      {/* Total Dr/Cr Cards */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="border-blue-200 bg-blue-50/40">
+          <CardContent className="p-4">
+            <p className="text-xs text-blue-600 font-medium uppercase">Total Sales (Dr)</p>
+            <p className="text-2xl font-bold text-blue-700 mt-1">
+              {loading ? "—" : formatCurrency(filtered.reduce((s, t) => s + (t.totalDebit || 0), 0))}
+            </p>
+            <p className="text-xs text-blue-500 mt-0.5">all sales & commissions</p>
+          </CardContent>
+        </Card>
+        <Card className="border-green-200 bg-green-50/40">
+          <CardContent className="p-4">
+            <p className="text-xs text-green-600 font-medium uppercase">Total Payments (Cr)</p>
+            <p className="text-2xl font-bold text-green-700 mt-1">
+              {loading ? "—" : formatCurrency(filtered.reduce((s, t) => s + (t.totalCredit || 0), 0))}
+            </p>
+            <p className="text-xs text-green-500 mt-0.5">received & paid</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Table */}
       <Card>
         <div className="p-4 border-b">
