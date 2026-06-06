@@ -44,6 +44,7 @@ export default function CustomersPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; phone?: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function loadData() {
@@ -192,10 +193,15 @@ export default function CustomersPage() {
     }
   }
 
-  async function handleBulkDeletePayments() {
+  function showDeleteConfirmModal() {
     if (!selected || selectedPayments.size === 0) return
-    const count = selectedPayments.size
-    if (!confirm(`Delete ${count} payment(s)?`)) return
+    setShowDeleteConfirm(true)
+  }
+
+  async function confirmDelete() {
+    if (!selected || selectedPayments.size === 0) return
+    setShowDeleteConfirm(false)
+    setDeleting(true)
 
     try {
       for (const paymentId of selectedPayments) {
@@ -213,6 +219,8 @@ export default function CustomersPage() {
       await loadDetail(selected.id)
     } catch (error) {
       alert(`Error deleting payments: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -648,7 +656,7 @@ export default function CustomersPage() {
                     {selectedPayments.size > 0 && (
                       <div className="mb-3 flex items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <span className="text-sm font-medium text-blue-900">{selectedPayments.size} payment(s) selected</span>
-                        <button onClick={handleBulkDeletePayments} className="ml-auto px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                        <button onClick={showDeleteConfirmModal} className="ml-auto px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
                           Delete Selected
                         </button>
                       </div>
@@ -1017,6 +1025,44 @@ export default function CustomersPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-600" />
+              Delete Transactions
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-900">
+                You are about to delete <strong>{selectedPayments.size} payment transaction(s)</strong>.
+              </p>
+              <p className="text-sm text-red-800 mt-2">
+                This action will remove the transactions from the ledger and reverse the balance calculations.
+              </p>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-xs text-yellow-900">
+                ⚠️ <strong>Warning:</strong> This action cannot be undone.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Deleting..." : "Delete Transactions"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
