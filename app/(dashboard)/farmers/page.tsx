@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { Plus, Search, Tractor, Edit, Trash2, ChevronDown, ChevronRight, BookOpen, Banknote, Printer, Check, Upload } from "lucide-react"
+import { Plus, Search, Tractor, Edit, Trash2, ChevronDown, ChevronRight, BookOpen, Banknote, Printer, Check, Upload, Eye, ExternalLink, ShoppingBag } from "lucide-react"
 
 export default function FarmersPage() {
   const router = useRouter()
@@ -75,6 +75,21 @@ export default function FarmersPage() {
     setPayForm({ amount: "", method: "CASH", notes: "", paymentType: "PAY" })
     setLastPayment(null)
     setShowPayModal(true)
+  }
+
+  async function openDetail(f: any) {
+    setSelectedFarmer(f)
+    setShowDetailModal(true)
+    setLoadingRow(f.id)
+    try {
+      const res = await fetch(`/api/farmers/${f.id}`)
+      const data = await res.json()
+      setFarmerDetail(data)
+    } catch (error) {
+      console.error("Failed to load farmer details", error)
+    } finally {
+      setLoadingRow(null)
+    }
   }
 
   async function handleSave() {
@@ -263,6 +278,13 @@ export default function FarmersPage() {
                       <td className="px-4 py-3 text-center text-gray-700">{f._count?.purchases || 0}</td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openDetail(f)}
+                            className="p-1 text-gray-400 hover:text-blue-600"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => openPayment(f)}
                             className="p-1 text-gray-400 hover:text-green-700"
@@ -587,6 +609,147 @@ export default function FarmersPage() {
               {deletingPayments ? "Deleting..." : "Delete Transactions"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Modal */}
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <DialogTitle>Farmer Details</DialogTitle>
+              <p className="text-xs text-gray-500 mt-1">View farmer account, purchases & sales</p>
+            </div>
+            <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+          </DialogHeader>
+
+          {farmerDetail && selectedFarmer && (
+            <div className="space-y-6">
+              {/* Farmer Info */}
+              <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Name</p>
+                  <p className="font-semibold text-gray-900">{selectedFarmer.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Village</p>
+                  <p className="font-semibold text-gray-900">{selectedFarmer.village || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Phone</p>
+                  <p className="font-semibold text-gray-900">{selectedFarmer.phone || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">CNIC</p>
+                  <p className="font-semibold text-gray-900">{selectedFarmer.cnic || "—"}</p>
+                </div>
+              </div>
+
+              {/* Balance Summary */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-xs text-blue-600 font-semibold mb-1">Total Purchased</p>
+                  <p className="text-lg font-bold text-blue-900">{formatCurrency(farmerDetail.ledger?.reduce((s: number, e: any) => s + (e.type === "PURCHASE" ? e.debit : 0), 0) || 0)}</p>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-xs text-green-600 font-semibold mb-1">Total Paid</p>
+                  <p className="text-lg font-bold text-green-900">{formatCurrency(farmerDetail.ledger?.reduce((s: number, e: any) => s + (e.type === "PAYMENT" ? e.debit : 0), 0) || 0)}</p>
+                </div>
+                <div className={`border-2 rounded-lg p-4 ${selectedFarmer.balance > 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
+                  <p className={`text-xs font-semibold mb-1 ${selectedFarmer.balance > 0 ? "text-red-600" : "text-green-600"}`}>Balance</p>
+                  <p className={`text-lg font-bold ${selectedFarmer.balance > 0 ? "text-red-900" : "text-green-900"}`}>
+                    {formatCurrency(Math.abs(selectedFarmer.balance))} {selectedFarmer.balance > 0 ? "Dr" : "Cr"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Purchases Section */}
+              {farmerDetail.purchases && farmerDetail.purchases.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4" /> Purchases ({farmerDetail.purchases.length})
+                  </h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {farmerDetail.purchases.map((p: any) => (
+                      <div key={p.id} className="bg-gray-50 rounded p-3 text-sm border border-gray-200">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-gray-900">{p.items.map((i: any) => i.product?.name || "Item").join(", ")}</p>
+                            <p className="text-xs text-gray-500 mt-1">{formatDate(p.createdAt)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900">{formatCurrency(p.totalAmount)}</p>
+                            <p className={`text-xs ${p.status === "PAID" ? "text-green-600" : p.status === "PARTIAL" ? "text-yellow-600" : "text-gray-600"}`}>
+                              {p.status}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sales Section */}
+              {farmerDetail.sales && farmerDetail.sales.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" /> Sales to Farmer ({farmerDetail.sales.length})
+                  </h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {farmerDetail.sales.map((s: any) => (
+                      <div key={s.id} className="bg-gray-50 rounded p-3 text-sm border border-gray-200">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-gray-900">{s.items.map((i: any) => i.product?.name || "Item").join(", ")}</p>
+                            <p className="text-xs text-gray-500 mt-1">{formatDate(s.createdAt)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900">{formatCurrency(s.totalAmount)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Ledger Section */}
+              {farmerDetail.ledger && farmerDetail.ledger.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" /> Account Ledger ({farmerDetail.ledger.length})
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Date</th>
+                          <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Description</th>
+                          <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Debit (Dr)</th>
+                          <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Credit (Cr)</th>
+                          <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {farmerDetail.ledger.map((e: any, i: number) => (
+                          <tr key={i}>
+                            <td className="py-2 px-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(e.date)}</td>
+                            <td className="py-2 px-3 text-gray-700 text-xs">{e.description}</td>
+                            <td className="py-2 px-3 text-right font-medium text-gray-900">{e.debit > 0 ? formatCurrency(e.debit) : "—"}</td>
+                            <td className="py-2 px-3 text-right text-green-700">{e.credit > 0 ? formatCurrency(e.credit) : "—"}</td>
+                            <td className={`py-2 px-3 text-right font-semibold ${e.balance > 0 ? "text-red-600" : "text-green-700"}`}>
+                              {formatCurrency(Math.abs(e.balance))} {e.balance > 0 ? "Dr" : e.balance < 0 ? "Cr" : ""}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
