@@ -526,7 +526,7 @@ export default function SuppliersPage() {
                         </tbody>
                         <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                           <tr>
-                            <td colSpan={4} className="py-2 px-3 font-bold text-gray-700 text-xs">Closing Balance</td>
+                            <td colSpan={5} className="py-2 px-3 font-bold text-gray-700 text-xs">Closing Balance</td>
                             <td className="py-2 px-3 text-right font-bold text-gray-900">{formatCurrency((detail.ledger || []).reduce((s: number, e: any) => s + e.debit, 0))}</td>
                             <td className="py-2 px-3 text-right font-bold text-green-700">{formatCurrency((detail.ledger || []).reduce((s: number, e: any) => s + e.credit, 0))}</td>
                             <td className={`py-2 px-3 text-right font-bold ${detail.totalBalance > 0 ? "text-red-600" : "text-green-700"}`}>
