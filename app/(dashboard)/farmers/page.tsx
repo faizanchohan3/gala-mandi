@@ -41,6 +41,10 @@ export default function FarmersPage() {
   const [payForm, setPayForm] = useState({ amount: "", method: "CASH", notes: "", paymentType: "PAY" })
   const [payLoading, setPayLoading] = useState(false)
   const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; paymentType: string; balance: number } | null>(null)
+  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set())
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedFarmer, setSelectedFarmer] = useState<any>(null)
+  const [farmerDetail, setFarmerDetail] = useState<any>(null)
 
   async function loadData() {
     try {
@@ -86,6 +90,49 @@ export default function FarmersPage() {
     if (!confirm(`Deactivate farmer: "${name}"?`)) return
     await fetch(`/api/farmers/${id}`, { method: "DELETE" })
     loadData()
+  }
+
+  async function handleDeletePayment(paymentId: string, amount: number) {
+    if (!selectedFarmer || !farmerDetail) return
+    if (!confirm(`Delete payment of Rs ${amount.toLocaleString()}?`)) return
+
+    try {
+      const res = await fetch(`/api/farmers/${selectedFarmer.id}/payment`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId })
+      })
+      if (!res.ok) throw new Error("Delete failed")
+
+      setSelectedPayments(prev => {
+        const updated = new Set(prev)
+        updated.delete(paymentId)
+        return updated
+      })
+      loadData()
+    } catch (error) {
+      alert("Error deleting payment")
+    }
+  }
+
+  async function handleBulkDeletePayments() {
+    if (!selectedFarmer || selectedPayments.size === 0) return
+    const count = selectedPayments.size
+    if (!confirm(`Delete ${count} payment(s)?`)) return
+
+    try {
+      for (const paymentId of selectedPayments) {
+        await fetch(`/api/farmers/${selectedFarmer.id}/payment`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentId })
+        })
+      }
+      setSelectedPayments(new Set())
+      loadData()
+    } catch (error) {
+      alert("Error deleting payments")
+    }
   }
 
   async function handlePayment() {

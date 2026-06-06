@@ -41,6 +41,7 @@ export default function SuppliersPage() {
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; balance: number; direction?: string } | null>(null)
+  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set())
 
   async function loadData() {
     try {
@@ -147,6 +148,49 @@ export default function SuppliersPage() {
     if (!confirm(`Remove supplier "${name}"?`)) return
     await fetch(`/api/suppliers/${id}`, { method: "DELETE" })
     loadData()
+  }
+
+  async function handleDeletePayment(paymentId: string, amount: number) {
+    if (!selected || !detail) return
+    if (!confirm(`Delete payment of Rs ${amount.toLocaleString()}?`)) return
+
+    try {
+      const res = await fetch(`/api/suppliers/${selected.id}/payment`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId })
+      })
+      if (!res.ok) throw new Error("Delete failed")
+
+      setSelectedPayments(prev => {
+        const updated = new Set(prev)
+        updated.delete(paymentId)
+        return updated
+      })
+      await loadDetail(selected.id)
+    } catch (error) {
+      alert("Error deleting payment")
+    }
+  }
+
+  async function handleBulkDeletePayments() {
+    if (!selected || selectedPayments.size === 0) return
+    const count = selectedPayments.size
+    if (!confirm(`Delete ${count} payment(s)?`)) return
+
+    try {
+      for (const paymentId of selectedPayments) {
+        await fetch(`/api/suppliers/${selected.id}/payment`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentId })
+        })
+      }
+      setSelectedPayments(new Set())
+      await loadDetail(selected.id)
+    } catch (error) {
+      alert("Error deleting payments")
+    }
   }
 
   const filtered = suppliers.filter((s) =>
@@ -388,11 +432,11 @@ export default function SuppliersPage() {
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  onClick={() => { setShowDetailModal(false); openPayment(selected) }}
+                  onClick={() => { setShowDetailModal(false); setSelectedPayments(new Set()); openPayment(selected) }}
                 >
                   <ArrowUpCircle className="w-4 h-4" /> Record Payment
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => { setShowDetailModal(false); openEdit(selected) }}>
+                <Button size="sm" variant="outline" onClick={() => { setShowDetailModal(false); setSelectedPayments(new Set()); openEdit(selected) }}>
                   <Edit className="w-4 h-4" /> Edit
                 </Button>
               </div>
@@ -419,49 +463,83 @@ export default function SuppliersPage() {
                 detail.ledger?.length === 0 ? (
                   <p className="text-gray-400 text-sm text-center py-6">No transactions yet</p>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-gray-100">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Date</th>
-                          <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Type</th>
-                          <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Description</th>
-                          <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Debit (Dr)</th>
-                          <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Credit (Cr)</th>
-                          <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Balance</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {detail.ledger.map((entry: any, i: number) => (
-                          <tr key={i} className={entry.type === "PAYMENT" ? "bg-green-50/50" : ""}>
-                            <td className="py-2 px-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(entry.date)}</td>
-                            <td className="py-2 px-3">
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${entry.type === "PAYMENT" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
-                                {entry.type}
-                              </span>
-                            </td>
-                            <td className="py-2 px-3 text-gray-700 text-xs max-w-xs truncate">{entry.description}</td>
-                            <td className="py-2 px-3 text-right font-medium text-gray-900">{entry.debit > 0 ? formatCurrency(entry.debit) : "—"}</td>
-                            <td className="py-2 px-3 text-right text-green-700">{entry.credit > 0 ? formatCurrency(entry.credit) : "—"}</td>
-                            <td className={`py-2 px-3 text-right font-semibold ${entry.balance > 0 ? "text-red-600" : "text-green-700"}`}>
-                              {formatCurrency(Math.abs(entry.balance))}
-                              {entry.balance !== 0 && <span className="text-xs ml-1 font-normal">{entry.balance > 0 ? "Dr" : "Cr"}</span>}
-                            </td>
+                  <div className="space-y-3">
+                    {selectedPayments.size > 0 && (
+                      <div className="flex items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <span className="text-sm font-medium text-blue-900">{selectedPayments.size} payment(s) selected</span>
+                        <button onClick={handleBulkDeletePayments} className="ml-auto px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                          Delete Selected
+                        </button>
+                      </div>
+                    )}
+                    <div className="overflow-x-auto rounded-lg border border-gray-100">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-center py-2 px-3 w-10"></th>
+                            <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Date</th>
+                            <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Type</th>
+                            <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Description</th>
+                            <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Debit (Dr)</th>
+                            <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Credit (Cr)</th>
+                            <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Balance</th>
+                            <th className="text-center py-2 px-3 w-12"></th>
                           </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-                        <tr>
-                          <td colSpan={3} className="py-2 px-3 font-bold text-gray-700 text-xs">Closing Balance</td>
-                          <td className="py-2 px-3 text-right font-bold text-gray-900">{formatCurrency(detail.totalBusiness)}</td>
-                          <td className="py-2 px-3 text-right font-bold text-green-700">{formatCurrency(detail.totalPaid)}</td>
-                          <td className={`py-2 px-3 text-right font-bold ${detail.totalBalance > 0 ? "text-red-600" : "text-green-700"}`}>
-                            {formatCurrency(detail.totalBalance)}
-                            <span className="text-xs ml-1 font-normal">{detail.totalBalance > 0 ? "Dr" : "Cr"}</span>
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {detail.ledger.map((entry: any, i: number) => {
+                            const isPayment = entry.type === "PAYMENT"
+                            const isSelected = isPayment && selectedPayments.has(entry.id || i)
+                            return (
+                              <tr key={i} className={isPayment ? "bg-green-50/50" : ""}>
+                                <td className="py-2 px-3 text-center">
+                                  {isPayment && (
+                                    <input type="checkbox" checked={isSelected} onChange={(e) => {
+                                      const newSet = new Set(selectedPayments)
+                                      if (e.target.checked) newSet.add(entry.id || i)
+                                      else newSet.delete(entry.id || i)
+                                      setSelectedPayments(newSet)
+                                    }} className="w-4 h-4" />
+                                  )}
+                                </td>
+                                <td className="py-2 px-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(entry.date)}</td>
+                                <td className="py-2 px-3">
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${entry.type === "PAYMENT" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                                    {entry.type}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-gray-700 text-xs max-w-xs truncate">{entry.description}</td>
+                                <td className="py-2 px-3 text-right font-medium text-gray-900">{entry.debit > 0 ? formatCurrency(entry.debit) : "—"}</td>
+                                <td className="py-2 px-3 text-right text-green-700">{entry.credit > 0 ? formatCurrency(entry.credit) : "—"}</td>
+                                <td className={`py-2 px-3 text-right font-semibold ${entry.balance > 0 ? "text-red-600" : "text-green-700"}`}>
+                                  {formatCurrency(Math.abs(entry.balance))}
+                                  {entry.balance !== 0 && <span className="text-xs ml-1 font-normal">{entry.balance > 0 ? "Dr" : "Cr"}</span>}
+                                </td>
+                                <td className="py-2 px-3 text-center">
+                                  {isPayment && (
+                                    <button onClick={() => handleDeletePayment(entry.id || i, entry.credit || entry.debit)} className="text-red-600 hover:text-red-800 text-xs font-medium" title="Delete payment">
+                                      ✕
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                        <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                          <tr>
+                            <td colSpan={4} className="py-2 px-3 font-bold text-gray-700 text-xs">Closing Balance</td>
+                            <td className="py-2 px-3 text-right font-bold text-gray-900">{formatCurrency(detail.totalBusiness)}</td>
+                            <td className="py-2 px-3 text-right font-bold text-green-700">{formatCurrency(detail.totalPaid)}</td>
+                            <td className={`py-2 px-3 text-right font-bold ${detail.totalBalance > 0 ? "text-red-600" : "text-green-700"}`}>
+                              {formatCurrency(detail.totalBalance)}
+                              <span className="text-xs ml-1 font-normal">{detail.totalBalance > 0 ? "Dr" : "Cr"}</span>
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
                   </div>
                 )
               )}
