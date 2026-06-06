@@ -964,7 +964,7 @@ export default function CustomersPage() {
                       : "border-gray-200 text-gray-500 hover:border-gray-300"
                   }`}
                 >
-                  Receive from Customer
+                  Received
                 </button>
                 <button
                   type="button"
@@ -975,7 +975,7 @@ export default function CustomersPage() {
                       : "border-gray-200 text-gray-500 hover:border-gray-300"
                   }`}
                 >
-                  Pay to Customer
+                  Paid to Customer
                 </button>
               </div>
               <div>

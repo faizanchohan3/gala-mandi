@@ -490,12 +490,12 @@ export default function FarmersPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setPayForm({ ...payForm, paymentType: "PAY" })}
                     className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${payForm.paymentType === "PAY" ? "bg-green-700 text-white border-green-700" : "bg-white text-gray-600 border-gray-200 hover:border-green-300"}`}>
-                    Pay to Farmer
+                    Paid to Farmer
                     <p className="text-xs font-normal opacity-75 mt-0.5">Paying farmer (Cr)</p>
                   </button>
                   <button type="button" onClick={() => setPayForm({ ...payForm, paymentType: "RECEIVE" })}
                     className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${payForm.paymentType === "RECEIVE" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-200 hover:border-blue-300"}`}>
-                    Receive from Farmer
+                    Received
                     <p className="text-xs font-normal opacity-75 mt-0.5">Income received (Dr)</p>
                   </button>
                 </div>

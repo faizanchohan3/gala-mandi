@@ -663,7 +663,7 @@ export default function SuppliersPage() {
                       : "border-gray-200 text-gray-500 hover:border-gray-300"
                   }`}
                 >
-                  Pay to Supplier
+                  Paid to Supplier
                 </button>
                 <button
                   type="button"
@@ -674,7 +674,7 @@ export default function SuppliersPage() {
                       : "border-gray-200 text-gray-500 hover:border-gray-300"
                   }`}
                 >
-                  Receive from Supplier
+                  Received
                 </button>
               </div>
               <div className={`rounded-lg p-3 text-sm ${paymentForm.direction === "RECEIVE" ? "bg-orange-50 text-orange-800" : "bg-blue-50 text-blue-800"}`}>
