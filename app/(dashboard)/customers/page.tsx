@@ -199,16 +199,20 @@ export default function CustomersPage() {
 
     try {
       for (const paymentId of selectedPayments) {
-        await fetch(`/api/customers/${selected.id}/payment`, {
+        const res = await fetch(`/api/customers/${selected.id}/payment`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ paymentId })
         })
+        if (!res.ok) {
+          const error = await res.json()
+          throw new Error(error.error || "Delete failed")
+        }
       }
       setSelectedPayments(new Set())
       await loadDetail(selected.id)
     } catch (error) {
-      alert("Error deleting payments")
+      alert(`Error deleting payments: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
