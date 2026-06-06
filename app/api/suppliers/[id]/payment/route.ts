@@ -44,3 +44,41 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   return NextResponse.json({ success: true })
 }
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth()
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { id } = await params
+  const { paymentId } = await req.json()
+
+  if (!paymentId) return NextResponse.json({ error: "Payment ID required" }, { status: 400 })
+
+  try {
+    const payment = await db.supplierPayment.findUnique({ where: { id: paymentId } })
+    if (!payment) return NextResponse.json({ error: "Payment not found" }, { status: 404 })
+
+    await db.$transaction(async (tx) => {
+      await tx.supplierPayment.delete({ where: { id: paymentId } })
+
+      // Reverse the balance update
+      // PAY was decrement → now increment to reverse
+      // RECEIVE was increment → now decrement to reverse
+      await tx.supplier.update({
+        where: { id },
+        data: { balance: payment.direction === "PAY" ? { increment: payment.amount } : { decrement: payment.amount } },
+      })
+    })
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: "DELETE",
+      module: "SUPPLIERS",
+      details: `Deleted payment from supplier ID: ${id}`,
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to delete payment" }, { status: 500 })
+  }
+}

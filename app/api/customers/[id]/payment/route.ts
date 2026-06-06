@@ -56,27 +56,31 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
   if (!paymentId) return NextResponse.json({ error: "Payment ID required" }, { status: 400 })
 
-  await db.$transaction(async (tx) => {
-    const payment = await tx.customerPayment.findUnique({ where: { id: paymentId } })
+  try {
+    const payment = await db.customerPayment.findUnique({ where: { id: paymentId } })
     if (!payment) return NextResponse.json({ error: "Payment not found" }, { status: 404 })
 
-    await tx.customerPayment.delete({ where: { id: paymentId } })
+    await db.$transaction(async (tx) => {
+      await tx.customerPayment.delete({ where: { id: paymentId } })
 
-    // Reverse the balance update
-    // RECEIVE was decrement → now increment to reverse
-    // PAY was increment → now decrement to reverse
-    await tx.customer.update({
-      where: { id },
-      data: { balance: payment.direction === "PAY" ? { decrement: payment.amount } : { increment: payment.amount } },
+      // Reverse the balance update
+      // RECEIVE was decrement → now increment to reverse
+      // PAY was increment → now decrement to reverse
+      await tx.customer.update({
+        where: { id },
+        data: { balance: payment.direction === "PAY" ? { decrement: payment.amount } : { increment: payment.amount } },
+      })
     })
-  })
 
-  await createAuditLog({
-    userId: session.user.id,
-    action: "DELETE",
-    module: "CUSTOMERS",
-    details: `Deleted payment from customer ID: ${id}`,
-  })
+    await createAuditLog({
+      userId: session.user.id,
+      action: "DELETE",
+      module: "CUSTOMERS",
+      details: `Deleted payment from customer ID: ${id}`,
+    })
 
-  return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to delete payment" }, { status: 500 })
+  }
 }

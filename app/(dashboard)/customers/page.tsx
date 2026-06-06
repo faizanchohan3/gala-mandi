@@ -659,7 +659,6 @@ export default function CustomersPage() {
                           <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Debit (Dr)</th>
                           <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Credit (Cr)</th>
                           <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Balance</th>
-                          <th className="text-center py-2 px-3 w-12"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -695,11 +694,6 @@ export default function CustomersPage() {
                               <td className={`py-2 px-3 text-right font-semibold ${entry.balance > 0 ? "text-red-600" : "text-green-700"}`}>
                                 {formatCurrency(Math.abs(entry.balance))}
                                 {entry.balance !== 0 && <span className="text-xs ml-1 font-normal">{entry.balance > 0 ? "Dr" : "Cr"}</span>}
-                              </td>
-                              <td className="py-2 px-3 text-center">
-                                {isPayment && (
-                                  <span className="text-gray-400 text-xs">×</span>
-                                )}
                               </td>
                             </tr>
                           )

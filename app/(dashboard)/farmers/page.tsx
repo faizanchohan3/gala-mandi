@@ -92,49 +92,6 @@ export default function FarmersPage() {
     loadData()
   }
 
-  async function handleDeletePayment(paymentId: string, amount: number) {
-    if (!selectedFarmer || !farmerDetail) return
-    if (!confirm(`Delete payment of Rs ${amount.toLocaleString()}?`)) return
-
-    try {
-      const res = await fetch(`/api/farmers/${selectedFarmer.id}/payment`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId })
-      })
-      if (!res.ok) throw new Error("Delete failed")
-
-      setSelectedPayments(prev => {
-        const updated = new Set(prev)
-        updated.delete(paymentId)
-        return updated
-      })
-      loadData()
-    } catch (error) {
-      alert("Error deleting payment")
-    }
-  }
-
-  async function handleBulkDeletePayments() {
-    if (!selectedFarmer || selectedPayments.size === 0) return
-    const count = selectedPayments.size
-    if (!confirm(`Delete ${count} payment(s)?`)) return
-
-    try {
-      for (const paymentId of selectedPayments) {
-        await fetch(`/api/farmers/${selectedFarmer.id}/payment`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentId })
-        })
-      }
-      setSelectedPayments(new Set())
-      loadData()
-    } catch (error) {
-      alert("Error deleting payments")
-    }
-  }
-
   async function handlePayment() {
     if (!payingFarmer) return
     const amt = parseFloat(payForm.amount)
