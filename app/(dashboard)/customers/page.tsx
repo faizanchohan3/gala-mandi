@@ -698,9 +698,7 @@ export default function CustomersPage() {
                               </td>
                               <td className="py-2 px-3 text-center">
                                 {isPayment && (
-                                  <button onClick={() => handleDeletePayment(entry.id || i, entry.credit || entry.debit)} className="text-red-600 hover:text-red-800 text-xs font-medium" title="Delete payment">
-                                    ✕
-                                  </button>
+                                  <span className="text-gray-400 text-xs">×</span>
                                 )}
                               </td>
                             </tr>
@@ -710,8 +708,8 @@ export default function CustomersPage() {
                       <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                         <tr>
                           <td colSpan={3} className="py-2 px-3 font-bold text-gray-700 text-xs">Closing Balance</td>
-                          <td className="py-2 px-3 text-right font-bold text-gray-900">{formatCurrency(detail.totalBusiness)}</td>
-                          <td className="py-2 px-3 text-right font-bold text-green-700">{formatCurrency(detail.totalPaid)}</td>
+                          <td className="py-2 px-3 text-right font-bold text-gray-900">{formatCurrency((detail.ledger || []).reduce((s: number, e: any) => s + e.debit, 0))}</td>
+                          <td className="py-2 px-3 text-right font-bold text-green-700">{formatCurrency((detail.ledger || []).reduce((s: number, e: any) => s + e.credit, 0))}</td>
                           <td className={`py-2 px-3 text-right font-bold ${detail.totalBalance > 0 ? "text-red-600" : "text-green-700"}`}>
                             {formatCurrency(detail.totalBalance)}
                             <span className="text-xs ml-1 font-normal">{detail.totalBalance > 0 ? "Dr" : "Cr"}</span>
