@@ -158,7 +158,22 @@ export default function FarmersPage() {
         }
       }
       setSelectedPayments(new Set())
-      loadData()
+
+      // Reload both the list and expanded detail if open
+      await loadData()
+      if (expanded[farmerId]) {
+        setLoadingRow(farmerId)
+        try {
+          const res = await fetch(`/api/farmers/${farmerId}`)
+          const data = await res.json()
+          setExpanded(prev => ({
+            ...prev,
+            [farmerId]: data
+          }))
+        } finally {
+          setLoadingRow(null)
+        }
+      }
     } catch (error) {
       alert(`Error deleting payments: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
