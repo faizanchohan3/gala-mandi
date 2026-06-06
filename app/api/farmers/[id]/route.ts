@@ -72,12 +72,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       const isReceive = payment.amount < 0
       const displayAmt = Math.abs(payment.amount)
       events.push({
+        id: payment.id,
         date: payment.createdAt,
         type: isReceive ? "INCOME" : "PAYMENT",
         description: `${isReceive ? "Received from Farmer" : "Payment"} — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
         debit: isReceive ? displayAmt : 0,
         credit: isReceive ? 0 : displayAmt,
-        ref: payment.id,
       })
     }
   }

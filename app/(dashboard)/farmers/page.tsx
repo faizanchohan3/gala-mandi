@@ -45,6 +45,8 @@ export default function FarmersPage() {
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedFarmer, setSelectedFarmer] = useState<any>(null)
   const [farmerDetail, setFarmerDetail] = useState<any>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [deletingPayments, setDeletingPayments] = useState(false)
 
   async function loadData() {
     try {
@@ -115,6 +117,37 @@ export default function FarmersPage() {
     } else {
       const data = await res.json().catch(() => ({}))
       alert(data?.error || "Failed to record payment")
+    }
+  }
+
+  function showDeleteConfirmModal(farmerId: string) {
+    if (selectedPayments.size === 0) return
+    setShowDeleteConfirm(farmerId)
+  }
+
+  async function confirmDelete(farmerId: string) {
+    if (selectedPayments.size === 0) return
+    setShowDeleteConfirm(null)
+    setDeletingPayments(true)
+
+    try {
+      for (const paymentId of selectedPayments) {
+        const res = await fetch(`/api/farmers/${farmerId}/payment`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentId })
+        })
+        if (!res.ok) {
+          const error = await res.json()
+          throw new Error(error.error || "Delete failed")
+        }
+      }
+      setSelectedPayments(new Set())
+      loadData()
+    } catch (error) {
+      alert(`Error deleting payments: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setDeletingPayments(false)
     }
   }
 
@@ -266,30 +299,61 @@ export default function FarmersPage() {
                             {expanded[f.id].ledger?.length === 0 ? (
                               <p className="text-xs text-gray-400">No transactions yet</p>
                             ) : (
-                              <table className="w-full text-xs border border-gray-100 rounded">
-                                <thead className="bg-white">
-                                  <tr className="border-b border-gray-100">
-                                    <th className="px-3 py-2 text-left text-gray-500">Date</th>
-                                    <th className="px-3 py-2 text-left text-gray-500">Description</th>
-                                    <th className="px-3 py-2 text-right text-red-600">Debit (Dr)</th>
-                                    <th className="px-3 py-2 text-right text-green-700">Credit (Cr)</th>
-                                    <th className="px-3 py-2 text-right text-gray-700">Balance</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {expanded[f.id].ledger.map((e: any, li: number) => (
-                                    <tr key={li} className="border-b border-gray-50">
-                                      <td className="px-3 py-2 text-gray-500">{formatDate(e.date)}</td>
-                                      <td className="px-3 py-2 text-gray-600">{e.description}</td>
-                                      <td className="px-3 py-2 text-right text-red-600">{e.debit > 0 ? formatCurrency(e.debit) : "—"}</td>
-                                      <td className="px-3 py-2 text-right text-green-700">{e.credit > 0 ? formatCurrency(e.credit) : "—"}</td>
-                                      <td className={`px-3 py-2 text-right font-semibold ${e.balance > 0 ? "text-red-600" : "text-gray-500"}`}>
-                                        {formatCurrency(Math.abs(e.balance))} {e.balance > 0 ? "Dr" : e.balance < 0 ? "Cr" : ""}
-                                      </td>
+                              <div className="space-y-2">
+                                {selectedPayments.size > 0 && (
+                                  <div className="flex items-center gap-2 bg-blue-50 p-2 rounded border border-blue-200">
+                                    <span className="text-xs font-medium text-blue-900">{selectedPayments.size} payment(s) selected</span>
+                                    <button onClick={() => showDeleteConfirmModal(f.id)} className="ml-auto px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
+                                      Delete Selected
+                                    </button>
+                                  </div>
+                                )}
+                                <table className="w-full text-xs border border-gray-100 rounded">
+                                  <thead className="bg-white">
+                                    <tr className="border-b border-gray-100">
+                                      <th className="px-2 py-2 text-center w-6"></th>
+                                      <th className="px-3 py-2 text-left text-gray-500">Date</th>
+                                      <th className="px-3 py-2 text-left text-gray-500">Description</th>
+                                      <th className="px-3 py-2 text-right text-red-600">Debit (Dr)</th>
+                                      <th className="px-3 py-2 text-right text-green-700">Credit (Cr)</th>
+                                      <th className="px-3 py-2 text-right text-gray-700">Balance</th>
                                     </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                                  </thead>
+                                  <tbody>
+                                    {expanded[f.id].ledger.map((e: any, li: number) => {
+                                      const isDeletable = e.type === "PAYMENT" || e.type === "INCOME"
+                                      const isSelected = isDeletable && selectedPayments.has(e.id || li)
+                                      return (
+                                        <tr key={li} className="border-b border-gray-50">
+                                          <td className="px-2 py-2 text-center">
+                                            {isDeletable && (
+                                              <input type="checkbox" checked={isSelected} onChange={(evt) => {
+                                                const newSet = new Set(selectedPayments)
+                                                if (evt.target.checked) newSet.add(e.id || li)
+                                                else newSet.delete(e.id || li)
+                                                setSelectedPayments(newSet)
+                                              }} className="w-3 h-3" />
+                                            )}
+                                          </td>
+                                          <td className="px-3 py-2 text-gray-500">{formatDate(e.date)}</td>
+                                          <td className="px-3 py-2 text-gray-600">{e.description}</td>
+                                          <td className="px-3 py-2 text-right text-red-600">{e.debit > 0 ? formatCurrency(e.debit) : "—"}</td>
+                                          <td className="px-3 py-2 text-right text-green-700">{e.credit > 0 ? formatCurrency(e.credit) : "—"}</td>
+                                          <td className={`px-3 py-2 text-right font-semibold ${e.balance > 0 ? "text-red-600" : "text-gray-500"}`}>
+                                            {formatCurrency(Math.abs(e.balance))} {e.balance > 0 ? "Dr" : e.balance < 0 ? "Cr" : ""}
+                                          </td>
+                                        </tr>
+                                      )
+                                    })}
+                                    <tr className="bg-gray-50 border-t-2 border-gray-200">
+                                      <td colSpan={3} className="px-3 py-2 font-bold text-gray-700 text-xs">Closing Balance</td>
+                                      <td className="px-3 py-2 text-right font-bold text-gray-900 text-xs">{formatCurrency((expanded[f.id].ledger || []).reduce((s: number, e: any) => s + e.debit, 0))}</td>
+                                      <td className="px-3 py-2 text-right font-bold text-green-700 text-xs">{formatCurrency((expanded[f.id].ledger || []).reduce((s: number, e: any) => s + e.credit, 0))}</td>
+                                      <td className="px-3 py-2 text-right font-bold text-gray-700 text-xs">{formatCurrency(Math.abs((expanded[f.id].ledger || [])[expanded[f.id].ledger?.length - 1]?.balance || 0))} {((expanded[f.id].ledger || [])[expanded[f.id].ledger?.length - 1]?.balance || 0) > 0 ? "Dr" : "Cr"}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
                             )}
                           </div>
                         </td>
@@ -485,6 +549,44 @@ export default function FarmersPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!showDeleteConfirm} onOpenChange={() => setShowDeleteConfirm(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-600" />
+              Delete Transactions
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-900">
+                You are about to delete <strong>{selectedPayments.size} payment transaction(s)</strong>.
+              </p>
+              <p className="text-sm text-red-800 mt-2">
+                This action will remove the transactions from the ledger and reverse the balance calculations.
+              </p>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-xs text-yellow-900">
+                ⚠️ <strong>Warning:</strong> This action cannot be undone.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(null)} disabled={deletingPayments}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => showDeleteConfirm && confirmDelete(showDeleteConfirm)}
+              disabled={deletingPayments}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deletingPayments ? "Deleting..." : "Delete Transactions"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
