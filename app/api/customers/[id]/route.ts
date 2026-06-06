@@ -63,6 +63,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   // Build ledger entries from all sources, sorted by date
   const ledgerEvents: {
+    id?: string
     date: Date
     type: "SALE" | "COMMISSION" | "PESTICIDE" | "PAYMENT" | "TRADER_PURCHASE"
     description: string
@@ -170,6 +171,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   for (const cp of customerPayments) {
     const isPay = cp.direction === "PAY"
     ledgerEvents.push({
+      id: cp.id,
       date: cp.createdAt,
       type: "PAYMENT",
       description: isPay

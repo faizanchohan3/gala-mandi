@@ -35,7 +35,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const totalBalance = totalBusiness - totalPaid
 
   // Build ledger entries
-  const ledgerEvents: { date: Date; type: string; description: string; debit: number; credit: number }[] = []
+  const ledgerEvents: { id?: string; date: Date; type: string; description: string; debit: number; credit: number }[] = []
 
   for (const p of purchases) {
     ledgerEvents.push({
@@ -69,6 +69,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   for (const sp of supplierPayments) {
     const isPay = sp.direction === "PAY"
     ledgerEvents.push({
+      id: sp.id,
       date: sp.createdAt,
       type: "PAYMENT",
       description: isPay
