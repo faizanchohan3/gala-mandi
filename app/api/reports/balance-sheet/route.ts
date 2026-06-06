@@ -95,18 +95,26 @@ export async function GET(req: Request) {
   const netIncome = grossProfit + totalIncome - otherExpense
 
   // Balance Sheet Items
-  const customerReceivables = Math.max(0, customers._sum.balance || 0) // Positive balance = customer owes us
-  const farmerReceivables = Math.max(0, farmers._sum.balance || 0)
-  const totalReceivables = customerReceivables + farmerReceivables
+  // For customers: Positive balance (Dr) = they owe us (Receivable), Negative balance (Cr) = we owe them (Liability)
+  const customerReceivables = Math.max(0, customers._sum.balance || 0)
+  const customerAdvancesReceived = Math.max(0, -(customers._sum.balance || 0)) // Negative balance = advance from customer
 
-  const supplierPayables = Math.max(0, suppliers._sum.balance || 0) // Positive balance = we owe supplier
+  // For farmers: Same logic as customers
+  const farmerReceivables = Math.max(0, farmers._sum.balance || 0)
+  const farmerAdvancesReceived = Math.max(0, -(farmers._sum.balance || 0))
+
+  const totalReceivables = customerReceivables + farmerReceivables
+  const totalAdvancesFromCustomers = customerAdvancesReceived + farmerAdvancesReceived
+
+  // For suppliers: Positive balance = we owe them (Payable)
+  const supplierPayables = Math.max(0, suppliers._sum.balance || 0)
 
   // Assets
   const currentAssets = totalReceivables + totalStockValue
   const totalAssets = currentAssets
 
-  // Liabilities
-  const currentLiabilities = supplierPayables
+  // Liabilities (we owe to others)
+  const currentLiabilities = supplierPayables + totalAdvancesFromCustomers
   const totalLiabilities = currentLiabilities
 
   // Equity
@@ -138,6 +146,7 @@ export async function GET(req: Request) {
 
     // Balance Sheet - Liabilities
     supplierPayables,
+    totalAdvancesFromCustomers,
     currentLiabilities,
     totalLiabilities,
 
