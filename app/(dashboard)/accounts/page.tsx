@@ -40,6 +40,9 @@ export default function AccountsPage() {
   const [typeFilter, setTypeFilter] = useState<"ALL" | AccountType>("ALL")
   const [search, setSearch] = useState("")
   const [shop, setShop] = useState<any>(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentForm, setPaymentForm] = useState({ amount: "", description: "" })
+  const [paymentLoading, setPaymentLoading] = useState(false)
 
   async function loadAccounts() {
     setLoading(true)
@@ -86,8 +89,33 @@ export default function AccountsPage() {
     setSelected(a)
     setDetail(null)
     setShowDetail(true)
+    setPaymentForm({ amount: "", description: "" })
     const data = await fetch(`/api/accounts/${a.id}`).then((r) => r.json())
     setDetail(data)
+  }
+
+  async function handleRecordPayment() {
+    if (!selected || !paymentForm.amount) return alert("Please enter an amount")
+    const amt = parseFloat(paymentForm.amount)
+    if (amt <= 0) return alert("Amount must be greater than 0")
+
+    setPaymentLoading(true)
+    try {
+      const res = await fetch(`/api/accounts/${selected.id}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amt, description: paymentForm.description })
+      })
+      if (!res.ok) throw new Error("Payment recording failed")
+
+      setPaymentForm({ amount: "", description: "" })
+      setShowPaymentModal(false)
+      await openDetail(selected)
+    } catch (error) {
+      alert("Error recording payment: " + (error instanceof Error ? error.message : "Unknown error"))
+    } finally {
+      setPaymentLoading(false)
+    }
   }
 
   async function handleSave() {
@@ -447,7 +475,7 @@ export default function AccountsPage() {
       {/* Account Detail / Ledger Modal */}
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <DialogTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5" />
               {selected?.code} — {selected?.name}
@@ -457,6 +485,14 @@ export default function AccountsPage() {
                 </span>
               )}
             </DialogTitle>
+            {selected?.type === "LIABILITY" && (
+              <Button
+                onClick={() => setShowPaymentModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-sm"
+              >
+                + Record Payment
+              </Button>
+            )}
           </DialogHeader>
 
           {!detail ? (
@@ -522,6 +558,71 @@ export default function AccountsPage() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Modal */}
+      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-2">Account: <strong>{selected?.name}</strong></p>
+              <p className="text-sm text-gray-600">Current Balance: <strong>{formatCurrency(selected?.balance || 0)}</strong></p>
+            </div>
+
+            <div>
+              <Label htmlFor="amount" className="text-sm font-medium">
+                Payment Amount (PKR) *
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="Enter payment amount"
+                value={paymentForm.amount}
+                onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="description" className="text-sm font-medium">
+                Description (Optional)
+              </Label>
+              <Input
+                id="description"
+                placeholder="e.g., Installment #1"
+                value={paymentForm.description}
+                onChange={(e) => setPaymentForm({ ...paymentForm, description: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-900">
+                This payment will reduce the liability balance from <strong>{formatCurrency(selected?.balance || 0)}</strong> to <strong>{formatCurrency((selected?.balance || 0) - parseFloat(paymentForm.amount || "0"))}</strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowPaymentModal(false)}
+              disabled={paymentLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRecordPayment}
+              disabled={paymentLoading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {paymentLoading ? "Recording..." : "Record Payment"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
