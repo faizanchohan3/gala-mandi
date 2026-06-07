@@ -22,7 +22,7 @@ export default function FinancePage() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "" })
+  const [form, setForm] = useState({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "", entryType: "DEBIT" })
 
   async function loadData() {
     try {
@@ -55,14 +55,14 @@ export default function FinancePage() {
     if (res.ok) {
       setShowModal(false)
       setShowMoreCats(false)
-      setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "" })
+      setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "", entryType: "DEBIT" })
       loadData()
     }
   }
 
   function openModal() {
     setShowMoreCats(false)
-    setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "" })
+    setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "", entryType: "DEBIT" })
     setShowModal(true)
   }
 
@@ -390,6 +390,35 @@ export default function FinancePage() {
                 </Select>
               )}
             </div>
+
+            {/* ── Step 6B: Debit/Credit (appears when account is selected) ── */}
+            {form.accountId && (
+              <div>
+                <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Entry Type</Label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    onClick={() => setForm({ ...form, entryType: "DEBIT" })}
+                    className={`py-2 px-3 rounded-lg text-sm font-medium border-2 transition-colors ${
+                      form.entryType === "DEBIT"
+                        ? "border-red-500 bg-red-50 text-red-700"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
+                    Debit (Dr)
+                  </button>
+                  <button
+                    onClick={() => setForm({ ...form, entryType: "CREDIT" })}
+                    className={`py-2 px-3 rounded-lg text-sm font-medium border-2 transition-colors ${
+                      form.entryType === "CREDIT"
+                        ? "border-green-500 bg-green-50 text-green-700"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
+                    Credit (Cr)
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* ── Step 7: Reference ── */}
             <div>
