@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { type, amount, description, reference, category, bankId, accountId } = await req.json()
+  const { type, amount, description, reference, category, bankId, accountId, entryType } = await req.json()
 
   const transaction = await db.$transaction(async (tx) => {
     const t = await tx.transaction.create({
@@ -59,12 +59,13 @@ export async function POST(req: Request) {
     if (accountId) {
       const account = await tx.account.findUnique({ where: { id: accountId }, select: { type: true } })
       if (account) {
-        // Natural direction: EXPENSE/LIABILITY → DEBIT increases balance, INCOME/ASSET → CREDIT increases balance
-        const naturalDebit = ["ASSET", "EXPENSE"]
-        const isNatural = naturalDebit.includes(account.type) ? type === "DEBIT" : type === "CREDIT"
+        // Use entryType (user's debit/credit choice) if provided, otherwise use type from Income/Expense
+        const directionType = entryType || type
+        // Debit increases balance, Credit decreases balance
+        const shouldIncrement = directionType === "DEBIT"
         await tx.account.update({
           where: { id: accountId },
-          data: { balance: { [isNatural ? "increment" : "decrement"]: amount } },
+          data: { balance: { [shouldIncrement ? "increment" : "decrement"]: amount } },
         })
       }
     }
