@@ -41,7 +41,7 @@ export default function AccountsPage() {
   const [search, setSearch] = useState("")
   const [shop, setShop] = useState<any>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [paymentForm, setPaymentForm] = useState({ amount: "", description: "" })
+  const [paymentForm, setPaymentForm] = useState({ amount: "", description: "", type: "DEBIT" })
   const [paymentLoading, setPaymentLoading] = useState(false)
 
   async function loadAccounts() {
@@ -89,7 +89,7 @@ export default function AccountsPage() {
     setSelected(a)
     setDetail(null)
     setShowDetail(true)
-    setPaymentForm({ amount: "", description: "" })
+    setPaymentForm({ amount: "", description: "", type: "DEBIT" })
     const data = await fetch(`/api/accounts/${a.id}`).then((r) => r.json())
     setDetail(data)
   }
@@ -104,15 +104,19 @@ export default function AccountsPage() {
       const res = await fetch(`/api/accounts/${selected.id}/payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amt, description: paymentForm.description })
+        body: JSON.stringify({
+          amount: amt,
+          description: paymentForm.description,
+          type: paymentForm.type
+        })
       })
-      if (!res.ok) throw new Error("Payment recording failed")
+      if (!res.ok) throw new Error("Entry recording failed")
 
-      setPaymentForm({ amount: "", description: "" })
+      setPaymentForm({ amount: "", description: "", type: "DEBIT" })
       setShowPaymentModal(false)
       await openDetail(selected)
     } catch (error) {
-      alert("Error recording payment: " + (error instanceof Error ? error.message : "Unknown error"))
+      alert("Error recording entry: " + (error instanceof Error ? error.message : "Unknown error"))
     } finally {
       setPaymentLoading(false)
     }
@@ -485,14 +489,12 @@ export default function AccountsPage() {
                 </span>
               )}
             </DialogTitle>
-            {selected?.type === "LIABILITY" && (
-              <Button
-                onClick={() => setShowPaymentModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-sm"
-              >
-                + Record Payment
-              </Button>
-            )}
+            <Button
+              onClick={() => setShowPaymentModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-sm"
+            >
+              + Add Entry
+            </Button>
           </DialogHeader>
 
           {!detail ? (
@@ -561,30 +563,58 @@ export default function AccountsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Payment Modal */}
+      {/* Add Entry Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
+            <DialogTitle>Add Journal Entry</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-600 mb-2">Account: <strong>{selected?.name}</strong></p>
-              <p className="text-sm text-gray-600">Current Balance: <strong>{formatCurrency(selected?.balance || 0)}</strong></p>
+              <p className="text-sm text-gray-600 mb-1">Account: <strong>{selected?.name}</strong></p>
+              <p className="text-sm text-gray-600">Type: <strong>{selected?.type}</strong> | Current Balance: <strong>{formatCurrency(selected?.balance || 0)}</strong></p>
             </div>
 
-            <div>
-              <Label htmlFor="amount" className="text-sm font-medium">
-                Payment Amount (PKR) *
-              </Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="Enter payment amount"
-                value={paymentForm.amount}
-                onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                className="mt-1"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Entry Type *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setPaymentForm({ ...paymentForm, type: "DEBIT" })}
+                    className={`py-2 px-3 rounded-lg text-sm font-medium border-2 transition-colors ${
+                      paymentForm.type === "DEBIT"
+                        ? "border-red-500 bg-red-50 text-red-700"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
+                    Debit (Dr)
+                  </button>
+                  <button
+                    onClick={() => setPaymentForm({ ...paymentForm, type: "CREDIT" })}
+                    className={`py-2 px-3 rounded-lg text-sm font-medium border-2 transition-colors ${
+                      paymentForm.type === "CREDIT"
+                        ? "border-green-500 bg-green-50 text-green-700"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
+                    Credit (Cr)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="amount" className="text-sm font-medium">
+                  Amount (PKR) *
+                </Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="0"
+                  value={paymentForm.amount}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
             </div>
 
             <div>
@@ -593,16 +623,19 @@ export default function AccountsPage() {
               </Label>
               <Input
                 id="description"
-                placeholder="e.g., Installment #1"
+                placeholder="e.g., Car installment payment"
                 value={paymentForm.description}
                 onChange={(e) => setPaymentForm({ ...paymentForm, description: e.target.value })}
                 className="mt-1"
               />
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs text-blue-900">
-                This payment will reduce the liability balance from <strong>{formatCurrency(selected?.balance || 0)}</strong> to <strong>{formatCurrency((selected?.balance || 0) - parseFloat(paymentForm.amount || "0"))}</strong>
+            <div className={`rounded-lg p-3 ${paymentForm.type === "DEBIT" ? "bg-red-50 border border-red-200" : "bg-green-50 border border-green-200"}`}>
+              <p className={`text-xs ${paymentForm.type === "DEBIT" ? "text-red-900" : "text-green-900"}`}>
+                {paymentForm.type === "DEBIT"
+                  ? `Debit of PKR ${(parseFloat(paymentForm.amount) || 0).toLocaleString()} will INCREASE balance to PKR ${((selected?.balance || 0) + (parseFloat(paymentForm.amount) || 0)).toLocaleString()}`
+                  : `Credit of PKR ${(parseFloat(paymentForm.amount) || 0).toLocaleString()} will DECREASE balance to PKR ${((selected?.balance || 0) - (parseFloat(paymentForm.amount) || 0)).toLocaleString()}`
+                }
               </p>
             </div>
           </div>
@@ -620,7 +653,7 @@ export default function AccountsPage() {
               disabled={paymentLoading}
               className="bg-green-600 hover:bg-green-700"
             >
-              {paymentLoading ? "Recording..." : "Record Payment"}
+              {paymentLoading ? "Recording..." : "Add Entry"}
             </Button>
           </div>
         </DialogContent>

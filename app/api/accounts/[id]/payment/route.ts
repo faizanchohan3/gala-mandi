@@ -8,35 +8,42 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
-  const { amount, description } = await req.json()
+  const { amount, description, type } = await req.json()
 
   if (!amount || parseFloat(amount) <= 0) {
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
   }
 
+  if (!type || (type !== "DEBIT" && type !== "CREDIT")) {
+    return NextResponse.json({ error: "Invalid entry type" }, { status: 400 })
+  }
+
   const amt = parseFloat(amount)
+  const entryType = type as "DEBIT" | "CREDIT"
 
   try {
     const account = await db.account.findUnique({ where: { id } })
     if (!account) return NextResponse.json({ error: "Account not found" }, { status: 404 })
 
-    // Record the payment as a CREDIT entry (reduces liability)
+    // Record the entry (debit increases balance, credit decreases)
     await db.$transaction(async (tx) => {
       await tx.transaction.create({
         data: {
           accountId: id,
-          type: "CREDIT",
+          type: entryType,
           amount: amt,
-          description: description || "Payment recorded",
-          reference: `Payment on ${new Date().toLocaleDateString()}`,
+          description: description || `${entryType} entry`,
+          reference: `Entry on ${new Date().toLocaleDateString()}`,
           createdById: session.user.id,
         },
       })
 
-      // Update account balance (credit reduces liability)
+      // Update account balance based on entry type
       await tx.account.update({
         where: { id },
-        data: { balance: { decrement: amt } },
+        data: {
+          balance: entryType === "DEBIT" ? { increment: amt } : { decrement: amt },
+        },
       })
     })
 
@@ -44,12 +51,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       userId: session.user.id,
       action: "CREATE",
       module: "ACCOUNTS",
-      details: `Payment of PKR ${amt} recorded against account: ${account.name}`,
+      details: `${entryType} entry of PKR ${amt} recorded in account: ${account.name}`,
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Payment recording error:", error)
-    return NextResponse.json({ error: "Failed to record payment" }, { status: 500 })
+    console.error("Entry recording error:", error)
+    return NextResponse.json({ error: "Failed to record entry" }, { status: 500 })
   }
 }
