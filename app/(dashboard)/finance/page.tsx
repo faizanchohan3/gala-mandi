@@ -333,7 +333,7 @@ export default function FinancePage() {
                   <Banknote className="w-4 h-4" /> Cash
                 </button>
                 <button
-                  onClick={() => banks.length > 0 && setForm({ ...form, bankId: banks[0].id })}
+                  onClick={() => setForm({ ...form, bankId: banks.length > 0 ? banks[0].id : "bank" })}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
                     form.bankId
                       ? "border-blue-500 bg-blue-50 text-blue-700"
