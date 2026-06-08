@@ -28,6 +28,7 @@ export default function BankTransactionsPage() {
   const [loading, setLoading] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [shop, setShop] = useState<any>(null)
+  const [bankSearch, setBankSearch] = useState("")
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then((d) => setShop(d.shop || null)).catch(() => {})
@@ -101,19 +102,35 @@ export default function BankTransactionsPage() {
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1">
               <label className="text-xs text-gray-500 font-medium">Bank</label>
-              <Select value={bankId} onValueChange={setBankId}>
-                <SelectTrigger className="w-56">
-                  <SelectValue placeholder="All Banks" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Banks</SelectItem>
-                  {banks.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}{b.accountNumber ? ` (${b.accountNumber})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={bankId} onValueChange={(val) => { setBankId(val); setBankSearch(""); }}>
+                  <SelectTrigger className="w-56">
+                    <SelectValue placeholder="All Banks" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="p-2">
+                      <Input
+                        placeholder="Search banks..."
+                        value={bankSearch}
+                        onChange={(e) => setBankSearch(e.target.value)}
+                        className="mb-2"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <SelectItem value="ALL">All Banks</SelectItem>
+                    {banks
+                      .filter((b) =>
+                        b.name.toLowerCase().includes(bankSearch.toLowerCase()) ||
+                        (b.accountNumber && b.accountNumber.includes(bankSearch))
+                      )
+                      .map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}{b.accountNumber ? ` (${b.accountNumber})` : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs text-gray-500 font-medium">From Date</label>
