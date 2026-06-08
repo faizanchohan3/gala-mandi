@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { type, amount, description, reference, category, bankId, accountId, entryType } = await req.json()
+  const { type, amount, description, reference, category, bankId, accountId, entryType, transactionDate } = await req.json()
 
   const transaction = await db.$transaction(async (tx) => {
     const t = await tx.transaction.create({
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
         bankId: bankId || null,
         accountId: accountId || null,
         createdById: session.user.id,
+        createdAt: transactionDate ? new Date(transactionDate) : new Date(),
       },
     })
 

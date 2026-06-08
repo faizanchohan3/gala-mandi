@@ -22,7 +22,8 @@ export default function FinancePage() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "", entryType: "DEBIT" })
+  const [form, setForm] = useState({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "", entryType: "DEBIT", transactionDate: new Date().toISOString().split('T')[0] })
+  const [dateFilter, setDateFilter] = useState({ from: "", to: "" })
 
   async function loadData() {
     try {
@@ -55,14 +56,14 @@ export default function FinancePage() {
     if (res.ok) {
       setShowModal(false)
       setShowMoreCats(false)
-      setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "", entryType: "DEBIT" })
+      setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "", entryType: "DEBIT", transactionDate: new Date().toISOString().split('T')[0] })
       loadData()
     }
   }
 
   function openModal() {
     setShowMoreCats(false)
-    setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "", entryType: "DEBIT" })
+    setForm({ type: "CREDIT", amount: "", description: "", reference: "", category: "", bankId: "", accountId: "", entryType: "DEBIT", transactionDate: new Date().toISOString().split('T')[0] })
     setShowModal(true)
   }
 
@@ -140,8 +141,23 @@ export default function FinancePage() {
 
       {/* Transactions Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-base">Transaction History</CardTitle>
+          <div className="flex gap-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500 font-medium">From Date</label>
+              <Input type="date" value={dateFilter.from} onChange={(e) => setDateFilter({ ...dateFilter, from: e.target.value })} className="w-40" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500 font-medium">To Date</label>
+              <Input type="date" value={dateFilter.to} onChange={(e) => setDateFilter({ ...dateFilter, to: e.target.value })} className="w-40" />
+            </div>
+            {(dateFilter.from || dateFilter.to) && (
+              <div className="flex items-end">
+                <Button variant="outline" size="sm" onClick={() => setDateFilter({ from: "", to: "" })}>Clear</Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading && !transactions.length ? (
@@ -157,7 +173,17 @@ export default function FinancePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((t) => (
+                  {transactions
+                    .filter((t) => {
+                      if (dateFilter.from && new Date(t.createdAt) < new Date(dateFilter.from)) return false
+                      if (dateFilter.to) {
+                        const toDate = new Date(dateFilter.to)
+                        toDate.setHours(23, 59, 59, 999)
+                        if (new Date(t.createdAt) > toDate) return false
+                      }
+                      return true
+                    })
+                    .map((t) => (
                     <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-1.5">
@@ -271,6 +297,17 @@ export default function FinancePage() {
                 placeholder={form.type === "CREDIT" ? "e.g. Wheat sales, Commission received..." : "e.g. Rent payment, Staff salary..."}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+
+            {/* ── Step 3B: Transaction Date ── */}
+            <div>
+              <Label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Transaction Date *</Label>
+              <Input
+                type="date"
+                className="mt-1"
+                value={form.transactionDate}
+                onChange={(e) => setForm({ ...form, transactionDate: e.target.value })}
               />
             </div>
 
