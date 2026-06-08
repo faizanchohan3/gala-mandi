@@ -287,8 +287,8 @@ export default function FarmersPage() {
                       <td className="px-4 py-3 text-gray-600">{f.phone || "—"}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{f.cnic || "—"}</td>
                       <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(f.creditLimit)}</td>
-                      <td className={`px-4 py-3 text-right font-bold ${(f.balance || 0) > 0 ? "text-red-600" : "text-gray-400"}`}>
-                        {(f.balance || 0) > 0 ? formatCurrency(f.balance) : "—"}
+                      <td className={`px-4 py-3 text-right font-bold ${(f.balance || 0) > 0 ? "text-green-600" : (f.balance || 0) < 0 ? "text-red-600" : "text-gray-600"}`}>
+                        {formatCurrency(f.balance || 0)}
                       </td>
                       <td className="px-4 py-3 text-center text-gray-700">{f._count?.purchases || 0}</td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
