@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { formatCurrency, formatDateTime, formatDate } from "@/lib/utils"
 import {
   Plus, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle,
-  Building2, Banknote, CreditCard, ChevronDown,
+  Building2, Banknote, CreditCard, ChevronDown, Trash2,
 } from "lucide-react"
 
 export default function FinancePage() {
@@ -67,10 +67,29 @@ export default function FinancePage() {
     setShowModal(true)
   }
 
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/finance/${deleteTarget.id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
+      setShowDeleteConfirm(false)
+      setDeleteTarget(null)
+      await loadData()
+    } catch (error) {
+      alert("Error deleting transaction: " + (error instanceof Error ? error.message : "Unknown error"))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const [saving, setSaving] = useState(false)
   const [showMoreCats, setShowMoreCats] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [detailType, setDetailType] = useState<"income" | "expense" | "balance" | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; description: string; amount: number } | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const INCOME_CATS  = ["Sales", "Commission", "Pesticide Sale", "Rent Received", "Other Income"]
   const EXPENSE_CATS = ["Purchases", "Salary", "Rent", "Utilities", "Transport", "Labour", "Repair", "Miscellaneous"]
@@ -167,7 +186,7 @@ export default function FinancePage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["Type", "Description", "Category", "Bank", "Amount", "Reference", "By", "Date"].map((h) => (
+                    {["Type", "Description", "Category", "Bank", "Amount", "Reference", "By", "Date", "Action"].map((h) => (
                       <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
                     ))}
                   </tr>
@@ -214,6 +233,14 @@ export default function FinancePage() {
                       <td className="py-3 px-3 text-gray-500">{t.reference || "-"}</td>
                       <td className="py-3 px-3 text-gray-500">{t.createdBy?.name}</td>
                       <td className="py-3 px-3 text-gray-500">{formatDateTime(t.createdAt)}</td>
+                      <td className="py-3 px-3">
+                        <button
+                          onClick={() => { setDeleteTarget({ id: t.id, description: t.description, amount: t.amount }); setShowDeleteConfirm(true); }}
+                          className="text-red-600 hover:text-red-800 text-xs font-medium hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {transactions.length === 0 && (
@@ -552,6 +579,47 @@ export default function FinancePage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              Delete Transaction
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-900">
+                <strong>Description:</strong> {deleteTarget?.description}
+              </p>
+              <p className="text-sm text-red-900 mt-2">
+                <strong>Amount:</strong> {formatCurrency(deleteTarget?.amount || 0)}
+              </p>
+            </div>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete this transaction? This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Deleting..." : "Delete Transaction"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
