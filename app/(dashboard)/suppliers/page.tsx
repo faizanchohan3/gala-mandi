@@ -279,8 +279,8 @@ export default function SuppliersPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {["#", "Name", "Phone", "Address", "Status", "Actions"].map((h) => (
-                      <th key={h} className="text-left py-3 px-3 text-gray-500 font-medium">{h}</th>
+                    {["#", "Name", "Phone", "Address", "Balance", "Status", "Actions"].map((h) => (
+                      <th key={h} className={`py-3 px-3 text-gray-500 font-medium ${h === "Balance" ? "text-right" : "text-left"}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -307,6 +307,9 @@ export default function SuppliersPage() {
                             <MapPin className="w-3 h-3 flex-shrink-0" />{s.address}
                           </span>
                         ) : "—"}
+                      </td>
+                      <td className={`py-3 px-3 text-right font-semibold ${(s.ledgerBalance || 0) > 0 ? "text-green-600" : (s.ledgerBalance || 0) < 0 ? "text-red-600" : "text-gray-600"}`}>
+                        {formatCurrency(s.ledgerBalance || 0)}
                       </td>
                       <td className="py-3 px-3">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${s.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>

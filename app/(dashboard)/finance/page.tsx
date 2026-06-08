@@ -83,6 +83,42 @@ export default function FinancePage() {
     }
   }
 
+  function openEdit(t: any) {
+    setEditingTransaction(t)
+    setEditForm({
+      description: t.description,
+      amount: t.amount.toString(),
+      category: t.category || "",
+      reference: t.reference || "",
+    })
+    setShowEditModal(true)
+  }
+
+  async function handleSaveEdit() {
+    if (!editingTransaction || !editForm.description.trim()) return alert("Description is required")
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/finance/${editingTransaction.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: editForm.description,
+          amount: parseFloat(editForm.amount),
+          category: editForm.category,
+          reference: editForm.reference,
+        }),
+      })
+      if (!res.ok) throw new Error("Update failed")
+      setShowEditModal(false)
+      setEditingTransaction(null)
+      await loadData()
+    } catch (error) {
+      alert("Error updating transaction: " + (error instanceof Error ? error.message : "Unknown error"))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const [saving, setSaving] = useState(false)
   const [showMoreCats, setShowMoreCats] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -90,6 +126,9 @@ export default function FinancePage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; description: string; amount: number } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<any>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({ description: "", amount: "", category: "", reference: "" })
 
   const INCOME_CATS  = ["Sales", "Commission", "Pesticide Sale", "Rent Received", "Other Income"]
   const EXPENSE_CATS = ["Purchases", "Salary", "Rent", "Utilities", "Transport", "Labour", "Repair", "Miscellaneous"]
@@ -234,12 +273,20 @@ export default function FinancePage() {
                       <td className="py-3 px-3 text-gray-500">{t.createdBy?.name}</td>
                       <td className="py-3 px-3 text-gray-500">{formatDateTime(t.createdAt)}</td>
                       <td className="py-3 px-3">
-                        <button
-                          onClick={() => { setDeleteTarget({ id: t.id, description: t.description, amount: t.amount }); setShowDeleteConfirm(true); }}
-                          className="text-red-600 hover:text-red-800 text-xs font-medium hover:underline"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openEdit(t)}
+                            className="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => { setDeleteTarget({ id: t.id, description: t.description, amount: t.amount }); setShowDeleteConfirm(true); }}
+                            className="text-red-600 hover:text-red-800 text-xs font-medium hover:underline"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -579,6 +626,69 @@ export default function FinancePage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Transaction Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Edit Transaction</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Description *</Label>
+              <Input
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Transaction description"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Amount (PKR) *</Label>
+              <Input
+                type="number"
+                value={editForm.amount}
+                onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Category (Optional)</Label>
+              <Input
+                value={editForm.category}
+                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                placeholder="e.g., Rent, Salary, Sales"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Reference (Optional)</Label>
+              <Input
+                value={editForm.reference}
+                onChange={(e) => setEditForm({ ...editForm, reference: e.target.value })}
+                placeholder="e.g., Invoice #, Cheque #"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowEditModal(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={saving}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
