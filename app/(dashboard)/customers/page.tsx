@@ -238,6 +238,8 @@ export default function CustomersPage() {
   const activeCustomers = customers.filter((c) => c.isActive)
   const inactiveCustomers = customers.filter((c) => !c.isActive)
   const visibleCustomers = statusTab === "active" ? activeCustomers : inactiveCustomers
+  const totalReceived = customers.reduce((s, c) => s + (c.totalCredit || 0), 0)
+  const totalPaid = customers.reduce((s, c) => s + (c.totalDebit || 0), 0)
 
   const filtered = visibleCustomers.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -260,7 +262,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-5 flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg"><Users className="w-5 h-5 text-blue-600" /></div>
@@ -276,6 +278,24 @@ export default function CustomersPage() {
             <div>
               <p className="text-2xl font-bold text-gray-900">{activeCustomers.length}</p>
               <p className="text-sm text-gray-500">Active Traders</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5 flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 rounded-lg"><ArrowDownCircle className="w-5 h-5 text-emerald-600" /></div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalReceived)}</p>
+              <p className="text-sm text-gray-500">Total Received</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5 flex items-center gap-3">
+            <div className="p-2 bg-orange-50 rounded-lg"><TrendingUp className="w-5 h-5 text-orange-600" /></div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalPaid)}</p>
+              <p className="text-sm text-gray-500">Total Paid</p>
             </div>
           </CardContent>
         </Card>
