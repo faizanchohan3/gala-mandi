@@ -36,6 +36,8 @@ export default function PesticidesPage() {
   const [showCatModal, setShowCatModal] = useState(false)
   const [newCatInput, setNewCatInput] = useState("")
   const [shop, setShop] = useState<any>(null)
+  const [isPreviousRecord, setIsPreviousRecord] = useState(false)
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0])
 
   async function loadData() {
     try {
@@ -299,9 +301,16 @@ ${buildPrintHeader(shop)}
         customerName: saleForm.customerName,
         paidAmount: parseFloat(saleForm.paidAmount),
         notes: saleForm.notes,
+        saleDate: isPreviousRecord ? saleDate : undefined,
       }),
     })
-    if (res.ok) { setShowSaleModal(false); loadData() }
+    if (res.ok) {
+      setShowSaleModal(false)
+      setSaleForm({ quantity: "1", customerName: "", paidAmount: "0", notes: "" })
+      setIsPreviousRecord(false)
+      setSaleDate(new Date().toISOString().split('T')[0])
+      loadData()
+    }
   }
 
   const now = new Date()
@@ -611,6 +620,33 @@ ${buildPrintHeader(shop)}
             const totalAmount = qty * unitPrice
             return (
               <div className="space-y-4">
+                {/* Previous Record Toggle */}
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <input
+                    type="checkbox"
+                    checked={isPreviousRecord}
+                    onChange={(e) => setIsPreviousRecord(e.target.checked)}
+                    className="w-4 h-4 cursor-pointer"
+                    id="isPreviousRecordPesticide"
+                  />
+                  <label htmlFor="isPreviousRecordPesticide" className="text-sm font-medium text-blue-900 cursor-pointer">
+                    Previous Record? (Backdated Entry)
+                  </label>
+                </div>
+
+                {/* Date Picker */}
+                {isPreviousRecord && (
+                  <div>
+                    <Label>Sale Date *</Label>
+                    <Input
+                      type="date"
+                      value={saleDate}
+                      onChange={(e) => setSaleDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+
                 <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 flex justify-between">
                   <span>Available: <strong>{selectedPesticide?.quantity} {selectedPesticide?.unit}</strong></span>
                   <span>Unit Price: <strong>{formatCurrency(unitPrice)}</strong></span>

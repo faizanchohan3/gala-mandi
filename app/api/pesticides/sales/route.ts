@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const { pesticideId, quantity, unitPrice, customerId, farmerId, customerName, paidAmount, incentive, notes } = await req.json()
+    const { pesticideId, quantity, unitPrice, customerId, farmerId, customerName, paidAmount, incentive, notes, saleDate } = await req.json()
 
     if (!pesticideId) return NextResponse.json({ error: "Pesticide is required" }, { status: 400 })
     if (!quantity || quantity <= 0) return NextResponse.json({ error: "Invalid quantity" }, { status: 400 })
@@ -59,6 +59,7 @@ export async function POST(req: Request) {
           incentive: parseFloat(incentive) || 0,
           soldById: session.user.id,
           notes: notes || null,
+          createdAt: saleDate ? new Date(saleDate) : new Date(),
         },
         include: {
           pesticide: true,

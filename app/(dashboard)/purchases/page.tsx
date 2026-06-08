@@ -140,6 +140,8 @@ export default function PurchasesPage() {
     setCPartyId(""); setCWalkInSeller(""); setCCustomerId(""); setCWalkInCustomer("")
     setCProductId(""); setCBags(""); setCWeight(""); setCRate(""); setCTotalValue("")
     setCCommissionRate("2.5"); setCPaidAmount("0"); setCNotes("")
+    setIsPreviousRecord(false); setPurchaseDate(new Date().toISOString().split('T')[0])
+    setIsPreviousRecordCommission(false); setCommissionDate(new Date().toISOString().split('T')[0])
   }
 
   async function handleSaveStock() {
@@ -168,6 +170,7 @@ export default function PurchasesPage() {
         })),
         paidAmount: parseFloat(paidAmount),
         notes,
+        purchaseDate: isPreviousRecord ? purchaseDate : undefined,
       }),
     })
     if (res.ok) {
@@ -204,6 +207,7 @@ export default function PurchasesPage() {
           bags: cBags, weight: cWeight, rate: cRate,
           totalValue: cTotalValue, commissionRate: cCommissionRate,
           paidAmount: cPaidAmount, notes: cNotes,
+          commissionDate: isPreviousRecordCommission ? commissionDate : undefined,
         }),
       })
       if (res.ok) {
@@ -428,6 +432,33 @@ ${buildPrintHeader(shop)}
             </DialogTitle>
           </DialogHeader>
 
+          {/* Previous Record Toggle */}
+          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <input
+              type="checkbox"
+              checked={isPreviousRecord}
+              onChange={(e) => setIsPreviousRecord(e.target.checked)}
+              className="w-4 h-4 cursor-pointer"
+              id="isPreviousRecordPurchase"
+            />
+            <label htmlFor="isPreviousRecordPurchase" className="text-sm font-medium text-blue-900 cursor-pointer">
+              Previous Record? (Backdated Entry)
+            </label>
+          </div>
+
+          {/* Date Picker (Only shows if Previous Record is checked) */}
+          {isPreviousRecord && (
+            <div>
+              <Label>Purchase Date *</Label>
+              <Input
+                type="date"
+                value={purchaseDate}
+                onChange={(e) => setPurchaseDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          )}
+
           {/* Type toggle */}
           <div className="flex rounded-lg border border-gray-200 p-1 gap-1">
             <button
@@ -538,6 +569,33 @@ ${buildPrintHeader(shop)}
           {/* ── COMMISSION path ── */}
           {purchaseType === "commission" && (
             <div className="space-y-4">
+              {/* Previous Record Toggle for Commission */}
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <input
+                  type="checkbox"
+                  checked={isPreviousRecordCommission}
+                  onChange={(e) => setIsPreviousRecordCommission(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer"
+                  id="isPreviousRecordCommission"
+                />
+                <label htmlFor="isPreviousRecordCommission" className="text-sm font-medium text-blue-900 cursor-pointer">
+                  Previous Record? (Backdated Entry)
+                </label>
+              </div>
+
+              {/* Date Picker for Commission */}
+              {isPreviousRecordCommission && (
+                <div>
+                  <Label>Commission Date *</Label>
+                  <Input
+                    type="date"
+                    value={commissionDate}
+                    onChange={(e) => setCommissionDate(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              )}
+
               <div>
                 <Label>Seller (Farmer / Supplier) <span className="text-gray-400 font-normal">— optional</span></Label>
                 <SearchableSelect

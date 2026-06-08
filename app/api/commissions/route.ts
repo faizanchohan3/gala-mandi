@@ -53,6 +53,7 @@ export async function POST(req: Request) {
     notes,
     paidAmount: initialPaid,
     paymentMethod,
+    commissionDate,
   } = body
 
   if (!customerId && !walkInCustomer) {
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
         shopId: session.user.shopId || null,
         customerId: customerId || null,
         walkInCustomer: walkInCustomer || null,
+        createdAt: commissionDate ? new Date(commissionDate) : new Date(),
         farmerId: farmerId || null,
         supplierId: supplierId || null,
         walkInSeller: walkInSeller || null,
