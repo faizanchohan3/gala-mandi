@@ -107,13 +107,13 @@ export default function BankTransactionsPage() {
                   <SelectTrigger className="w-56">
                     <SelectValue placeholder="All Banks" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <div className="p-2">
+                  <SelectContent className="max-h-64 overflow-y-auto">
+                    <div className="sticky top-0 bg-white p-2 border-b">
                       <Input
                         placeholder="Search banks..."
                         value={bankSearch}
                         onChange={(e) => setBankSearch(e.target.value)}
-                        className="mb-2"
+                        className="mb-0"
                         onClick={(e) => e.stopPropagation()}
                       />
                     </div>
