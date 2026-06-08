@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()
-  const { customerId, farmerId, items, paidAmount, notes } = body
+  const { customerId, farmerId, items, paidAmount, notes, saleDate } = body
 
   const totalAmount = items.reduce((s: number, i: any) => s + i.quantity * i.price, 0)
   const balance = totalAmount - (paidAmount || 0)
@@ -83,6 +83,7 @@ export async function POST(req: Request) {
         status,
         notes,
         createdById: session.user.id,
+        createdAt: saleDate ? new Date(saleDate) : new Date(),
         items: {
           create: items.map((i: any) => ({
             productId: i.productId,

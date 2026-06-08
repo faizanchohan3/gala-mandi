@@ -32,6 +32,10 @@ export default function PurchasesPage() {
   const [paidAmount, setPaidAmount] = useState("0")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState([{ productId: "", quantity: "1", price: "0", customName: "" }])
+  const [isPreviousRecord, setIsPreviousRecord] = useState(false)
+  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0])
+  const [isPreviousRecordCommission, setIsPreviousRecordCommission] = useState(false)
+  const [commissionDate, setCommissionDate] = useState(new Date().toISOString().split('T')[0])
 
   // Commission path state
   const [cPartyId, setCPartyId] = useState("")

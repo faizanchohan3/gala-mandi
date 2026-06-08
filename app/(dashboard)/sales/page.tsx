@@ -39,6 +39,10 @@ export default function SalesPage() {
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState([{ productId: "", quantity: "1", price: "0" }])
   const [pesticideSaleForm, setPesticideSaleForm] = useState({ pesticideId: "", quantity: "1", customerId: "", customerName: "", paidAmount: "0" })
+  const [isPreviousRecord, setIsPreviousRecord] = useState(false)
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0])
+  const [isPreviousRecordPesticide, setIsPreviousRecordPesticide] = useState(false)
+  const [pesticideSaleDate, setPesticideSaleDate] = useState(new Date().toISOString().split('T')[0])
 
   async function loadData() {
     setLoading(true)
@@ -105,6 +109,7 @@ export default function SalesPage() {
         })),
         paidAmount: parseFloat(paidAmount),
         notes,
+        saleDate: isPreviousRecord ? saleDate : undefined,
       }),
     })
     if (res.ok) {
@@ -113,6 +118,7 @@ export default function SalesPage() {
       setShowModal(false)
       setItems([{ productId: "", quantity: "1", price: "0" }])
       setCustomerId(""); setPaidAmount("0"); setNotes("")
+      setIsPreviousRecord(false); setSaleDate(new Date().toISOString().split('T')[0])
       const loaded = await loadData()
       if (newSaleId && loaded?.sales) {
         const newSale = loaded.sales.find((s: any) => s.id === newSaleId)
@@ -712,6 +718,33 @@ ${buildPrintHeader(shop)}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Previous Record Toggle */}
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <input
+                  type="checkbox"
+                  checked={isPreviousRecord}
+                  onChange={(e) => setIsPreviousRecord(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer"
+                  id="isPreviousRecord"
+                />
+                <label htmlFor="isPreviousRecord" className="text-sm font-medium text-blue-900 cursor-pointer">
+                  Previous Record? (Backdated Entry)
+                </label>
+              </div>
+
+              {/* Date Picker (Only shows if Previous Record is checked) */}
+              {isPreviousRecord && (
+                <div>
+                  <Label>Sale Date *</Label>
+                  <Input
+                    type="date"
+                    value={saleDate}
+                    onChange={(e) => setSaleDate(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              )}
+
               <div>
                 <Label>Customer (optional)</Label>
                 <SearchableSelect
