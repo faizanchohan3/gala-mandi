@@ -29,9 +29,9 @@ export async function GET() {
 
   const suppliersWithBalance = suppliers.map((s) => ({
     ...s,
-    totalDebit: paidMap[s.id] || 0,
-    totalCredit: receivedMap[s.id] || 0,
-    ledgerBalance: (receivedMap[s.id] || 0) - (paidMap[s.id] || 0),
+    totalDebit: (paidMap[s.id] || 0),
+    totalCredit: (receivedMap[s.id] || 0),
+    ledgerBalance: (paidMap[s.id] || 0) - (receivedMap[s.id] || 0),
   }))
 
   return cachedJson({ suppliers: suppliersWithBalance })

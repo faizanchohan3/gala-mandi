@@ -76,8 +76,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         date: payment.createdAt,
         type: isReceive ? "INCOME" : "PAYMENT",
         description: `${isReceive ? "Received from Farmer" : "Payment"} — ${payment.method}${payment.notes ? ` (${payment.notes})` : ""}`,
-        debit: isReceive ? displayAmt : 0,
-        credit: isReceive ? 0 : displayAmt,
+        debit: isReceive ? 0 : displayAmt,
+        credit: isReceive ? displayAmt : 0,
       })
     }
   }

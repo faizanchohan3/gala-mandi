@@ -75,8 +75,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       description: isPay
         ? `Paid to Supplier — ${sp.method}${sp.notes ? ` (${sp.notes})` : ""}`
         : `Received from Supplier — ${sp.method}${sp.notes ? ` (${sp.notes})` : ""}`,
-      debit: isPay ? 0 : sp.amount,
-      credit: isPay ? sp.amount : 0,
+      debit: isPay ? sp.amount : 0,
+      credit: isPay ? 0 : sp.amount,
     })
   }
 
