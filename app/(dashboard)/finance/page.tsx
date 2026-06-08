@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { formatCurrency, formatDateTime } from "@/lib/utils"
+import { formatCurrency, formatDateTime, formatDate } from "@/lib/utils"
 import {
   Plus, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle,
   Building2, Banknote, CreditCard, ChevronDown,
@@ -68,6 +68,8 @@ export default function FinancePage() {
 
   const [saving, setSaving] = useState(false)
   const [showMoreCats, setShowMoreCats] = useState(false)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [detailType, setDetailType] = useState<"income" | "expense" | "balance" | null>(null)
 
   const INCOME_CATS  = ["Sales", "Commission", "Pesticide Sale", "Rent Received", "Other Income"]
   const EXPENSE_CATS = ["Purchases", "Salary", "Rent", "Utilities", "Transport", "Labour", "Repair", "Miscellaneous"]
@@ -93,7 +95,7 @@ export default function FinancePage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-green-500">
+        <Card className="border-l-4 border-l-green-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { setDetailType("income"); setShowDetailModal(true); }}>
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
@@ -106,7 +108,7 @@ export default function FinancePage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-red-500">
+        <Card className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { setDetailType("expense"); setShowDetailModal(true); }}>
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
@@ -119,7 +121,7 @@ export default function FinancePage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-blue-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { setDetailType("balance"); setShowDetailModal(true); }}>
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
@@ -444,6 +446,75 @@ export default function FinancePage() {
               </Button>
             </div>
 
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Modal */}
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {detailType === "income" && "All Income Transactions"}
+              {detailType === "expense" && "All Expense Transactions"}
+              {detailType === "balance" && "Income vs Expenses Summary"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {detailType === "balance" && (
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <p className="text-sm text-green-600 font-medium">Total Income</p>
+                  <p className="text-2xl font-bold text-green-700">{formatCurrency(summary.income)}</p>
+                </div>
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                  <p className="text-sm text-red-600 font-medium">Total Expenses</p>
+                  <p className="text-2xl font-bold text-red-700">{formatCurrency(summary.expense)}</p>
+                </div>
+                <div className={`${summary.balance >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"} p-4 rounded-lg border`}>
+                  <p className={`text-sm ${summary.balance >= 0 ? "text-blue-600" : "text-orange-600"} font-medium`}>Net Balance</p>
+                  <p className={`text-2xl font-bold ${summary.balance >= 0 ? "text-blue-700" : "text-orange-700"}`}>{formatCurrency(summary.balance)}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="overflow-x-auto rounded-lg border border-gray-100">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="text-left py-3 px-4 text-gray-600 font-semibold">Date</th>
+                    <th className="text-left py-3 px-4 text-gray-600 font-semibold">Description</th>
+                    <th className="text-left py-3 px-4 text-gray-600 font-semibold">Category</th>
+                    <th className="text-left py-3 px-4 text-gray-600 font-semibold">Type</th>
+                    <th className="text-right py-3 px-4 text-gray-600 font-semibold">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {transactions
+                    .filter((t) => {
+                      if (detailType === "income") return t.type === "CREDIT"
+                      if (detailType === "expense") return t.type === "DEBIT"
+                      return true
+                    })
+                    .map((t, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="py-3 px-4 text-gray-500 text-xs whitespace-nowrap">{formatDate(t.createdAt)}</td>
+                        <td className="py-3 px-4 text-gray-700">{t.description}</td>
+                        <td className="py-3 px-4 text-gray-600 text-xs">{t.category || "—"}</td>
+                        <td className="py-3 px-4">
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${t.type === "CREDIT" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {t.type === "CREDIT" ? "Income" : "Expense"}
+                          </span>
+                        </td>
+                        <td className={`py-3 px-4 text-right font-semibold ${t.type === "CREDIT" ? "text-green-600" : "text-red-600"}`}>
+                          {formatCurrency(t.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
