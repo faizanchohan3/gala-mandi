@@ -81,6 +81,9 @@ export function SearchableSelect({
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8 h-8 text-sm border-gray-200"
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                onKeyUp={(e) => e.stopPropagation()}
+                autoFocus
               />
               {search && (
                 <button
