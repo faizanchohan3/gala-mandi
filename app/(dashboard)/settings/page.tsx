@@ -28,6 +28,7 @@ export default function SettingsPage() {
     moduleFarmers: true,
     moduleCommission: true,
     modulePesticides: false,
+    moduleAccounts: true,
   })
   const [savingModules, setSavingModules] = useState(false)
   const [moduleSavedKey, setModuleSavedKey] = useState<string | null>(null)
@@ -57,6 +58,7 @@ export default function SettingsPage() {
         moduleFarmers:    s.moduleFarmers !== false,
         moduleCommission: s.moduleCommission !== false,
         modulePesticides: !!s.modulePesticides,
+        moduleAccounts:   s.moduleAccounts !== false,
       })
     }
   }
@@ -265,6 +267,7 @@ export default function SettingsPage() {
               { key: "moduleCommission", label: "Commission (Aadat)", desc: "Commission entries and payments" },
               { key: "moduleFarmers",    label: "Farmers",            desc: "Farmer accounts, peshgi, ledger" },
               { key: "modulePesticides", label: "Pesticides",         desc: "Pesticide stock and sales" },
+              { key: "moduleAccounts",   label: "Accounts",           desc: "Chart of Accounts and journal entries" },
               { key: "moduleGodown",     label: "Godowns",            desc: "Warehouse and storage management" },
               { key: "moduleGate",       label: "Gate / Weighbridge", desc: "Entry/exit and weight recording" },
               { key: "moduleTransport",  label: "FeedMills",          desc: "Transport and freight slips" },

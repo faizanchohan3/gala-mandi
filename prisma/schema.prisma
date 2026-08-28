@@ -84,6 +84,7 @@ model Shop {
   moduleFarmers    Boolean @default(true)
   moduleCommission Boolean @default(true)
   modulePesticides Boolean @default(false)
+  moduleAccounts   Boolean @default(true)
 
   users               User[]
   customers           Customer[]

@@ -89,6 +89,7 @@ export function Sidebar() {
   const [shopModules, setShopModules] = useState({
     moduleGodown: false, moduleGate: false, moduleTransport: false,
     moduleFarmers: true, moduleCommission: true, modulePesticides: false,
+    moduleAccounts: true,
   })
 
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN"
@@ -111,6 +112,7 @@ export function Sidebar() {
     if (item.href === "/farmers")    return shopModules.moduleFarmers
     if (item.href === "/commission") return shopModules.moduleCommission
     if (item.href === "/pesticides") return shopModules.modulePesticides
+    if (item.href === "/accounts")   return shopModules.moduleAccounts
     return true
   })
 
@@ -136,6 +138,7 @@ export function Sidebar() {
               moduleFarmers:    d.shop.moduleFarmers !== false,
               moduleCommission: d.shop.moduleCommission !== false,
               modulePesticides: !!d.shop.modulePesticides,
+              moduleAccounts:   d.shop.moduleAccounts !== false,
             })
           }
         })

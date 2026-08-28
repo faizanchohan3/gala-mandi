@@ -452,13 +452,11 @@ ${buildPrintHeader(shop)}
                   <Input type="number" className="mt-1" value={form.minStock}
                     onChange={(e) => setForm({ ...form, minStock: e.target.value })} />
                 </div>
-                {!editing && (
-                  <div>
-                    <Label className="text-xs font-semibold text-gray-600">Opening Stock</Label>
-                    <Input type="number" className="mt-1" value={form.currentStock}
-                      onChange={(e) => setForm({ ...form, currentStock: e.target.value })} />
-                  </div>
-                )}
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">{editing ? "Current Stock" : "Opening Stock"}</Label>
+                  <Input type="number" className="mt-1" value={form.currentStock}
+                    onChange={(e) => setForm({ ...form, currentStock: e.target.value })} />
+                </div>
               </div>
               </div>
             </div>

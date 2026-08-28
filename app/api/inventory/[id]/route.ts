@@ -9,12 +9,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   const { id } = await params
   const body = await req.json()
-  const { name, categoryId, unit, minStock, purchasePrice, salePrice } = body
+  const { name, categoryId, unit, minStock, purchasePrice, salePrice, currentStock } = body
 
-  const product = await db.product.update({
-    where: { id },
-    data: { name, categoryId, unit, minStock, purchasePrice, salePrice },
-  })
+  const data: any = { name, categoryId, unit, minStock, purchasePrice, salePrice }
+  if (currentStock !== undefined && currentStock !== null && !Number.isNaN(Number(currentStock))) {
+    data.currentStock = Number(currentStock)
+  }
+
+  const product = await db.product.update({ where: { id }, data })
 
   await createAuditLog({ userId: session.user.id, action: "UPDATE", module: "INVENTORY", details: `Updated product: ${name}` })
 
