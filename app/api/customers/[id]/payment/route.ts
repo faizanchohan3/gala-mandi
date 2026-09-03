@@ -2,19 +2,21 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { createAuditLog } from "@/lib/audit"
+import { parsePaymentDate } from "@/lib/payment-date"
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
-  const { amount, method, notes, direction } = await req.json()
+  const { amount, method, notes, direction, date } = await req.json()
 
   if (!amount || parseFloat(amount) <= 0)
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
 
   const amt = parseFloat(amount)
   const dir = direction === "PAY" ? "PAY" : "RECEIVE"
+  const createdAt = parsePaymentDate(date)
 
   let paymentId = ""
   await db.$transaction(async (tx) => {
@@ -25,6 +27,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         direction: dir,
         method: method || "CASH",
         notes: notes || null,
+        ...(createdAt ? { createdAt } : {}),
       },
     })
     paymentId = payment.id

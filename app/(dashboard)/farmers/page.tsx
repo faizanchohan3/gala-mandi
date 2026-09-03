@@ -38,7 +38,7 @@ export default function FarmersPage() {
   // Payment state
   const [showPayModal, setShowPayModal] = useState(false)
   const [payingFarmer, setPayingFarmer] = useState<any>(null)
-  const [payForm, setPayForm] = useState({ amount: "", method: "CASH", notes: "", paymentType: "PAY" })
+  const [payForm, setPayForm] = useState({ amount: "", method: "CASH", notes: "", paymentType: "PAY", date: new Date().toISOString().slice(0, 10) })
   const [payLoading, setPayLoading] = useState(false)
   const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; paymentType: string; balance: number } | null>(null)
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set())
@@ -72,7 +72,7 @@ export default function FarmersPage() {
 
   function openPayment(f: any) {
     setPayingFarmer(f)
-    setPayForm({ amount: "", method: "CASH", notes: "", paymentType: "PAY" })
+    setPayForm({ amount: "", method: "CASH", notes: "", paymentType: "PAY", date: new Date().toISOString().slice(0, 10) })
     setLastPayment(null)
     setShowPayModal(true)
   }
@@ -117,7 +117,7 @@ export default function FarmersPage() {
     const res = await fetch(`/api/farmers/${payingFarmer.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: amt, method: payForm.method, notes: payForm.notes, paymentType: payForm.paymentType }),
+      body: JSON.stringify({ amount: amt, method: payForm.method, notes: payForm.notes, paymentType: payForm.paymentType, date: payForm.date }),
     })
     setPayLoading(false)
     if (res.ok) {
@@ -559,6 +559,10 @@ export default function FarmersPage() {
                 </div>
               </div>
 
+              <div>
+                <Label>Payment Date *</Label>
+                <Input type="date" max={new Date().toISOString().slice(0, 10)} value={payForm.date} onChange={(e) => setPayForm({ ...payForm, date: e.target.value })} />
+              </div>
               <div>
                 <Label>Amount (PKR) *</Label>
                 <Input type="number" placeholder="0" value={payForm.amount} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} autoFocus />

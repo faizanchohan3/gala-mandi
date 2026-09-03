@@ -37,7 +37,7 @@ export default function SuppliersPage() {
       router.push("/dashboard")
     }
   }, [session, router])
-  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "", direction: "PAY" })
+  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "", direction: "PAY", date: new Date().toISOString().slice(0, 10) })
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [lastPayment, setLastPayment] = useState<{ amount: number; method: string; notes: string; name: string; phone?: string; balance: number; direction?: string } | null>(null)
@@ -89,7 +89,7 @@ export default function SuppliersPage() {
 
   function openPayment(s: any) {
     setSelected(s)
-    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "", direction: "PAY" })
+    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "", direction: "PAY", date: new Date().toISOString().slice(0, 10) })
     setLastPayment(null)
     setShowPaymentModal(true)
   }
@@ -687,6 +687,15 @@ export default function SuppliersPage() {
               </div>
               <div className={`rounded-lg p-3 text-sm ${paymentForm.direction === "RECEIVE" ? "bg-orange-50 text-orange-800" : "bg-blue-50 text-blue-800"}`}>
                 Supplier: <strong>{selected?.name}</strong>
+              </div>
+              <div>
+                <Label>Payment Date *</Label>
+                <Input
+                  type="date"
+                  max={new Date().toISOString().slice(0, 10)}
+                  value={paymentForm.date}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, date: e.target.value })}
+                />
               </div>
               <div>
                 <Label>Amount (PKR) *</Label>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
+import { parsePaymentDate } from "@/lib/payment-date"
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -156,13 +157,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { id } = await params
   const body = await req.json()
-  const { amount, method, notes, purchaseId, paymentType = "PAY" } = body
+  const { amount, method, notes, purchaseId, paymentType = "PAY", date } = body
 
   const amt = parseFloat(amount)
   if (!amt || amt <= 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
 
   // Store negative amount for RECEIVE (farmer pays mandi), positive for PAY (mandi pays farmer)
   const storedAmount = paymentType === "RECEIVE" ? -amt : amt
+  const createdAt = parsePaymentDate(date)
 
   // Balance convention: positive = mandi owes farmer
   // PAY: mandi pays farmer → balance decrements
@@ -179,6 +181,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         amount: storedAmount,
         method: method || "CASH",
         notes: notes || null,
+        ...(createdAt ? { createdAt } : {}),
       },
     })
 

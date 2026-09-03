@@ -36,7 +36,7 @@ export default function CustomersPage() {
   const [detail, setDetail] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<Tab>("ledger")
   const [form, setForm] = useState(DEFAULT_FORM)
-  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "", direction: "RECEIVE" })
+  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "CASH", notes: "", bankId: "", direction: "RECEIVE", date: new Date().toISOString().slice(0, 10) })
   const [banks, setBanks] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [statusTab, setStatusTab] = useState<StatusTab>("active")
@@ -97,7 +97,7 @@ export default function CustomersPage() {
 
   function openPayment(c: any) {
     setSelected(c)
-    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "", direction: "RECEIVE" })
+    setPaymentForm({ amount: "", method: "CASH", notes: "", bankId: "", direction: "RECEIVE", date: new Date().toISOString().slice(0, 10) })
     setLastPayment(null)
     setShowPaymentModal(true)
   }
@@ -1001,6 +1001,11 @@ export default function CustomersPage() {
                 >
                   Paid to Customer
                 </button>
+              </div>
+              <div>
+                <Label>Payment Date *</Label>
+                <Input type="date" max={new Date().toISOString().slice(0, 10)}
+                  value={paymentForm.date} onChange={(e) => setPaymentForm({ ...paymentForm, date: e.target.value })} />
               </div>
               <div>
                 <Label>Amount (PKR) *</Label>
